@@ -4,6 +4,8 @@
 # Secrets — NEVER commit API keys.
 .env
 *.env
+client_secret*.json
+token.json
 
 # Python virtual environment
 venv/

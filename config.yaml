@@ -102,6 +102,9 @@ upload:
   privacy_status: private     # private | unlisted | public
                               # start with 'private' so test uploads
                               # are not seen by anyone.
+  category_id: "22"           # YouTube category. 22 = People & Blogs,
+                              # 24 = Entertainment, 27 = Education.
+  made_for_kids: false        # almost always false for these
 
 # --- PERFORMANCE-WEIGHTED SELECTION ---------------------------------
 # Once enough data exists, bias story picking toward subreddits that
