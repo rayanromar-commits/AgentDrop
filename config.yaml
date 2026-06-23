@@ -1,0 +1,100 @@
+# ===================================================================
+# AgentDrop configuration
+# Edit this file to control how AgentDrop behaves. No coding needed.
+# Lines starting with '#' are comments (ignored by the program).
+# Keep the indentation (spaces) exactly as shown — YAML cares about it.
+# ===================================================================
+
+# --- STORY SOURCING -------------------------------------------------
+# Where stories come from:
+#   manual  = read .txt files you drop into sourcing/manual_stories/
+#             (use this until your Reddit API access is approved)
+#   reddit  = pull live from the Reddit API (needs approved API keys)
+story_source: manual
+
+# Which subreddits to pull stories from. Add/remove as you like.
+subreddits:
+  - tifu
+  - AmItheAsshole
+  - nosleep
+
+# How many top posts to look at per subreddit on each run.
+posts_to_scan_per_subreddit: 25
+
+# Pull from this time window: hour, day, week, month, year, all
+reddit_time_filter: day
+
+# --- SCREENING / FILTERING ------------------------------------------
+# A story must fall within this word count to be used.
+# Roughly 100-500 words ≈ a 30-60 second short.
+min_word_count: 100
+max_word_count: 500
+
+# Skip posts flagged Not-Safe-For-Work by Reddit.
+skip_nsfw: true
+
+# Reject a story for profanity/slurs?
+#   false = profanity is ALLOWED (your choice).
+# NOTE: even with profanity allowed here, see the monetization warning
+# in chat — strong language can limit YouTube ad revenue. We can later
+# add an option to bleep/censor swear words in the audio only.
+reject_profanity: false
+
+# Words/phrases that REJECT a story. Case-insensitive, whole-word.
+# Focused on graphic sexual content (your stated red line). The NSFW
+# flag (skip_nsfw above) is the first net; this is the backup.
+# Edit freely — add or remove anything. These target explicit sexual
+# content specifically (profanity is allowed per reject_profanity).
+extra_blocklist:
+  - blowjob
+  - handjob
+  - cumshot
+  - creampie
+  - masturbat   # partial-word friendly variants
+  - orgasm
+  - bestiality
+  - incest
+
+# --- VOICEOVER (TTS = Text To Speech) -------------------------------
+voiceover:
+  provider: elevenlabs        # which TTS service to use
+  voice: Rachel               # voice name/id (set up at Step 4)
+  model: eleven_turbo_v2_5    # quality/speed/cost tier
+  speaking_rate: 1.0          # 1.0 = normal speed
+
+# --- VIDEO / CAPTIONS -----------------------------------------------
+video:
+  width: 1080                 # vertical 9:16 dimensions
+  height: 1920
+  fps: 30
+
+captions:
+  font: Arial
+  font_size: 90
+  font_color: white
+  outline_color: black
+  outline_width: 6
+  position: center            # center | lower-third
+  words_per_caption: 3        # how many words to show at once
+
+# --- REVIEW / APPROVAL ----------------------------------------------
+# "manual" = you approve every video before upload (SAFE DEFAULT).
+# "auto"   = uploads automatically with no approval. Don't switch to
+#            this until you trust the output quality.
+approval_mode: manual
+
+# --- UPLOAD SCHEDULE ------------------------------------------------
+upload:
+  videos_per_day: 2
+  # 24-hour clock, your computer's local time.
+  upload_times:
+    - "09:00"
+    - "18:00"
+  privacy_status: private     # private | unlisted | public
+                              # start with 'private' so test uploads
+                              # are not seen by anyone.
+
+# --- PERFORMANCE-WEIGHTED SELECTION ---------------------------------
+# Once enough data exists, bias story picking toward subreddits that
+# perform well. Set to false to keep selection purely random/recent.
+use_performance_weighting: false

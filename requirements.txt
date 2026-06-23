@@ -1,0 +1,17 @@
+# Python libraries AgentDrop depends on.
+# Install everything here with:  pip3 install -r requirements.txt
+#
+# We install in stages as we build. For STEP 1 only PyYAML is needed;
+# the rest are commented out and we'll enable them at the right step.
+
+PyYAML>=6.0            # read/write config.yaml  (Step 1)
+
+praw>=7.7             # Reddit API client          (Step 2)
+python-dotenv>=1.0    # load API keys from .env    (Step 2)
+better-profanity>=0.7 # profanity/slur detection   (Step 3)
+
+# --- enabled at later steps ---
+# elevenlabs>=1.0      # text-to-speech             (Step 4)
+# google-api-python-client>=2.0   # YouTube upload  (Step 8)
+# google-auth-oauthlib>=1.0       # YouTube login   (Step 8)
+# APScheduler>=3.10    # scheduling                 (Step 9)

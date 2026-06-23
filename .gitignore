@@ -1,0 +1,21 @@
+# Secrets — NEVER commit API keys.
+.env
+*.env
+
+# Python virtual environment
+venv/
+.venv/
+
+# Generated/working files
+__pycache__/
+*.pyc
+database/*.db
+voiceover/output/
+video/output/
+review/pending/
+review/approved/
+review/rejected/
+
+# Keep the footage library out of version control (big files).
+footage/*.mp4
+footage/*.mov
