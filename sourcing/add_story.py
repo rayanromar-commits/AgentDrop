@@ -45,7 +45,8 @@ def read_multiline(prompt: str) -> str:
             line = input()
         except EOFError:
             break
-        if line.strip() == "END":
+        # Accept END / end / End on its own line (and Ctrl-D also works).
+        if line.strip().upper() == "END":
             break
         lines.append(line)
     return "\n".join(lines).strip()
