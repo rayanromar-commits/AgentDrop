@@ -15,6 +15,7 @@ venv/
 __pycache__/
 *.pyc
 database/*.db
+media/
 voiceover/output/
 video/output/
 review/pending/

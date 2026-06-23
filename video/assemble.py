@@ -23,13 +23,13 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
-from agentdrop_common import load_config, setup_logging
+from agentdrop_common import DATA_DIR, load_config, setup_logging
 from video.footage_library import pick_clip
 
 log = setup_logging()
 
-OUTPUT_DIR = Path(__file__).resolve().parent / "output"
-VOICE_DIR = Path(__file__).resolve().parent.parent / "voiceover" / "output"
+OUTPUT_DIR = DATA_DIR / "media" / "video"
+VOICE_DIR = DATA_DIR / "media" / "voiceover"
 
 
 def _ffmpeg_exe() -> str:

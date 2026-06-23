@@ -26,11 +26,11 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 import requests
 from dotenv import load_dotenv
 
-from agentdrop_common import load_config, setup_logging
+from agentdrop_common import DATA_DIR, load_config, setup_logging
 
 log = setup_logging()
 
-OUTPUT_DIR = Path(__file__).resolve().parent / "output"
+OUTPUT_DIR = DATA_DIR / "media" / "voiceover"
 API_BASE = "https://api.elevenlabs.io/v1/text-to-speech"
 
 

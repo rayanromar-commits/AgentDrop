@@ -18,13 +18,13 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
-from agentdrop_common import setup_logging
+from agentdrop_common import DATA_DIR, setup_logging
 from database import db
 from upload.metadata import generate_metadata
 
 log = setup_logging()
 
-REVIEW_ROOT = Path(__file__).resolve().parent
+REVIEW_ROOT = DATA_DIR / "review"
 DIRS = {
     "pending": REVIEW_ROOT / "pending",
     "approved": REVIEW_ROOT / "approved",

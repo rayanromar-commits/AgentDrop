@@ -151,14 +151,19 @@ def produce_one_video(config: dict):
 
 
 def upload_next_approved(config: dict):
-    """Upload one approved video, if any."""
+    """Upload the oldest approved video whose file still exists."""
+    from pathlib import Path
     from upload.youtube_upload import upload_video
     db.init_db()
-    approved = db.videos_by_status("approved")
-    if not approved:
-        log.info("No approved videos to upload.")
-        return None
-    return upload_video(approved[0], config)
+    for row in db.videos_by_status("approved"):
+        if not Path(row["file_path"]).exists():
+            log.warning("Approved video file missing (%s); marking 'missing' "
+                        "and skipping.", row["file_path"])
+            db.set_video_status(row["post_id"], "missing")
+            continue
+        return upload_video(row, config)
+    log.info("No approved videos with available files to upload.")
+    return None
 
 
 def refresh_performance(config: dict) -> None:

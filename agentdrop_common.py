@@ -18,6 +18,12 @@ import yaml
 PROJECT_ROOT = Path(__file__).resolve().parent
 CONFIG_PATH = PROJECT_ROOT / "config.yaml"
 
+# Where working files (audio, videos, review queue) are written. Locally
+# this is the project root; in the cloud set AGENTDROP_DATA_DIR to the
+# persistent volume (e.g. /data) so produced videos survive restarts
+# between the production step and their later upload slot.
+DATA_DIR = Path(os.getenv("AGENTDROP_DATA_DIR", PROJECT_ROOT))
+
 
 def bootstrap_cloud_secrets() -> None:
     """In the cloud, recreate Google credential FILES from env vars.
