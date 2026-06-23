@@ -31,30 +31,35 @@ def show_config(config: dict) -> None:
 
 
 def produce_one_video(config: dict):
-    """Source -> screen -> rank -> narrate -> assemble -> queue. Spends TTS."""
+    """Source -> screen -> rank -> narrate -> assemble -> queue.
+
+    Produces ALL parts of the top-ranked story (one video for short
+    stories, several "Part N" videos for long ones). Returns a list of
+    produced video results, or None if nothing was made. Spends TTS.
+    """
     from sourcing.get_stories import fetch_stories
     from processing.screen import screen_story, clean_text
     from processing.rank import rank_stories
+    from processing.split import num_parts, split_text
     from voiceover.tts import synthesize
     from video.assemble import assemble_video
     from review.queue import submit_video
 
     db.init_db()
 
+    # --- SAFEGUARD 1: daily video cap (checked before starting a story) ---
+    sg = config.get("safeguards", {})
+    max_per_day = sg.get("max_videos_per_day", 4)
+    if db.videos_produced_today() >= max_per_day:
+        log.warning("Daily cap reached (%d videos). Skipping production.",
+                    max_per_day)
+        return None
+
     # Gather fresh, unseen, passing stories.
     stories = fetch_stories(config, skip_seen=True)
     passing = [s for s in stories if screen_story(s, config)[0]]
     if not passing:
         log.warning("No new passing stories available right now.")
-        return None
-
-    # --- SAFEGUARD 1: daily video cap ---
-    sg = config.get("safeguards", {})
-    max_per_day = sg.get("max_videos_per_day", 4)
-    produced_today = db.videos_produced_today()
-    if produced_today >= max_per_day:
-        log.warning("Daily cap reached (%d/%d videos). Skipping production.",
-                    produced_today, max_per_day)
         return None
 
     ranked = rank_stories(passing)
@@ -70,37 +75,69 @@ def produce_one_video(config: dict):
             ranked.sort(key=lambda s: s["captivation_score"], reverse=True)
 
     story = ranked[0]
-    log.info("Selected (score %.2f): %s", story["captivation_score"], story["title"])
-
-    # Narrate (spends ElevenLabs credits).
     text = clean_text(story["title"], story["body"])
+    words = len(text.split())
 
-    # --- SAFEGUARD 2: monthly TTS character budget ---
-    char_count = len(text)
+    # Decide how many parts this story becomes.
+    split_cfg = config.get("splitting", {})
+    if split_cfg.get("enabled"):
+        n = num_parts(words, split_cfg.get("words_per_part", 375),
+                      split_cfg.get("max_parts", 8))
+        if n is None:
+            log.warning("Story too long even to split (%d words); skipping.", words)
+            db.save_post(post_id=story["post_id"], subreddit=story["subreddit"],
+                         title=story["title"], body=story["body"],
+                         score=story.get("score", 0),
+                         word_count=story.get("word_count", 0), status="skipped")
+            return None
+    else:
+        n = 1
+    chunks = split_text(text, n)
+
+    log.info("Selected (score %.2f): %s  [%d part(s)]",
+             story["captivation_score"], story["title"], n)
+
     budget = sg.get("monthly_tts_char_budget", 110000)
-    used = db.tts_chars_this_month()
-    if used + char_count > budget:
-        log.warning(
-            "TTS monthly budget would be exceeded (%d + %d > %d). "
-            "Skipping to protect spend.", used, char_count, budget)
-        return None
+    base_id = story["post_id"]
+    results = []
+    completed_all = True
 
-    synthesize(text, story["post_id"], config)
-    db.record_tts_usage(story["post_id"], char_count)
+    for i, chunk in enumerate(chunks, 1):
+        part_id = base_id if n == 1 else f"{base_id}_p{i}"
 
-    # Build the video and queue it.
-    video_path = assemble_video(story["post_id"], config)
-    result = submit_video(story, video_path, config)
+        # Resume support: skip parts already produced in a prior run.
+        if db.video_exists(part_id):
+            continue
 
-    # Mark the source post used so it's never repeated.
-    db.save_post(
-        post_id=story["post_id"], subreddit=story["subreddit"],
-        title=story["title"], body=story["body"],
-        score=story.get("score", 0), word_count=story.get("word_count", 0),
-        status="used",
-    )
-    log.info("Produced video -> %s (status: %s)", result["path"], result["status"])
-    return result
+        # --- SAFEGUARD 2: monthly TTS budget (hard money wall) ---
+        char_count = len(chunk)
+        used = db.tts_chars_this_month()
+        if used + char_count > budget:
+            log.warning("TTS budget reached (%d + %d > %d). Stopping at part %d; "
+                        "will resume later.", used, char_count, budget, i)
+            completed_all = False
+            break
+
+        synthesize(chunk, part_id, config)
+        db.record_tts_usage(part_id, char_count)
+        video_path = assemble_video(part_id, config)
+
+        part_title = story["title"] if n == 1 else f"{story['title']} (Part {i}/{n})"
+        part_story = {**story, "post_id": part_id, "title": part_title, "body": chunk}
+        result = submit_video(part_story, video_path, config)
+        results.append(result)
+        log.info("Produced part %d/%d -> %s (%s)",
+                 i, n, result["path"], result["status"])
+
+    # Mark the source post used only once every part is done.
+    if completed_all:
+        db.save_post(
+            post_id=base_id, subreddit=story["subreddit"],
+            title=story["title"], body=story["body"],
+            score=story.get("score", 0), word_count=story.get("word_count", 0),
+            status="used",
+        )
+    return results or None
 
 
 def upload_next_approved(config: dict):
@@ -137,16 +174,24 @@ def start_scheduler(config: dict) -> None:
     n_per_day = config["upload"]["videos_per_day"]
 
     def production_job():
-        log.info("[scheduler] Daily production: up to %d video(s).", n_per_day)
-        for _ in range(n_per_day):
+        log.info("[scheduler] Production run (target buffer: %d queued videos).",
+                 n_per_day)
+        while True:
+            # Stop once enough videos are queued for the day's uploads.
+            backlog = (len(db.videos_by_status("approved"))
+                       + len(db.videos_by_status("pending")))
+            if backlog >= n_per_day:
+                log.info("[scheduler] %d videos queued (>= %d); production done.",
+                         backlog, n_per_day)
+                break
             try:
-                # produce_one_video returns None when a safeguard or lack
-                # of stories stops it — no point continuing the batch then.
-                if produce_one_video(config) is None:
-                    log.info("[scheduler] production stopped early (cap/budget/no stories).")
-                    break
+                res = produce_one_video(config)
             except Exception as e:  # keep the scheduler alive on errors
                 log.error("[scheduler] production error: %s", e)
+                break
+            if not res:
+                log.info("[scheduler] production stopped (cap/budget/no stories).")
+                break
 
     sched.add_job(production_job, CronTrigger(hour=prod_hour, minute=0),
                   id="produce", name="daily production")

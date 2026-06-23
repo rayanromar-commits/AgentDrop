@@ -62,6 +62,15 @@ extra_blocklist:
   - bestiality
   - incest
 
+# --- LONG-STORY SPLITTING -------------------------------------------
+# Stories longer than one part get split into "Part 1", "Part 2", ...
+# each its own video, published in order (oldest slot first).
+splitting:
+  enabled: true
+  words_per_part: 375    # target length of each part (aim ~350-400)
+  max_parts: 8           # stories needing more parts than this are skipped
+                         # (avoids endless 10+ part series)
+
 # --- VOICEOVER (TTS = Text To Speech) -------------------------------
 voiceover:
   provider: elevenlabs        # which TTS service to use

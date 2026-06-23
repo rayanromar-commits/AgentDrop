@@ -145,6 +145,16 @@ def upsert_video(post_id, subreddit, title, description, tags, file_path, status
     conn.close()
 
 
+def video_exists(post_id: str) -> bool:
+    """True if a video row already exists (used to resume multi-part series)."""
+    conn = get_connection()
+    row = conn.execute(
+        "SELECT 1 FROM videos WHERE post_id = ?", (post_id,)
+    ).fetchone()
+    conn.close()
+    return row is not None
+
+
 def videos_by_status(status: str) -> list:
     conn = get_connection()
     rows = conn.execute(

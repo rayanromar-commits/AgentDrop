@@ -114,13 +114,18 @@ def screen_story(story: dict, config: dict) -> tuple[bool, list[str]]:
     cleaned = clean_text(story["title"], story["body"])
     word_count = len(cleaned.split())
 
-    # 2. Length window.
+    # 2. Length window. With splitting enabled, long stories are allowed
+    #    (they'll be cut into parts) up to words_per_part * max_parts.
     lo = config["min_word_count"]
-    hi = config["max_word_count"]
+    split_cfg = config.get("splitting", {})
+    if split_cfg.get("enabled"):
+        hi = split_cfg.get("words_per_part", 375) * split_cfg.get("max_parts", 8)
+    else:
+        hi = config["max_word_count"]
     if word_count < lo:
         reasons.append(f"too short ({word_count} < {lo} words)")
     elif word_count > hi:
-        reasons.append(f"too long ({word_count} > {hi} words)")
+        reasons.append(f"too long ({word_count} > {hi} words, even split)")
 
     # 3. Profanity / slurs.
     if config.get("reject_profanity", True):
