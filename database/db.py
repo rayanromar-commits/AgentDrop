@@ -57,7 +57,56 @@ def init_db() -> None:
             )
             """
         )
+        # Performance snapshots over time (one row per stats fetch).
+        conn.execute(
+            """
+            CREATE TABLE IF NOT EXISTS video_stats (
+                id          INTEGER PRIMARY KEY AUTOINCREMENT,
+                post_id     TEXT,
+                youtube_id  TEXT,
+                subreddit   TEXT,
+                views       INTEGER,
+                likes       INTEGER,
+                comments    INTEGER,
+                fetched_at  TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )
+            """
+        )
     conn.close()
+
+
+def record_stats(post_id, youtube_id, subreddit, views, likes, comments):
+    """Save a performance snapshot for an uploaded video."""
+    conn = get_connection()
+    with conn:
+        conn.execute(
+            """
+            INSERT INTO video_stats
+                (post_id, youtube_id, subreddit, views, likes, comments)
+            VALUES (?, ?, ?, ?, ?, ?)
+            """,
+            (post_id, youtube_id, subreddit, views, likes, comments),
+        )
+    conn.close()
+
+
+def subreddit_performance() -> dict:
+    """Average views per subreddit from the latest snapshot of each video."""
+    conn = get_connection()
+    rows = conn.execute(
+        """
+        SELECT subreddit, AVG(views) AS avg_views, COUNT(*) AS n
+        FROM (
+            SELECT post_id, subreddit, views,
+                   ROW_NUMBER() OVER (PARTITION BY post_id ORDER BY fetched_at DESC) AS rn
+            FROM video_stats
+        )
+        WHERE rn = 1
+        GROUP BY subreddit
+        """
+    ).fetchall()
+    conn.close()
+    return {r["subreddit"]: {"avg_views": r["avg_views"], "n": r["n"]} for r in rows}
 
 
 def upsert_video(post_id, subreddit, title, description, tags, file_path, status="pending"):
