@@ -1,3 +1,6 @@
+# macOS Finder junk
+.DS_Store
+
 # Secrets — NEVER commit API keys.
 .env
 *.env

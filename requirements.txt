@@ -9,9 +9,8 @@ PyYAML>=6.0            # read/write config.yaml  (Step 1)
 praw>=7.7             # Reddit API client          (Step 2)
 python-dotenv>=1.0    # load API keys from .env    (Step 2)
 better-profanity>=0.7 # profanity/slur detection   (Step 3)
-
-# --- enabled at later steps ---
-# elevenlabs>=1.0      # text-to-speech             (Step 4)
+requests>=2.31        # call the ElevenLabs API     (Step 4)
+imageio-ffmpeg>=0.4   # bundled ffmpeg video engine (Step 6)
 # google-api-python-client>=2.0   # YouTube upload  (Step 8)
 # google-auth-oauthlib>=1.0       # YouTube login   (Step 8)
 # APScheduler>=3.10    # scheduling                 (Step 9)
