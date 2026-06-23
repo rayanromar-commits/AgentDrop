@@ -74,9 +74,13 @@ def add_one() -> Path | None:
 
     word_count = len(body.split())
     print(f"\n✅ Saved {path.name}  ({word_count} words)")
-    if word_count < 100 or word_count > 500:
-        print(f"   ⚠️  Note: {word_count} words is outside the 100-500 target — "
-              "the screener may skip it.")
+    if word_count < 100:
+        print(f"   ⚠️  Only {word_count} words — the screener may skip it (too short).")
+    elif word_count > 400:
+        import math
+        parts = math.ceil(word_count / 375)
+        print(f"   ℹ️  ~{word_count} words → will auto-split into about {parts} parts "
+              "(Part 1, Part 2, ...).")
     return path
 
 
