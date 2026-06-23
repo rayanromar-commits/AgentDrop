@@ -15,6 +15,8 @@ SUBREDDIT_TAGS = {
     "AmItheAsshole": ["aita", "amitheasshole"],
     "tifu": ["tifu"],
     "nosleep": ["nosleep", "scarystories", "horrorstories"],
+    "LetsNotMeet": ["letsnotmeet", "scarystories", "truescary", "creepy"],
+    "shortscarystories": ["scarystories", "horror", "creepypasta"],
     "pettyrevenge": ["pettyrevenge", "revenge"],
     "ProRevenge": ["prorevenge", "revenge"],
     "MaliciousCompliance": ["maliciouscompliance"],
