@@ -107,9 +107,8 @@ upload:
     - "09:00"
     - "14:00"
     - "19:00"
-  privacy_status: private     # private | unlisted | public
-                              # start with 'private' so test uploads
-                              # are not seen by anyone.
+  privacy_status: public      # private | unlisted | public
+                              # PUBLIC: uploads are visible to everyone.
   category_id: "22"           # YouTube category. 22 = People & Blogs,
                               # 24 = Entertainment, 27 = Education.
   made_for_kids: false        # almost always false for these
