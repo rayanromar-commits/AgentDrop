@@ -90,15 +90,16 @@ captions:
 # "manual" = you approve every video before upload (SAFE DEFAULT).
 # "auto"   = uploads automatically with no approval. Don't switch to
 #            this until you trust the output quality.
-approval_mode: manual
+approval_mode: auto
 
 # --- UPLOAD SCHEDULE ------------------------------------------------
 upload:
-  videos_per_day: 2
-  # 24-hour clock, your computer's local time.
+  videos_per_day: 3
+  # 24-hour clock, your computer's local time. One upload per time.
   upload_times:
     - "09:00"
-    - "18:00"
+    - "14:00"
+    - "19:00"
   privacy_status: private     # private | unlisted | public
                               # start with 'private' so test uploads
                               # are not seen by anyone.
@@ -108,5 +109,19 @@ upload:
 
 # --- PERFORMANCE-WEIGHTED SELECTION ---------------------------------
 # Once enough data exists, bias story picking toward subreddits that
-# perform well. Set to false to keep selection purely random/recent.
-use_performance_weighting: false
+# perform well. Stays neutral until videos accumulate real views.
+use_performance_weighting: true
+
+# --- SPENDING SAFEGUARDS (hard limits the agent will not cross) -----
+safeguards:
+  # Max videos AgentDrop will PRODUCE per day (each one spends TTS
+  # credits). A hard ceiling even if something loops/misfires.
+  max_videos_per_day: 3
+  # Max TTS characters per calendar month. Set this AT or BELOW your
+  # ElevenLabs plan so code stops before the plan does.
+  # Rough guide: ~1,300 chars per video.
+  #   Starter 30k  -> ~23 videos/mo  (set budget to 28000)
+  #   Creator 121k -> ~90 videos/mo  (set budget to 115000)
+  # >>> Set to 115000 ONLY after you upgrade to Creator. While still on
+  #     Starter, change this to 28000 or you'll hit ElevenLabs errors. <<<
+  monthly_tts_char_budget: 115000

@@ -48,6 +48,15 @@ def produce_one_video(config: dict):
         log.warning("No new passing stories available right now.")
         return None
 
+    # --- SAFEGUARD 1: daily video cap ---
+    sg = config.get("safeguards", {})
+    max_per_day = sg.get("max_videos_per_day", 4)
+    produced_today = db.videos_produced_today()
+    if produced_today >= max_per_day:
+        log.warning("Daily cap reached (%d/%d videos). Skipping production.",
+                    produced_today, max_per_day)
+        return None
+
     ranked = rank_stories(passing)
 
     # Optional: bias toward subreddits that perform well.
@@ -65,7 +74,19 @@ def produce_one_video(config: dict):
 
     # Narrate (spends ElevenLabs credits).
     text = clean_text(story["title"], story["body"])
+
+    # --- SAFEGUARD 2: monthly TTS character budget ---
+    char_count = len(text)
+    budget = sg.get("monthly_tts_char_budget", 110000)
+    used = db.tts_chars_this_month()
+    if used + char_count > budget:
+        log.warning(
+            "TTS monthly budget would be exceeded (%d + %d > %d). "
+            "Skipping to protect spend.", used, char_count, budget)
+        return None
+
     synthesize(text, story["post_id"], config)
+    db.record_tts_usage(story["post_id"], char_count)
 
     # Build the video and queue it.
     video_path = assemble_video(story["post_id"], config)
@@ -114,10 +135,14 @@ def start_scheduler(config: dict) -> None:
     n_per_day = config["upload"]["videos_per_day"]
 
     def production_job():
-        log.info("[scheduler] Daily production: making %d video(s).", n_per_day)
+        log.info("[scheduler] Daily production: up to %d video(s).", n_per_day)
         for _ in range(n_per_day):
             try:
-                produce_one_video(config)
+                # produce_one_video returns None when a safeguard or lack
+                # of stories stops it — no point continuing the batch then.
+                if produce_one_video(config) is None:
+                    log.info("[scheduler] production stopped early (cap/budget/no stories).")
+                    break
             except Exception as e:  # keep the scheduler alive on errors
                 log.error("[scheduler] production error: %s", e)
 

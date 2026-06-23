@@ -57,6 +57,18 @@ def init_db() -> None:
             )
             """
         )
+        # TTS spend tracking — every voiceover records its character count
+        # so we can enforce a monthly budget safeguard.
+        conn.execute(
+            """
+            CREATE TABLE IF NOT EXISTS tts_usage (
+                id          INTEGER PRIMARY KEY AUTOINCREMENT,
+                post_id     TEXT,
+                chars       INTEGER,
+                created_at  TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )
+            """
+        )
         # Performance snapshots over time (one row per stats fetch).
         conn.execute(
             """
@@ -183,6 +195,40 @@ def save_post(
             (post_id, subreddit, title, body, score, word_count, status),
         )
     conn.close()
+
+
+def record_tts_usage(post_id: str, chars: int) -> None:
+    """Log characters sent to the TTS API (for the monthly budget guard)."""
+    conn = get_connection()
+    with conn:
+        conn.execute(
+            "INSERT INTO tts_usage (post_id, chars) VALUES (?, ?)",
+            (post_id, chars),
+        )
+    conn.close()
+
+
+def tts_chars_this_month() -> int:
+    """Total TTS characters used since the start of the current month."""
+    conn = get_connection()
+    row = conn.execute(
+        """
+        SELECT COALESCE(SUM(chars), 0) AS total FROM tts_usage
+        WHERE strftime('%Y-%m', created_at) = strftime('%Y-%m', 'now')
+        """
+    ).fetchone()
+    conn.close()
+    return int(row["total"])
+
+
+def videos_produced_today() -> int:
+    """How many videos were created today (for the daily-cap guard)."""
+    conn = get_connection()
+    row = conn.execute(
+        "SELECT COUNT(*) AS n FROM videos WHERE date(created_at) = date('now')"
+    ).fetchone()
+    conn.close()
+    return int(row["n"])
 
 
 if __name__ == "__main__":
