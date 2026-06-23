@@ -40,6 +40,66 @@ def init_db() -> None:
             )
             """
         )
+        # One row per produced video, tracking it through the pipeline.
+        conn.execute(
+            """
+            CREATE TABLE IF NOT EXISTS videos (
+                post_id      TEXT PRIMARY KEY,
+                subreddit    TEXT,
+                title        TEXT,        -- proposed YouTube title
+                description  TEXT,        -- proposed description
+                tags         TEXT,        -- comma-separated hashtags
+                file_path    TEXT,        -- where the .mp4 currently lives
+                status       TEXT DEFAULT 'pending',
+                              -- pending|approved|rejected|uploaded
+                youtube_id   TEXT,        -- filled after upload
+                created_at   TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )
+            """
+        )
+    conn.close()
+
+
+def upsert_video(post_id, subreddit, title, description, tags, file_path, status="pending"):
+    """Insert or update a video row."""
+    conn = get_connection()
+    with conn:
+        conn.execute(
+            """
+            INSERT INTO videos
+                (post_id, subreddit, title, description, tags, file_path, status)
+            VALUES (?, ?, ?, ?, ?, ?, ?)
+            ON CONFLICT(post_id) DO UPDATE SET
+                subreddit=excluded.subreddit, title=excluded.title,
+                description=excluded.description, tags=excluded.tags,
+                file_path=excluded.file_path, status=excluded.status
+            """,
+            (post_id, subreddit, title, description, tags, file_path, status),
+        )
+    conn.close()
+
+
+def videos_by_status(status: str) -> list:
+    conn = get_connection()
+    rows = conn.execute(
+        "SELECT * FROM videos WHERE status = ? ORDER BY created_at", (status,)
+    ).fetchall()
+    conn.close()
+    return rows
+
+
+def set_video_status(post_id: str, status: str, file_path: str | None = None,
+                     youtube_id: str | None = None) -> None:
+    conn = get_connection()
+    with conn:
+        if file_path is not None:
+            conn.execute("UPDATE videos SET file_path=? WHERE post_id=?",
+                         (file_path, post_id))
+        if youtube_id is not None:
+            conn.execute("UPDATE videos SET youtube_id=? WHERE post_id=?",
+                         (youtube_id, post_id))
+        conn.execute("UPDATE videos SET status=? WHERE post_id=?",
+                     (status, post_id))
     conn.close()
 
 
