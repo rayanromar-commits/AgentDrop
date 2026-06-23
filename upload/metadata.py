@@ -17,6 +17,7 @@ SUBREDDIT_TAGS = {
     "nosleep": ["nosleep", "scarystories", "horrorstories"],
     "LetsNotMeet": ["letsnotmeet", "scarystories", "truescary", "creepy"],
     "shortscarystories": ["scarystories", "horror", "creepypasta"],
+    "confession": ["confession", "confessions", "storytime"],
     "pettyrevenge": ["pettyrevenge", "revenge"],
     "ProRevenge": ["prorevenge", "revenge"],
     "MaliciousCompliance": ["maliciouscompliance"],

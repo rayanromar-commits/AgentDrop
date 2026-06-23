@@ -23,6 +23,7 @@ subreddits:
   - nosleep            # fictional horror stories
   - LetsNotMeet        # TRUE scary real-life encounters (great hook)
   - shortscarystories  # very short horror — fits the Shorts length well
+  - confession         # personal confessions (high drama/engagement)
 
 # How many top posts to look at per subreddit on each run.
 posts_to_scan_per_subreddit: 25
