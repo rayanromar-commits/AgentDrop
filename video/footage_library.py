@@ -11,6 +11,7 @@ commercially. See COPYRIGHT_NOTES.md for safe sources.
 Test it (lists what you've got):  python3 video/footage_library.py
 """
 
+import os
 import random
 import sys
 from pathlib import Path
@@ -21,7 +22,9 @@ from agentdrop_common import setup_logging
 
 log = setup_logging()
 
-FOOTAGE_DIR = Path(__file__).resolve().parent.parent / "footage"
+# In the cloud, point FOOTAGE_DIR at a persistent volume holding your
+# clips (e.g. /data/footage). Locally it defaults to ./footage.
+FOOTAGE_DIR = Path(os.getenv("FOOTAGE_DIR", Path(__file__).resolve().parent.parent / "footage"))
 VIDEO_EXTENSIONS = {".mp4", ".mov", ".mkv", ".webm", ".m4v"}
 
 

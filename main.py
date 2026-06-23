@@ -15,7 +15,7 @@ intend AgentDrop to operate (and spend) on its own.
 
 import sys
 
-from agentdrop_common import load_config, setup_logging
+from agentdrop_common import bootstrap_cloud_secrets, load_config, setup_logging
 from database import db
 
 log = setup_logging()
@@ -125,8 +125,10 @@ def start_scheduler(config: dict) -> None:
     """Run AgentDrop continuously on the configured schedule."""
     from apscheduler.schedulers.blocking import BlockingScheduler
     from apscheduler.triggers.cron import CronTrigger
+    from zoneinfo import ZoneInfo
 
-    sched = BlockingScheduler()
+    tz = ZoneInfo(config.get("timezone", "America/New_York"))
+    sched = BlockingScheduler(timezone=tz)
     times = config["upload"]["upload_times"]
 
     # Produce a fresh batch each day, a bit before the first upload time.
@@ -173,6 +175,7 @@ def start_scheduler(config: dict) -> None:
 
 
 def main() -> None:
+    bootstrap_cloud_secrets()  # recreate Google cred files from env (cloud)
     config = load_config()
     cmd = sys.argv[1] if len(sys.argv) > 1 else "show"
 

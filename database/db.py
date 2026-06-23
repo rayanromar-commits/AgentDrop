@@ -9,14 +9,19 @@ This module creates the tables if they don't exist and provides small
 helper functions the rest of AgentDrop calls.
 """
 
+import os
 import sqlite3
 from pathlib import Path
 
-DB_PATH = Path(__file__).resolve().parent / "agentdrop.db"
+# Default to a file next to this module. In the cloud, set DB_PATH to a
+# location on a persistent volume (e.g. /data/agentdrop.db) so it
+# survives redeploys.
+DB_PATH = Path(os.getenv("DB_PATH", Path(__file__).resolve().parent / "agentdrop.db"))
 
 
 def get_connection() -> sqlite3.Connection:
     """Open a connection to the database file (creates it if missing)."""
+    DB_PATH.parent.mkdir(parents=True, exist_ok=True)
     conn = sqlite3.connect(DB_PATH)
     conn.row_factory = sqlite3.Row  # lets us access columns by name
     return conn

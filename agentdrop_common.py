@@ -8,6 +8,7 @@ these things once.
 """
 
 import logging
+import os
 import sys
 from pathlib import Path
 
@@ -16,6 +17,24 @@ import yaml
 # The folder this file lives in = the project root.
 PROJECT_ROOT = Path(__file__).resolve().parent
 CONFIG_PATH = PROJECT_ROOT / "config.yaml"
+
+
+def bootstrap_cloud_secrets() -> None:
+    """In the cloud, recreate Google credential FILES from env vars.
+
+    Railway/servers store secrets as environment variables, not files.
+    If GOOGLE_CLIENT_SECRET_JSON / GOOGLE_TOKEN_JSON are set and the
+    files are missing, write them so the rest of the code works
+    unchanged. No-op locally where the files already exist.
+    """
+    mapping = {
+        "GOOGLE_CLIENT_SECRET_JSON": PROJECT_ROOT / "client_secret.json",
+        "GOOGLE_TOKEN_JSON": PROJECT_ROOT / "token.json",
+    }
+    for env_name, path in mapping.items():
+        content = os.getenv(env_name)
+        if content and not path.exists():
+            path.write_text(content, encoding="utf-8")
 
 
 def load_config(path: Path = CONFIG_PATH) -> dict:

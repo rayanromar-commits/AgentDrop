@@ -92,6 +92,13 @@ captions:
 #            this until you trust the output quality.
 approval_mode: auto
 
+# --- SCHEDULING -----------------------------------------------------
+# Timezone for the upload_times below. On your Mac this is automatic,
+# but in the cloud (Railway runs on UTC) you MUST set this to your zone
+# so "09:00" means 9am YOUR time. Examples: America/New_York,
+# America/Los_Angeles, Europe/London.
+timezone: America/New_York
+
 # --- UPLOAD SCHEDULE ------------------------------------------------
 upload:
   videos_per_day: 3
