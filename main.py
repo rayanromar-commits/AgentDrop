@@ -38,7 +38,7 @@ def produce_one_video(config: dict):
     produced video results, or None if nothing was made. Spends TTS.
     """
     from sourcing.get_stories import fetch_stories
-    from processing.screen import screen_story, clean_text
+    from processing.screen import screen_story, clean_str
     from processing.rank import rank_stories
     from processing.split import num_parts, split_text
     from voiceover.tts import synthesize
@@ -75,8 +75,9 @@ def produce_one_video(config: dict):
             ranked.sort(key=lambda s: s["captivation_score"], reverse=True)
 
     story = ranked[0]
-    text = clean_text(story["title"], story["body"])
-    words = len(text.split())
+    ctitle = clean_str(story["title"])
+    cbody = clean_str(story["body"])
+    words = len(f"{ctitle} {cbody}".split())
 
     # Decide how many parts this story becomes.
     split_cfg = config.get("splitting", {})
@@ -92,7 +93,16 @@ def produce_one_video(config: dict):
             return None
     else:
         n = 1
-    chunks = split_text(text, n)
+
+    # Speak the TITLE at the start of every part (with a "Part N" cue for
+    # multi-part series, so each video has context for new viewers).
+    body_chunks = split_text(cbody, n)
+    chunks = []
+    for i, bc in enumerate(body_chunks, 1):
+        if n == 1:
+            chunks.append(f"{ctitle}. {bc}")
+        else:
+            chunks.append(f"{ctitle}. Part {i}. {bc}")
 
     log.info("Selected (score %.2f): %s  [%d part(s)]",
              story["captivation_score"], story["title"], n)

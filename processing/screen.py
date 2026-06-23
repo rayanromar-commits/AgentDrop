@@ -62,10 +62,8 @@ def _expand_abbreviations(text: str) -> str:
     return text
 
 
-def clean_text(title: str, body: str) -> str:
-    """Produce narration-ready text from a raw title + body."""
-    text = f"{title}. {body}"
-
+def clean_str(text: str) -> str:
+    """Clean a raw string for narration (edit notes, links, markdown...)."""
     # Remove edit/update notes like "Edit:", "EDIT 2:", "Update:" and
     # everything up to the end of that line.
     text = re.sub(
@@ -93,6 +91,11 @@ def clean_text(title: str, body: str) -> str:
     text = re.sub(r"[ \t]{2,}", " ", text)
 
     return text.strip()
+
+
+def clean_text(title: str, body: str) -> str:
+    """Narration-ready text from a raw title + body (title spoken first)."""
+    return clean_str(f"{title}. {body}")
 
 
 def _profanity_filter():
