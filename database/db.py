@@ -157,8 +157,11 @@ def video_exists(post_id: str) -> bool:
 
 def videos_by_status(status: str) -> list:
     conn = get_connection()
+    # created_at orders across stories; post_id is a tiebreaker so parts
+    # of the same story made in the same second still upload p1, p2, p3...
     rows = conn.execute(
-        "SELECT * FROM videos WHERE status = ? ORDER BY created_at", (status,)
+        "SELECT * FROM videos WHERE status = ? ORDER BY created_at, post_id",
+        (status,),
     ).fetchall()
     conn.close()
     return rows
