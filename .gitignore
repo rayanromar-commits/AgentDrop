@@ -21,6 +21,8 @@ review/pending/
 review/approved/
 review/rejected/
 
-# Keep the footage library out of version control (big files).
+# Keep the footage library out of version control (big files)...
 footage/*.mp4
 footage/*.mov
+# ...except the small, compressed cloud-ready clips (bg1.mp4, bg2.mp4, ...).
+!footage/bg*.mp4
