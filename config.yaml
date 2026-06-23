@@ -97,7 +97,7 @@ approval_mode: auto
 # but in the cloud (Railway runs on UTC) you MUST set this to your zone
 # so "09:00" means 9am YOUR time. Examples: America/New_York,
 # America/Los_Angeles, Europe/London.
-timezone: America/New_York
+timezone: America/Chicago
 
 # --- UPLOAD SCHEDULE ------------------------------------------------
 upload:
