@@ -24,7 +24,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 from agentdrop_common import DATA_DIR, load_config, setup_logging
-from video.footage_library import pick_clip
+from video.footage_library import next_clip
 
 log = setup_logging()
 
@@ -113,7 +113,7 @@ def assemble_video(post_id: str, config: dict) -> Path:
     ass_path = OUTPUT_DIR / f"{post_id}.ass"
     build_captions_ass(words, config, ass_path)
 
-    bg_clip = pick_clip()
+    bg_clip = next_clip()
     log.info("Using background clip: %s", bg_clip.name)
 
     vid = config["video"]

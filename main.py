@@ -41,7 +41,7 @@ def produce_one_video(config: dict):
     from processing.screen import screen_story, clean_str
     from processing.rank import rank_stories
     from processing.split import num_parts, split_text
-    from voiceover.tts import synthesize
+    from voiceover.tts import synthesize, choose_voice
     from video.assemble import assemble_video
     from review.queue import submit_video
 
@@ -112,6 +112,11 @@ def produce_one_video(config: dict):
     results = []
     completed_all = True
 
+    # Pick ONE voice for this whole story so a multi-part series keeps the
+    # same narrator; the next story rotates to a different voice.
+    voice = choose_voice(config)
+    log.info("Narrator for this story: %s", voice.get("name"))
+
     for i, chunk in enumerate(chunks, 1):
         part_id = base_id if n == 1 else f"{base_id}_p{i}"
 
@@ -128,7 +133,7 @@ def produce_one_video(config: dict):
             completed_all = False
             break
 
-        synthesize(chunk, part_id, config)
+        synthesize(chunk, part_id, config, voice=voice)
         db.record_tts_usage(part_id, char_count)
         video_path = assemble_video(part_id, config)
 

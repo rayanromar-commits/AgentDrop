@@ -74,9 +74,22 @@ splitting:
 # --- VOICEOVER (TTS = Text To Speech) -------------------------------
 voiceover:
   provider: elevenlabs        # which TTS service to use
-  # ElevenLabs picks voices by ID. This default is "Rachel" (clear,
-  # neutral US female). Browse others in your ElevenLabs Voice Library
-  # and paste the voice's ID here.
+  # AgentDrop rotates through the voices below, using a DIFFERENT voice
+  # for each new story (a multi-part series keeps one narrator, then the
+  # next story switches). Add/remove voices freely — paste any voice's
+  # ID from your ElevenLabs Voice Library. The list rotates in order and
+  # the position is remembered across restarts.
+  # These IDs are ElevenLabs' built-in default voices (on every account).
+  voices:
+    - {name: Rachel, id: 21m00Tcm4TlvDq8ikWAM}   # clear US female
+    - {name: Adam,   id: pNInz6obpgDQGcFmaJgB}   # deep US male
+    - {name: Antoni, id: ErXwobaYiN019PkySvjV}   # warm US male
+    - {name: Bella,  id: EXAVITQu4vr4xnSDxMaL}   # soft US female
+    - {name: Josh,   id: TxGEqnHWrfWFTfGW9XjX}   # young US male
+    - {name: Elli,   id: MF3mGyEYCl7XYWbV9V6O}   # emotive US female
+    - {name: Sam,    id: yoZ06aMxZJJ28mfd3POQ}   # neutral US male
+    - {name: Arnold, id: VR6AewLTigWG4xSOukaG}   # crisp US male
+  # Fallback single voice (used only if the 'voices' list above is empty).
   voice_id: 21m00Tcm4TlvDq8ikWAM
   voice_name: Rachel          # just a human-readable label for logs
   model: eleven_turbo_v2_5    # cheaper/faster; good quality

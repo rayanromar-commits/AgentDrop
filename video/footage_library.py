@@ -49,6 +49,28 @@ def pick_clip(rng: random.Random | None = None) -> Path:
     return rng.choice(clips)
 
 
+def next_clip() -> Path:
+    """Return the next clip in round-robin order.
+
+    Unlike a random pick, this cycles through EVERY file in the footage
+    folder in turn, so all clips you add get used (no clip is skipped by
+    chance). Just drop new .mp4s into the folder — they're picked up
+    automatically. The counter persists across restarts (cloud-safe).
+    """
+    # Imported lazily so this module has no hard dependency on the DB
+    # when used purely for listing.
+    from database import db
+
+    clips = list_clips()
+    if not clips:
+        raise FileNotFoundError(
+            f"No footage found in {FOOTAGE_DIR}. Add at least one "
+            "rights-cleared video file (see COPYRIGHT_NOTES.md)."
+        )
+    idx = db.next_rotation_index("footage") % len(clips)
+    return clips[idx]
+
+
 if __name__ == "__main__":
     clips = list_clips()
     if not clips:

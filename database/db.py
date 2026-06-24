@@ -74,6 +74,16 @@ def init_db() -> None:
             )
             """
         )
+        # Round-robin counters (e.g. which voice / footage clip is next).
+        # Persisted so rotation survives restarts in the cloud.
+        conn.execute(
+            """
+            CREATE TABLE IF NOT EXISTS rotation_state (
+                key    TEXT PRIMARY KEY,
+                value  INTEGER NOT NULL DEFAULT 0
+            )
+            """
+        )
         # Performance snapshots over time (one row per stats fetch).
         conn.execute(
             """
@@ -90,6 +100,32 @@ def init_db() -> None:
             """
         )
     conn.close()
+
+
+def next_rotation_index(key: str) -> int:
+    """Return a steadily-incrementing counter for round-robin rotation.
+
+    First call for a given key returns 0, then 1, 2, 3 ... The caller
+    takes this modulo the number of choices (voices, footage clips) to
+    pick the next one. Persisted so rotation continues across restarts.
+    """
+    conn = get_connection()
+    with conn:
+        # Self-create so callers don't depend on init_db() running first.
+        conn.execute(
+            "CREATE TABLE IF NOT EXISTS rotation_state "
+            "(key TEXT PRIMARY KEY, value INTEGER NOT NULL DEFAULT 0)"
+        )
+        conn.execute(
+            "INSERT INTO rotation_state (key, value) VALUES (?, 0) "
+            "ON CONFLICT(key) DO UPDATE SET value = value + 1",
+            (key,),
+        )
+        row = conn.execute(
+            "SELECT value FROM rotation_state WHERE key = ?", (key,)
+        ).fetchone()
+    conn.close()
+    return int(row["value"])
 
 
 def record_stats(post_id, youtube_id, subreddit, views, likes, comments):

@@ -34,6 +34,39 @@ OUTPUT_DIR = DATA_DIR / "media" / "voiceover"
 API_BASE = "https://api.elevenlabs.io/v1/text-to-speech"
 
 
+def _voice_pool(vo: dict) -> list[dict]:
+    """Return the list of voices to rotate through.
+
+    Uses voiceover.voices (a list of {id, name}) if present; otherwise
+    falls back to the single voice_id/voice_name so old configs keep
+    working.
+    """
+    voices = vo.get("voices")
+    if voices:
+        # Normalise to a list of {"id","name"} dicts.
+        out = []
+        for v in voices:
+            out.append({"id": v["id"], "name": v.get("name", v["id"])})
+        return out
+    return [{"id": vo["voice_id"], "name": vo.get("voice_name", "default")}]
+
+
+def choose_voice(config: dict) -> dict:
+    """Pick the next voice in round-robin order (a different one each call).
+
+    Cycles through every voice in the pool in turn and persists the
+    position across restarts, so consecutive videos use different
+    narrators. Returns a {"id", "name"} dict.
+    """
+    from database import db
+
+    pool = _voice_pool(config["voiceover"])
+    if len(pool) == 1:
+        return pool[0]
+    idx = db.next_rotation_index("voice") % len(pool)
+    return pool[idx]
+
+
 def _get_api_key() -> str:
     load_dotenv()
     key = os.getenv("ELEVENLABS_API_KEY")
@@ -68,13 +101,21 @@ def _chars_to_words(chars: list[str], starts: list[float], ends: list[float]):
     return words
 
 
-def synthesize(text: str, post_id: str, config: dict) -> dict:
-    """Generate audio + word timings for the given text. Returns paths."""
+def synthesize(text: str, post_id: str, config: dict, voice: dict | None = None) -> dict:
+    """Generate audio + word timings for the given text. Returns paths.
+
+    Pass `voice` ({"id","name"}) to force a specific narrator (used so
+    every part of one story shares a voice). If omitted, the next voice
+    in the rotation is chosen automatically.
+    """
     OUTPUT_DIR.mkdir(exist_ok=True)
     vo = config["voiceover"]
     api_key = _get_api_key()
 
-    url = f"{API_BASE}/{vo['voice_id']}/with-timestamps"
+    if voice is None:
+        voice = choose_voice(config)
+
+    url = f"{API_BASE}/{voice['id']}/with-timestamps"
     headers = {"xi-api-key": api_key, "Content-Type": "application/json"}
     payload = {
         "text": text,
@@ -85,7 +126,7 @@ def synthesize(text: str, post_id: str, config: dict) -> dict:
         },
     }
 
-    log.info("Requesting voiceover from ElevenLabs (%s)...", vo.get("voice_name"))
+    log.info("Requesting voiceover from ElevenLabs (voice: %s)...", voice.get("name"))
     resp = requests.post(url, headers=headers, json=payload, timeout=120)
     if resp.status_code != 200:
         raise RuntimeError(
