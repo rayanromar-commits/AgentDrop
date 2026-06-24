@@ -108,7 +108,7 @@ def synthesize(text: str, post_id: str, config: dict, voice: dict | None = None)
     every part of one story shares a voice). If omitted, the next voice
     in the rotation is chosen automatically.
     """
-    OUTPUT_DIR.mkdir(exist_ok=True)
+    OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
     vo = config["voiceover"]
     api_key = _get_api_key()
 

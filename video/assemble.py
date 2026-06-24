@@ -96,7 +96,7 @@ Format: Layer, Start, End, Style, MarginL, MarginR, MarginV, Effect, Text
 
 def assemble_video(post_id: str, config: dict) -> Path:
     """Build the final MP4 for a story whose voiceover already exists."""
-    OUTPUT_DIR.mkdir(exist_ok=True)
+    OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
 
     audio_path = VOICE_DIR / f"{post_id}.mp3"
     words_path = VOICE_DIR / f"{post_id}.words.json"
