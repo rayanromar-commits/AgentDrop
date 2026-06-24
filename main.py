@@ -175,11 +175,16 @@ def refresh_performance(config: dict) -> None:
 
 def start_scheduler(config: dict) -> None:
     """Run AgentDrop continuously on the configured schedule."""
+    from datetime import datetime
     from apscheduler.schedulers.blocking import BlockingScheduler
     from apscheduler.triggers.cron import CronTrigger
     from zoneinfo import ZoneInfo
 
-    tz = ZoneInfo(config.get("timezone", "America/New_York"))
+    tz_name = config.get("timezone", "America/New_York")
+    tz = ZoneInfo(tz_name)
+    # Diagnostic: confirm in the logs which timezone is actually active.
+    log.info("Scheduler timezone resolved to: %s | local time now: %s",
+             tz_name, datetime.now(tz).strftime("%Y-%m-%d %H:%M %Z"))
     sched = BlockingScheduler(timezone=tz)
     times = config["upload"]["upload_times"]
 

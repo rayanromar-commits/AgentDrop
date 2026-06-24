@@ -14,3 +14,4 @@ imageio-ffmpeg>=0.4   # bundled ffmpeg video engine (Step 6)
 google-api-python-client>=2.0   # YouTube upload    (Step 8)
 google-auth-oauthlib>=1.0       # YouTube OAuth login (Step 8)
 APScheduler>=3.10     # run on a schedule           (Step 9)
+tzdata>=2024.1        # timezone database for zoneinfo on Linux/cloud
