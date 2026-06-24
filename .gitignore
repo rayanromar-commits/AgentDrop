@@ -27,3 +27,7 @@ footage/*.mp4
 footage/*.mov
 # ...except the small, compressed cloud-ready clips (bg1.mp4, bg2.mp4, ...).
 !footage/bg*.mp4
+
+# Compressed, render-ready footage (1080x1920, audio stripped). These are
+# small enough to commit and are what the cloud uses (see footage_library).
+# The raw 4K masters in footage/ stay ignored above.

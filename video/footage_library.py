@@ -22,17 +22,52 @@ from agentdrop_common import setup_logging
 
 log = setup_logging()
 
-# In the cloud, point FOOTAGE_DIR at a persistent volume holding your
-# clips (e.g. /data/footage). Locally it defaults to ./footage.
-FOOTAGE_DIR = Path(os.getenv("FOOTAGE_DIR", Path(__file__).resolve().parent.parent / "footage"))
 VIDEO_EXTENSIONS = {".mp4", ".mov", ".mkv", ".webm", ".m4v"}
+PROJECT_ROOT = Path(__file__).resolve().parent.parent
+
+
+def _has_clips(d: Path) -> bool:
+    return d.is_dir() and any(
+        p.suffix.lower() in VIDEO_EXTENSIONS for p in d.iterdir()
+    )
+
+
+def footage_dir() -> Path:
+    """Decide which folder to read background clips from.
+
+    Priority:
+      1. $FOOTAGE_DIR (e.g. a cloud volume) — if set AND it holds clips.
+      2. ./footage_compressed — the small, render-ready clips committed to
+         the repo (1080x1920, audio stripped). This is what the cloud and
+         normal local runs use.
+      3. ./footage — raw/original masters (often large 4K source files).
+    Falls back to whichever exists with clips; defaults to footage_compressed.
+    """
+    env = os.getenv("FOOTAGE_DIR")
+    compressed = PROJECT_ROOT / "footage_compressed"
+    raw = PROJECT_ROOT / "footage"
+
+    if env and _has_clips(Path(env)):
+        return Path(env)
+    if _has_clips(compressed):
+        return compressed
+    if _has_clips(raw):
+        return raw
+    # Nothing has clips yet — return the preferred location so the empty-
+    # library error message points somewhere sensible.
+    return Path(env) if env else compressed
+
+
+# Kept for backward compatibility / logging. Resolved at import time.
+FOOTAGE_DIR = footage_dir()
 
 
 def list_clips() -> list[Path]:
-    """Return all usable video files in the footage folder."""
-    FOOTAGE_DIR.mkdir(exist_ok=True)
+    """Return all usable video files in the active footage folder."""
+    d = footage_dir()
+    d.mkdir(exist_ok=True)
     return sorted(
-        p for p in FOOTAGE_DIR.iterdir()
+        p for p in d.iterdir()
         if p.suffix.lower() in VIDEO_EXTENSIONS
     )
 
@@ -42,7 +77,7 @@ def pick_clip(rng: random.Random | None = None) -> Path:
     clips = list_clips()
     if not clips:
         raise FileNotFoundError(
-            f"No footage found in {FOOTAGE_DIR}. Add at least one "
+            f"No footage found in {footage_dir()}. Add at least one "
             "rights-cleared video file (see COPYRIGHT_NOTES.md)."
         )
     rng = rng or random
@@ -64,7 +99,7 @@ def next_clip() -> Path:
     clips = list_clips()
     if not clips:
         raise FileNotFoundError(
-            f"No footage found in {FOOTAGE_DIR}. Add at least one "
+            f"No footage found in {footage_dir()}. Add at least one "
             "rights-cleared video file (see COPYRIGHT_NOTES.md)."
         )
     idx = db.next_rotation_index("footage") % len(clips)
