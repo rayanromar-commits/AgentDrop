@@ -64,14 +64,32 @@ def produce_one_video(config: dict):
 
     ranked = rank_stories(passing)
 
-    # Optional: bias toward subreddits that perform well.
+    # Optional: bias toward subreddits that perform well. Uses the
+    # age-normalized composite score (views/day + engagement), with
+    # shrinkage toward the global mean so one lucky video doesn't dominate
+    # while we still have only a handful of data points per subreddit.
     if config.get("use_performance_weighting"):
         perf = db.subreddit_performance()
         if perf:
-            max_v = max((d["avg_views"] for d in perf.values()), default=0) or 1
+            pcfg = config.get("performance", {})
+            max_boost = pcfg.get("boost", 3.0)      # max points added to a score
+            prior = pcfg.get("prior_weight", 1.5)   # pseudo-count for shrinkage
+
+            scores = [d["score"] for d in perf.values()]
+            global_mean = sum(scores) / len(scores)
+
+            # Bayesian-style shrink: blend each subreddit toward the mean by
+            # its sample size (small n -> trust the mean more).
+            adj = {
+                sub: (d["n"] * d["score"] + prior * global_mean) / (d["n"] + prior)
+                for sub, d in perf.items()
+            }
+            max_s = max(adj.values()) or 1
             for s in ranked:
-                boost = perf.get(s["subreddit"], {}).get("avg_views", 0) / max_v
-                s["captivation_score"] += boost * 3.0  # up to +3
+                # Unseen subreddits get the (shrunk) average, not zero, so
+                # they're still explored rather than starved.
+                sub_score = adj.get(s["subreddit"], global_mean)
+                s["captivation_score"] += (sub_score / max_s) * max_boost
             ranked.sort(key=lambda s: s["captivation_score"], reverse=True)
 
     story = ranked[0]

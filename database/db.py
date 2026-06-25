@@ -143,23 +143,83 @@ def record_stats(post_id, youtube_id, subreddit, views, likes, comments):
     conn.close()
 
 
-def subreddit_performance() -> dict:
-    """Average views per subreddit from the latest snapshot of each video."""
+def video_performance() -> list[dict]:
+    """Per-video performance from each video's latest snapshot.
+
+    Returns one dict per uploaded video with an age-normalized ``score``:
+      views_per_day = latest views / days since the video was first tracked
+      engagement    = (likes + comments) / views
+      score         = views_per_day * (1 + 5 * engagement)
+
+    Age comes from the EARLIEST stats snapshot (a good proxy for upload
+    time, since stats are polled every 6h). Normalizing by age stops older
+    videos from looking "better" just because they've had more time to rack
+    up views; engagement nudges the score toward stories people react to.
+    """
     conn = get_connection()
     rows = conn.execute(
         """
-        SELECT subreddit, AVG(views) AS avg_views, COUNT(*) AS n
-        FROM (
-            SELECT post_id, subreddit, views,
-                   ROW_NUMBER() OVER (PARTITION BY post_id ORDER BY fetched_at DESC) AS rn
+        WITH latest AS (
+            SELECT post_id, subreddit, views, likes, comments,
+                   ROW_NUMBER() OVER (
+                       PARTITION BY post_id ORDER BY fetched_at DESC) AS rn
             FROM video_stats
+        ),
+        firstseen AS (
+            SELECT post_id, MIN(fetched_at) AS first_at
+            FROM video_stats GROUP BY post_id
         )
-        WHERE rn = 1
-        GROUP BY subreddit
+        SELECT l.post_id, l.subreddit, l.views, l.likes, l.comments,
+               (julianday('now') - julianday(f.first_at)) AS age_days
+        FROM latest l
+        JOIN firstseen f ON l.post_id = f.post_id
+        WHERE l.rn = 1
         """
     ).fetchall()
     conn.close()
-    return {r["subreddit"]: {"avg_views": r["avg_views"], "n": r["n"]} for r in rows}
+
+    out = []
+    for r in rows:
+        views = r["views"] or 0
+        likes = r["likes"] or 0
+        comments = r["comments"] or 0
+        # Floor age so a just-uploaded video can't show an infinite rate.
+        age_days = max(float(r["age_days"] or 0), 0.5)
+        views_per_day = views / age_days
+        engagement = (likes + comments) / max(views, 1)
+        score = views_per_day * (1 + 5 * engagement)
+        out.append({
+            "post_id": r["post_id"], "subreddit": r["subreddit"],
+            "views": views, "likes": likes, "comments": comments,
+            "age_days": age_days, "views_per_day": views_per_day,
+            "engagement_rate": engagement, "score": score,
+        })
+    return out
+
+
+def subreddit_performance() -> dict:
+    """Aggregate per-video performance into per-subreddit averages.
+
+    Each subreddit gets: n (sample size), avg_views, avg_views_per_day,
+    engagement_rate, and the composite ``score`` the producer uses to bias
+    story selection. ``score`` is age-normalized, so it reflects momentum
+    rather than just how long a video has been live.
+    """
+    by_sub: dict[str, list] = {}
+    for v in video_performance():
+        by_sub.setdefault(v["subreddit"], []).append(v)
+
+    out = {}
+    for sub, vs in by_sub.items():
+        n = len(vs)
+        out[sub] = {
+            "n": n,
+            "avg_views": sum(v["views"] for v in vs) / n,
+            "avg_views_per_day": sum(v["views_per_day"] for v in vs) / n,
+            "engagement_rate": sum(v["engagement_rate"] for v in vs) / n,
+            "score": sum(v["score"] for v in vs) / n,
+        }
+    return out
 
 
 def upsert_video(post_id, subreddit, title, description, tags, file_path, status="pending"):

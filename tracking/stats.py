@@ -57,14 +57,17 @@ def refresh_stats() -> int:
 
 
 def print_report() -> None:
-    """Show a quick performance summary by subreddit."""
+    """Show a performance summary by subreddit, ranked by the learned score."""
     perf = db.subreddit_performance()
     if not perf:
         print("No stats recorded yet. Run refresh_stats() after uploads.")
         return
-    print("\nAverage views by subreddit (best first):")
-    for sub, d in sorted(perf.items(), key=lambda kv: kv[1]["avg_views"], reverse=True):
-        print(f"  r/{sub:20} {d['avg_views']:.0f} avg views  ({d['n']} videos)")
+    print("\nPerformance by subreddit (best first, by age-normalized score):")
+    print(f"  {'subreddit':22} {'score':>7} {'views/day':>10} "
+          f"{'avg views':>10} {'engmt':>7}  n")
+    for sub, d in sorted(perf.items(), key=lambda kv: kv[1]["score"], reverse=True):
+        print(f"  r/{sub:20} {d['score']:7.1f} {d['avg_views_per_day']:10.1f} "
+              f"{d['avg_views']:10.0f} {d['engagement_rate'] * 100:6.1f}% {d['n']:>3}")
 
 
 if __name__ == "__main__":

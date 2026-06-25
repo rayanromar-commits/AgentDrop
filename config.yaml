@@ -140,8 +140,14 @@ upload:
 
 # --- PERFORMANCE-WEIGHTED SELECTION ---------------------------------
 # Once enough data exists, bias story picking toward subreddits that
-# perform well. Stays neutral until videos accumulate real views.
+# perform well. The score is age-normalized (views/day since upload) and
+# rewards engagement (likes + comments), so fast-climbing recent videos
+# beat old ones that merely accumulated views over time.
 use_performance_weighting: true
+performance:
+  boost: 3.0           # max points added to a story's score for a top subreddit
+  prior_weight: 1.5    # shrinkage: higher = trust the global average more while
+                       # samples are small (stops one viral video dominating)
 
 # --- SPENDING SAFEGUARDS (hard limits the agent will not cross) -----
 safeguards:
