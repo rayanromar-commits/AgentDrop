@@ -6,6 +6,7 @@ Commands:
   python3 main.py produce    make ONE video and put it in the review queue
   python3 main.py upload      upload the next APPROVED video
   python3 main.py stats       refresh + print performance stats
+  python3 main.py digest      send the daily Slack performance digest now
   python3 main.py schedule    run continuously on your configured schedule
 
 NOTE: 'produce' calls the TTS API and so SPENDS ElevenLabs credits.
@@ -196,6 +197,13 @@ def refresh_performance(config: dict) -> None:
     print_report()
 
 
+def send_digest(config: dict) -> None:
+    """Build + send the daily Slack performance digest."""
+    from notify.digest import send_daily_digest
+    db.init_db()
+    send_daily_digest(config)
+
+
 def start_scheduler(config: dict) -> None:
     """Run AgentDrop continuously on the configured schedule."""
     from datetime import datetime
@@ -254,9 +262,20 @@ def start_scheduler(config: dict) -> None:
     sched.add_job(lambda: refresh_performance(config),
                   CronTrigger(hour="*/6", timezone=tz), id="stats", name="stats refresh")
 
+    # Daily Slack digest (channel totals + deltas + top videos + restock signal).
+    ncfg = config.get("notifications", {})
+    digest_time = ncfg.get("digest_time", "20:00")
+    if ncfg.get("enabled"):
+        dh, dm = (int(x) for x in digest_time.split(":"))
+        sched.add_job(lambda: send_digest(config),
+                      CronTrigger(hour=dh, minute=dm, timezone=tz),
+                      id="digest", name="daily digest")
+
     log.info("Scheduler started. Production at %02d:00; uploads at %s; "
-             "stats every 6h. Approval mode: %s. Ctrl+C to stop.",
-             prod_hour, ", ".join(times), config["approval_mode"])
+             "stats every 6h; digest at %s. Approval mode: %s. Ctrl+C to stop.",
+             prod_hour, ", ".join(times),
+             digest_time if ncfg.get("enabled") else "off",
+             config["approval_mode"])
     if config["approval_mode"] == "manual":
         log.info("Manual mode: videos are produced into the review queue but "
                  "NOT uploaded until you approve them (python3 -m review.review).")
@@ -279,10 +298,13 @@ def main() -> None:
         upload_next_approved(config)
     elif cmd == "stats":
         refresh_performance(config)
+    elif cmd == "digest":
+        send_digest(config)
     elif cmd == "schedule":
         start_scheduler(config)
     else:
-        log.error("Unknown command '%s'. Use: show | produce | upload | stats | schedule", cmd)
+        log.error("Unknown command '%s'. Use: show | produce | upload | stats | "
+                  "digest | schedule", cmd)
 
 
 if __name__ == "__main__":

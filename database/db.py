@@ -99,6 +99,19 @@ def init_db() -> None:
             )
             """
         )
+        # Channel-level snapshots (one row per digest). Lets us compute how
+        # subscribers / views / videos changed over the last day, week, month.
+        conn.execute(
+            """
+            CREATE TABLE IF NOT EXISTS channel_stats (
+                id           INTEGER PRIMARY KEY AUTOINCREMENT,
+                subscribers  INTEGER,
+                views        INTEGER,
+                videos       INTEGER,
+                fetched_at   TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )
+            """
+        )
     conn.close()
 
 
@@ -220,6 +233,82 @@ def subreddit_performance() -> dict:
             "score": sum(v["score"] for v in vs) / n,
         }
     return out
+
+
+def record_channel_stats(subscribers: int, views: int, videos: int) -> None:
+    """Save a channel-level snapshot (subscribers / views / videos)."""
+    conn = get_connection()
+    with conn:
+        conn.execute(
+            "INSERT INTO channel_stats (subscribers, views, videos) "
+            "VALUES (?, ?, ?)",
+            (subscribers, views, videos),
+        )
+    conn.close()
+
+
+def _channel_snapshot_at_or_before(conn, days_ago: int):
+    """Latest channel snapshot at or before (now - days_ago), or None."""
+    return conn.execute(
+        """
+        SELECT subscribers, views, videos FROM channel_stats
+        WHERE fetched_at <= datetime('now', ?)
+        ORDER BY fetched_at DESC LIMIT 1
+        """,
+        (f"-{days_ago} days",),
+    ).fetchone()
+
+
+def channel_metrics() -> dict | None:
+    """Current channel totals plus deltas over the last 1 / 7 / 30 days.
+
+    Returns None if no snapshot exists yet. Each delta is None when there is
+    no snapshot old enough to compare against (so callers can render "—").
+    """
+    conn = get_connection()
+    current = conn.execute(
+        "SELECT subscribers, views, videos FROM channel_stats "
+        "ORDER BY fetched_at DESC LIMIT 1"
+    ).fetchone()
+    if current is None:
+        conn.close()
+        return None
+
+    fields = ("subscribers", "views", "videos")
+    out = {f: current[f] for f in fields}
+    out["deltas"] = {}
+    for label, days in (("1d", 1), ("7d", 7), ("30d", 30)):
+        past = _channel_snapshot_at_or_before(conn, days)
+        out["deltas"][label] = (
+            None if past is None
+            else {f: current[f] - past[f] for f in fields}
+        )
+    conn.close()
+    return out
+
+
+def top_videos(n: int = 3) -> list:
+    """Top n uploaded videos by latest view count, with title + youtube_id."""
+    conn = get_connection()
+    rows = conn.execute(
+        """
+        WITH latest AS (
+            SELECT post_id, views,
+                   ROW_NUMBER() OVER (
+                       PARTITION BY post_id ORDER BY fetched_at DESC) AS rn
+            FROM video_stats
+        )
+        SELECT l.post_id, l.views, v.title, v.youtube_id
+        FROM latest l
+        JOIN videos v ON v.post_id = l.post_id
+        WHERE l.rn = 1
+        ORDER BY l.views DESC
+        LIMIT ?
+        """,
+        (n,),
+    ).fetchall()
+    conn.close()
+    return rows
 
 
 def upsert_video(post_id, subreddit, title, description, tags, file_path, status="pending"):

@@ -77,3 +77,19 @@ def fetch_stories(config: dict, skip_seen: bool = True) -> list[dict]:
 
     log.info("Loaded %d manual stories from %s.", len(stories), STORIES_DIR)
     return stories
+
+
+def unused_story_count() -> int:
+    """How many manual stories haven't been produced yet (restock signal).
+
+    Counts .txt files whose post_id we haven't already seen/used. Mirrors the
+    skip_seen filter in fetch_stories() but without the per-call logging.
+    """
+    from database import db
+
+    if not STORIES_DIR.exists():
+        return 0
+    return sum(
+        1 for path in STORIES_DIR.glob("*.txt")
+        if not db.post_already_seen("manual_" + path.stem)
+    )

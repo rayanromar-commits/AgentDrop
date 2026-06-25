@@ -56,6 +56,34 @@ def refresh_stats() -> int:
     return updated
 
 
+def fetch_channel_stats() -> dict | None:
+    """Fetch + record this channel's subscriber / view / video totals.
+
+    Uses channels().list(mine=True), which only needs the youtube.readonly
+    scope we already hold. Returns the snapshot dict, or None if the channel
+    can't be read.
+    """
+    from upload.youtube_upload import get_authenticated_service
+
+    youtube = get_authenticated_service()
+    resp = youtube.channels().list(part="statistics", mine=True).execute()
+    items = resp.get("items", [])
+    if not items:
+        log.warning("No channel found for the authorized account.")
+        return None
+
+    s = items[0].get("statistics", {})
+    snap = {
+        "subscribers": int(s.get("subscriberCount", 0)),
+        "views": int(s.get("viewCount", 0)),
+        "videos": int(s.get("videoCount", 0)),
+    }
+    db.record_channel_stats(**snap)
+    log.info("Channel stats: %d subs, %d views, %d videos",
+             snap["subscribers"], snap["views"], snap["videos"])
+    return snap
+
+
 def print_report() -> None:
     """Show a performance summary by subreddit, ranked by the learned score."""
     perf = db.subreddit_performance()

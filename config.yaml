@@ -149,6 +149,17 @@ performance:
   prior_weight: 1.5    # shrinkage: higher = trust the global average more while
                        # samples are small (stops one viral video dominating)
 
+# --- NOTIFICATIONS (daily Slack digest) -----------------------------
+# Once a day, send a Slack message with channel totals + their deltas
+# (yesterday / last week / last month), the top videos, and how many
+# unused manual stories remain. Needs SLACK_WEBHOOK_URL set in the env.
+notifications:
+  enabled: true
+  channel: slack             # slack (email support can be added later)
+  digest_time: "20:00"       # 24h clock, Central (uses the scheduler timezone)
+  top_n: 3                   # how many top videos to list
+  restock_threshold: 5       # warn when unused stories <= this many
+
 # --- SPENDING SAFEGUARDS (hard limits the agent will not cross) -----
 safeguards:
   # Max videos AgentDrop will PRODUCE per day (each one spends TTS
