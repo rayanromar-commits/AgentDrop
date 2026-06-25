@@ -17,6 +17,7 @@ Test it:  python3 video/assemble.py
 """
 
 import json
+import re
 import subprocess
 import sys
 from pathlib import Path
@@ -98,7 +99,11 @@ Format: Layer, Start, End, Style, MarginL, MarginR, MarginV, Effect, Text
         chunk = words[i:i + n]
         start = chunk[0]["start"]
         end = chunk[-1]["end"]
-        text = " ".join(w["word"] for w in chunk)
+        text = " ".join(w["word"] for w in chunk).strip()
+        # A chunk boundary can land right after a comma/period, leaving the
+        # next caption starting on an orphan punctuation mark (", talk to her").
+        # Trim leading punctuation so captions read cleanly.
+        text = re.sub(r"^[\s,.;:!?]+", "", text)
         # Escape ASS-special characters.
         text = text.replace("\\", "\\\\").replace("{", "(").replace("}", ")")
         lines.append(

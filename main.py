@@ -218,19 +218,23 @@ def start_scheduler(config: dict) -> None:
                 log.info("[scheduler] production stopped (cap/budget/no stories).")
                 break
 
-    sched.add_job(production_job, CronTrigger(hour=prod_hour, minute=0),
+    # NOTE: each CronTrigger MUST be given timezone=tz explicitly. APScheduler
+    # does not apply the scheduler's timezone to a pre-built trigger, so an
+    # untagged CronTrigger captures the container's local zone (UTC on Railway)
+    # and fires hours off from the configured America/Chicago times.
+    sched.add_job(production_job, CronTrigger(hour=prod_hour, minute=0, timezone=tz),
                   id="produce", name="daily production")
 
     # Upload one approved video at each configured time.
     for t in times:
         hh, mm = (int(x) for x in t.split(":"))
         sched.add_job(lambda: upload_next_approved(config),
-                      CronTrigger(hour=hh, minute=mm),
+                      CronTrigger(hour=hh, minute=mm, timezone=tz),
                       id=f"upload_{t}", name=f"upload at {t}")
 
     # Refresh performance stats every 6 hours.
     sched.add_job(lambda: refresh_performance(config),
-                  CronTrigger(hour="*/6"), id="stats", name="stats refresh")
+                  CronTrigger(hour="*/6", timezone=tz), id="stats", name="stats refresh")
 
     log.info("Scheduler started. Production at %02d:00; uploads at %s; "
              "stats every 6h. Approval mode: %s. Ctrl+C to stop.",
