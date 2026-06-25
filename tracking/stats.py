@@ -73,9 +73,13 @@ def fetch_channel_stats() -> dict | None:
         return None
 
     s = items[0].get("statistics", {})
+    # Channel viewCount is often hidden (0) and unreliable for Shorts, so
+    # prefer the sum of our tracked per-video views; fall back to the API
+    # value if that's somehow larger.
+    api_views = int(s.get("viewCount", 0))
     snap = {
         "subscribers": int(s.get("subscriberCount", 0)),
-        "views": int(s.get("viewCount", 0)),
+        "views": max(db.total_tracked_views(), api_views),
         "videos": int(s.get("videoCount", 0)),
     }
     db.record_channel_stats(**snap)

@@ -235,6 +235,26 @@ def subreddit_performance() -> dict:
     return out
 
 
+def total_tracked_views() -> int:
+    """Sum of the latest view count across every tracked video.
+
+    More reliable than YouTube's channel-level viewCount, which is often
+    hidden (returns 0) and doesn't always aggregate Shorts views.
+    """
+    conn = get_connection()
+    row = conn.execute(
+        """
+        SELECT COALESCE(SUM(views), 0) AS total FROM (
+            SELECT views, ROW_NUMBER() OVER (
+                PARTITION BY post_id ORDER BY fetched_at DESC) AS rn
+            FROM video_stats
+        ) WHERE rn = 1
+        """
+    ).fetchone()
+    conn.close()
+    return int(row["total"])
+
+
 def record_channel_stats(subscribers: int, views: int, videos: int) -> None:
     """Save a channel-level snapshot (subscribers / views / videos)."""
     conn = get_connection()
