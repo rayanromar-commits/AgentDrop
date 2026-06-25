@@ -31,6 +31,12 @@ log = setup_logging()
 OUTPUT_DIR = DATA_DIR / "media" / "video"
 VOICE_DIR = DATA_DIR / "media" / "voiceover"
 
+# Bundled font so captions render on headless Linux/cloud workers that
+# have no system fonts (and no Arial). libass renders nothing — silently,
+# with no ffmpeg error — when it can't find a font, which is why a video
+# can come out with background + audio but no words on screen.
+FONTS_DIR = Path(__file__).resolve().parent / "fonts"
+
 
 def _ffmpeg_exe() -> str:
     """Find an ffmpeg binary (bundled one preferred)."""
@@ -40,6 +46,14 @@ def _ffmpeg_exe() -> str:
         return system
     import imageio_ffmpeg
     return imageio_ffmpeg.get_ffmpeg_exe()
+
+
+def _escape_filter_path(p: Path) -> str:
+    """Escape a path for use as an ffmpeg filtergraph option value.
+
+    Inside a filtergraph, '\\' and ':' are special and must be escaped.
+    """
+    return str(p).replace("\\", "\\\\").replace(":", "\\:")
 
 
 def _fmt_time(seconds: float) -> str:
@@ -120,11 +134,13 @@ def assemble_video(post_id: str, config: dict) -> Path:
     w, h, fps = vid["width"], vid["height"], vid["fps"]
     out_path = OUTPUT_DIR / f"{post_id}.mp4"
 
-    # scale to cover -> crop center -> set fps -> burn captions
+    # scale to cover -> crop center -> set fps -> burn captions.
+    # fontsdir points libass at our bundled font so captions render even
+    # when the host has no system fonts installed.
     vf = (
         f"scale={w}:{h}:force_original_aspect_ratio=increase,"
         f"crop={w}:{h},setsar=1,fps={fps},"
-        f"subtitles={ass_path.name}"
+        f"subtitles={ass_path.name}:fontsdir={_escape_filter_path(FONTS_DIR)}"
     )
 
     cmd = [

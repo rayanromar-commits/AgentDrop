@@ -103,7 +103,7 @@ video:
   fps: 30
 
 captions:
-  font: Arial
+  font: DejaVu Sans          # bundled in video/fonts so captions render on cloud Linux
   font_size: 90
   font_color: white
   outline_color: black
