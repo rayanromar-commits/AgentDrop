@@ -101,13 +101,22 @@ video:
   width: 1080                 # vertical 9:16 dimensions
   height: 1920
   fps: 30
+  # Encoding quality / size. Without a cap, busy stock footage ballooned to
+  # ~100MB per clip. CRF is quality (lower = better/bigger; 23-28 typical);
+  # max_bitrate caps the peak so files stay small with no visible loss on
+  # phone screens.
+  crf: 25
+  max_bitrate: "3M"
+  buf_size: "6M"
 
 captions:
   font: DejaVu Sans          # bundled in video/fonts so captions render on cloud Linux
-  font_size: 90
+  font_size: 96
   font_color: white
   outline_color: black
-  outline_width: 6
+  outline_width: 7            # thick outline so text stays legible on any footage
+  shadow: 3                   # drop shadow for depth/pop
+  pop: true                   # punch-in scale animation as each caption appears
   position: center            # center | lower-third
   words_per_caption: 3        # how many words to show at once
 

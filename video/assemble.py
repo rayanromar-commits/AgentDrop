@@ -87,11 +87,16 @@ WrapStyle: 0
 
 [V4+ Styles]
 Format: Name, Fontname, Fontsize, PrimaryColour, OutlineColour, BackColour, Bold, Italic, BorderStyle, Outline, Shadow, Alignment, MarginL, MarginR, MarginV, Encoding
-Style: Caption,{cap.get('font','Arial')},{cap.get('font_size',90)},&H00FFFFFF,&H00000000,&H00000000,1,0,1,{cap.get('outline_width',6)},0,{alignment},60,60,0,1
+Style: Caption,{cap.get('font','Arial')},{cap.get('font_size',90)},&H00FFFFFF,&H00000000,&H00000000,1,0,1,{cap.get('outline_width',6)},{cap.get('shadow',0)},{alignment},60,60,0,1
 
 [Events]
 Format: Layer, Start, End, Style, MarginL, MarginR, MarginV, Effect, Text
 """
+
+    # Punch-in: each caption fades in while scaling 80% -> 100% for a snappy
+    # "pop" that pulls the eye back to the words.
+    pop = r"{\fad(60,0)\fscx80\fscy80\t(0,130,\fscx100\fscy100)}" \
+        if cap.get("pop", False) else ""
 
     lines = [header]
     # Group words into small chunks shown together.
@@ -104,10 +109,11 @@ Format: Layer, Start, End, Style, MarginL, MarginR, MarginV, Effect, Text
         # next caption starting on an orphan punctuation mark (", talk to her").
         # Trim leading punctuation so captions read cleanly.
         text = re.sub(r"^[\s,.;:!?]+", "", text)
-        # Escape ASS-special characters.
+        # Escape ASS-special characters in the user text, THEN prepend the
+        # animation override (whose own braces must stay literal).
         text = text.replace("\\", "\\\\").replace("{", "(").replace("}", ")")
         lines.append(
-            f"Dialogue: 0,{_fmt_time(start)},{_fmt_time(end)},Caption,,0,0,0,,{text}"
+            f"Dialogue: 0,{_fmt_time(start)},{_fmt_time(end)},Caption,,0,0,0,,{pop}{text}"
         )
 
     out_path.write_text("\n".join(lines), encoding="utf-8")
@@ -148,12 +154,19 @@ def assemble_video(post_id: str, config: dict) -> Path:
         f"subtitles={ass_path.name}:fontsdir={_escape_filter_path(FONTS_DIR)}"
     )
 
+    # Quality/size controls — CRF + a peak-bitrate cap keep files small
+    # (busy footage otherwise hit ~100MB, slow to upload to YT/TikTok).
+    crf = str(vid.get("crf", 25))
+    maxrate = vid.get("max_bitrate", "4M")
+    bufsize = vid.get("buf_size", "8M")
+
     cmd = [
         _ffmpeg_exe(), "-y",
         "-stream_loop", "-1", "-i", str(bg_clip),  # loop bg as needed
         "-i", str(audio_path),                      # voiceover
         "-vf", vf,
         "-c:v", "libx264", "-preset", "medium", "-pix_fmt", "yuv420p",
+        "-crf", crf, "-maxrate", maxrate, "-bufsize", bufsize,
         "-c:a", "aac", "-b:a", "192k",
         "-shortest",                                # stop at narration end
         out_path.name,
