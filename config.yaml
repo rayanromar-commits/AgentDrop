@@ -120,6 +120,20 @@ captions:
   position: center            # center | lower-third
   words_per_caption: 3        # how many words to show at once
 
+# --- HOOK LINE (AI-written cold open) --------------------------------
+# Before the story, the narrator speaks ONE attention-grabbing line that
+# Claude writes to stop the scroll in the first ~2 seconds — a curiosity
+# gap or the single weirdest detail, aimed at that subreddit's audience.
+# It is spoken AND shown on screen (captions are synced to the narration).
+#
+# Needs ANTHROPIC_API_KEY in .env (local) or the environment (cloud). If the
+# key is missing, the package isn't installed, the call fails, or the model
+# decides it can't beat the title, AgentDrop simply opens with the story
+# title instead (the old behavior) — nothing breaks.
+hook:
+  enabled: true
+  model: claude-opus-4-8   # smartest model; ~half a cent per video at 3/day
+
 # --- REVIEW / APPROVAL ----------------------------------------------
 # "manual" = you approve every video before upload (SAFE DEFAULT).
 # "auto"   = uploads automatically with no approval. Don't switch to

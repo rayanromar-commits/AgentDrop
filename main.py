@@ -43,6 +43,7 @@ def produce_one_video(config: dict):
     from processing.screen import screen_story, clean_str
     from processing.rank import rank_stories
     from processing.split import num_parts, split_text
+    from processing.hook import generate_hook
     from voiceover.tts import synthesize, choose_voice
     from video.assemble import assemble_video
     from review.queue import submit_video
@@ -114,13 +115,33 @@ def produce_one_video(config: dict):
     else:
         n = 1
 
-    # Speak the TITLE at the start of every part (with a "Part N" cue for
-    # multi-part series, so each video has context for new viewers).
+    # Write an AI cold-open hook (one per story, cached). It opens the FIRST
+    # part only; because captions are synced to the narration, the hook is
+    # both spoken and shown on screen. Falls back to None (title-first) on
+    # any problem — see processing/hook.py.
+    hook_line = generate_hook(story["post_id"], ctitle, cbody,
+                              story["subreddit"], config)
+
+    def _opener(text: str, rest: str) -> str:
+        """Join an opening line to the rest, avoiding doubled punctuation."""
+        text = text.strip()
+        sep = " " if text[-1:] in ".!?" else ". "
+        return f"{text}{sep}{rest}"
+
+    # Build the spoken text per part. Part 1 leads with the hook (then the
+    # title for context on multi-part series); later parts keep the "Part N"
+    # cue so new viewers still have context.
     body_chunks = split_text(cbody, n)
     chunks = []
     for i, bc in enumerate(body_chunks, 1):
         if n == 1:
-            chunks.append(f"{ctitle}. {bc}")
+            # Single video: the hook REPLACES the title as the opener.
+            chunks.append(_opener(hook_line, bc) if hook_line
+                          else f"{ctitle}. {bc}")
+        elif i == 1:
+            # First of a series: hook, then the title for context, then Part 1.
+            lead = _opener(hook_line, ctitle) if hook_line else ctitle
+            chunks.append(f"{lead}. Part {i}. {bc}")
         else:
             chunks.append(f"{ctitle}. Part {i}. {bc}")
 

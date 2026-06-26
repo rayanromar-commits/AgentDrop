@@ -113,6 +113,18 @@ def init_db() -> None:
             )
             """
         )
+        # AI-written cold-open hook line, cached per story so re-renders /
+        # resumes reuse the exact same wording without paying for it again.
+        # An empty string means the model chose to SKIP (fall back to title).
+        conn.execute(
+            """
+            CREATE TABLE IF NOT EXISTS hooks (
+                post_id     TEXT PRIMARY KEY,
+                hook        TEXT,
+                created_at  TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )
+            """
+        )
         # --- lightweight migrations (idempotent) ---
         _add_column_if_missing(conn, "videos", "tiktok_id", "TEXT")
         _add_column_if_missing(conn, "channel_stats", "platform",
@@ -454,6 +466,32 @@ def save_post(
             VALUES (?, ?, ?, ?, ?, ?, ?)
             """,
             (post_id, subreddit, title, body, score, word_count, status),
+        )
+    conn.close()
+
+
+def get_hook(post_id: str) -> str | None:
+    """Return the cached hook line for a story.
+
+    Returns the stored string ("" means a prior SKIP), or None if we've
+    never generated a hook for this post yet.
+    """
+    conn = get_connection()
+    row = conn.execute(
+        "SELECT hook FROM hooks WHERE post_id = ?", (post_id,)
+    ).fetchone()
+    conn.close()
+    return None if row is None else (row["hook"] or "")
+
+
+def save_hook(post_id: str, hook: str) -> None:
+    """Cache a generated hook line (or "" to remember a SKIP)."""
+    conn = get_connection()
+    with conn:
+        conn.execute(
+            "INSERT INTO hooks (post_id, hook) VALUES (?, ?) "
+            "ON CONFLICT(post_id) DO UPDATE SET hook = excluded.hook",
+            (post_id, hook),
         )
     conn.close()
 

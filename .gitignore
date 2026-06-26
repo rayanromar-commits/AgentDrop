@@ -5,7 +5,9 @@
 .env
 *.env
 client_secret*.json
+# OAuth token files (google token.json, tiktok_token.json, etc.)
 token.json
+*token.json
 
 # Python virtual environment
 venv/
