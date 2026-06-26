@@ -101,6 +101,7 @@ def init_db() -> None:
         )
         # Channel-level snapshots (one row per digest). Lets us compute how
         # subscribers / views / videos changed over the last day, week, month.
+        # platform column distinguishes YouTube vs TikTok snapshots.
         conn.execute(
             """
             CREATE TABLE IF NOT EXISTS channel_stats (
@@ -112,7 +113,20 @@ def init_db() -> None:
             )
             """
         )
+        # --- lightweight migrations (idempotent) ---
+        _add_column_if_missing(conn, "videos", "tiktok_id", "TEXT")
+        _add_column_if_missing(conn, "channel_stats", "platform",
+                               "TEXT DEFAULT 'youtube'")
+        _add_column_if_missing(conn, "video_stats", "platform",
+                               "TEXT DEFAULT 'youtube'")
     conn.close()
+
+
+def _add_column_if_missing(conn, table: str, column: str, decl: str) -> None:
+    """Add a column to an existing table only if it isn't already there."""
+    cols = [r["name"] for r in conn.execute(f"PRAGMA table_info({table})")]
+    if column not in cols:
+        conn.execute(f"ALTER TABLE {table} ADD COLUMN {column} {decl}")
 
 
 def next_rotation_index(key: str) -> int:
@@ -373,7 +387,8 @@ def videos_by_status(status: str) -> list:
 
 
 def set_video_status(post_id: str, status: str, file_path: str | None = None,
-                     youtube_id: str | None = None) -> None:
+                     youtube_id: str | None = None,
+                     tiktok_id: str | None = None) -> None:
     conn = get_connection()
     with conn:
         if file_path is not None:
@@ -382,9 +397,32 @@ def set_video_status(post_id: str, status: str, file_path: str | None = None,
         if youtube_id is not None:
             conn.execute("UPDATE videos SET youtube_id=? WHERE post_id=?",
                          (youtube_id, post_id))
+        if tiktok_id is not None:
+            conn.execute("UPDATE videos SET tiktok_id=? WHERE post_id=?",
+                         (tiktok_id, post_id))
         conn.execute("UPDATE videos SET status=? WHERE post_id=?",
                      (status, post_id))
     conn.close()
+
+
+def videos_missing_platform(platform: str) -> list:
+    """Approved/uploaded videos that haven't been posted to `platform` yet.
+
+    Lets each platform's scheduler pick the next video it still owes, so one
+    approved video flows independently to YouTube and TikTok on their own
+    schedules. `platform` is 'youtube' or 'tiktok'.
+    """
+    col = "youtube_id" if platform == "youtube" else "tiktok_id"
+    conn = get_connection()
+    rows = conn.execute(
+        f"""
+        SELECT * FROM videos
+        WHERE status IN ('approved', 'uploaded') AND {col} IS NULL
+        ORDER BY created_at, post_id
+        """
+    ).fetchall()
+    conn.close()
+    return rows
 
 
 def post_already_seen(post_id: str) -> bool:

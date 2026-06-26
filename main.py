@@ -4,7 +4,8 @@ AgentDrop — entry point + orchestrator + scheduler.
 Commands:
   python3 main.py            show current config
   python3 main.py produce    make ONE video and put it in the review queue
-  python3 main.py upload      upload the next APPROVED video
+  python3 main.py upload      upload the next APPROVED video to YouTube
+  python3 main.py tiktok      post the next video to TikTok
   python3 main.py stats       refresh + print performance stats
   python3 main.py digest      send the daily Slack performance digest now
   python3 main.py schedule    run continuously on your configured schedule
@@ -175,18 +176,53 @@ def produce_one_video(config: dict):
 
 
 def upload_next_approved(config: dict):
-    """Upload the oldest approved video whose file still exists."""
+    """Upload the oldest video not yet on YouTube whose file still exists."""
     from pathlib import Path
     from upload.youtube_upload import upload_video
+    from notify.events import notify_posted, notify_failed
     db.init_db()
-    for row in db.videos_by_status("approved"):
+    for row in db.videos_missing_platform("youtube"):
         if not Path(row["file_path"]).exists():
             log.warning("Approved video file missing (%s); marking 'missing' "
                         "and skipping.", row["file_path"])
             db.set_video_status(row["post_id"], "missing")
             continue
-        return upload_video(row, config)
-    log.info("No approved videos with available files to upload.")
+        try:
+            vid = upload_video(row, config)
+            notify_posted("YouTube", row["title"],
+                          f"https://youtube.com/watch?v={vid}")
+            return vid
+        except Exception as e:
+            log.error("[youtube] upload failed for %s: %s", row["post_id"], e)
+            notify_failed("YouTube upload", f"{row['post_id']}: {e}")
+            return None
+    log.info("No videos waiting for YouTube upload.")
+    return None
+
+
+def upload_next_tiktok(config: dict):
+    """Post the oldest video not yet on TikTok (its own schedule)."""
+    from pathlib import Path
+    from upload.tiktok_upload import upload_video_tiktok
+    from notify.events import notify_posted, notify_failed
+    db.init_db()
+    if not config.get("tiktok", {}).get("enabled"):
+        log.info("TikTok disabled in config; skipping.")
+        return None
+    for row in db.videos_missing_platform("tiktok"):
+        if not Path(row["file_path"]).exists():
+            continue
+        try:
+            pid = upload_video_tiktok(row, config)
+            mode = config["tiktok"].get("mode", "inbox")
+            where = "TikTok drafts" if mode == "inbox" else "TikTok"
+            notify_posted(where, row["title"])
+            return pid
+        except Exception as e:
+            log.error("[tiktok] upload failed for %s: %s", row["post_id"], e)
+            notify_failed("TikTok upload", f"{row['post_id']}: {e}")
+            return None
+    log.info("No videos waiting for TikTok.")
     return None
 
 
@@ -262,6 +298,15 @@ def start_scheduler(config: dict) -> None:
     sched.add_job(lambda: refresh_performance(config),
                   CronTrigger(hour="*/6", timezone=tz), id="stats", name="stats refresh")
 
+    # TikTok cross-posting on its OWN schedule (independent of YouTube times).
+    tcfg = config.get("tiktok", {})
+    if tcfg.get("enabled"):
+        for t in tcfg.get("post_times", []):
+            th, tm = (int(x) for x in t.split(":"))
+            sched.add_job(lambda: upload_next_tiktok(config),
+                          CronTrigger(hour=th, minute=tm, timezone=tz),
+                          id=f"tiktok_{t}", name=f"tiktok post at {t}")
+
     # Daily Slack digest (channel totals + deltas + top videos + restock signal).
     ncfg = config.get("notifications", {})
     digest_time = ncfg.get("digest_time", "20:00")
@@ -296,6 +341,8 @@ def main() -> None:
         produce_one_video(config)
     elif cmd == "upload":
         upload_next_approved(config)
+    elif cmd == "tiktok":
+        upload_next_tiktok(config)
     elif cmd == "stats":
         refresh_performance(config)
     elif cmd == "digest":
@@ -303,8 +350,8 @@ def main() -> None:
     elif cmd == "schedule":
         start_scheduler(config)
     else:
-        log.error("Unknown command '%s'. Use: show | produce | upload | stats | "
-                  "digest | schedule", cmd)
+        log.error("Unknown command '%s'. Use: show | produce | upload | tiktok | "
+                  "stats | digest | schedule", cmd)
 
 
 if __name__ == "__main__":

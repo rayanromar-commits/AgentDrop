@@ -138,6 +138,25 @@ upload:
                               # 24 = Entertainment, 27 = Education.
   made_for_kids: false        # almost always false for these
 
+# --- TIKTOK CROSS-POSTING -------------------------------------------
+# Posts the same approved 9:16 videos to TikTok on its OWN schedule
+# (independent of the YouTube times above). Needs TIKTOK_CLIENT_KEY /
+# TIKTOK_CLIENT_SECRET in the env and a one-time authorization
+# (python3 -m upload.tiktok_auth).
+tiktok:
+  enabled: false             # flip on after you've authorized (tiktok_auth)
+  mode: inbox                # inbox  = push to TikTok drafts, you tap Post
+                             #          (works BEFORE app audit)
+                             # direct = auto-publish public (needs audit +
+                             #          the video.publish scope)
+  privacy_level: SELF_ONLY   # used by 'direct' mode once audited:
+                             # PUBLIC_TO_EVERYONE | MUTUAL_FOLLOW_FRIENDS | SELF_ONLY
+  videos_per_day: 3
+  post_times:                # 24h clock, same timezone as YouTube
+    - "10:00"
+    - "15:00"
+    - "20:00"
+
 # --- PERFORMANCE-WEIGHTED SELECTION ---------------------------------
 # Once enough data exists, bias story picking toward subreddits that
 # perform well. The score is age-normalized (views/day since upload) and

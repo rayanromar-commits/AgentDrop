@@ -36,6 +36,7 @@ def bootstrap_cloud_secrets() -> None:
     mapping = {
         "GOOGLE_CLIENT_SECRET_JSON": PROJECT_ROOT / "client_secret.json",
         "GOOGLE_TOKEN_JSON": PROJECT_ROOT / "token.json",
+        "TIKTOK_TOKEN_JSON": PROJECT_ROOT / "tiktok_token.json",
     }
     for env_name, path in mapping.items():
         content = os.getenv(env_name)
