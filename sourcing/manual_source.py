@@ -14,6 +14,7 @@ The file name (without .txt) is used as the unique post id, so each
 file is only ever used once (dedup works just like with Reddit).
 """
 
+import re
 import sys
 from pathlib import Path
 
@@ -24,6 +25,51 @@ from agentdrop_common import setup_logging
 log = setup_logging()
 
 STORIES_DIR = Path(__file__).resolve().parent / "manual_stories"
+# Scripts of stories that have been posted are moved here so they're never
+# produced again (repetitive content gets a channel throttled/removed). Lives
+# in a SUBfolder of STORIES_DIR, which unused_story_count()'s non-recursive
+# glob ignores — so archiving a file automatically drops the unused count.
+USED_DIR = STORIES_DIR / "used"
+
+
+def _base_stem(post_id: str) -> str:
+    """Map a (possibly decorated) post_id back to its source-file stem.
+
+    Production tags the source id with suffixes like ``_p1`` (part N of a
+    split series) or ``_cap`` (captioned variant). Strip the ``manual_``
+    prefix and any trailing ``_p<n>`` / ``_cap`` decorations so we land on
+    the original ``<stem>.txt`` filename.
+    """
+    stem = post_id[len("manual_"):] if post_id.startswith("manual_") else post_id
+    # Strip repeated trailing _p<digits> / _cap in any order/combination.
+    while True:
+        new = re.sub(r"_(?:p\d+|cap)$", "", stem)
+        if new == stem:
+            return stem
+        stem = new
+
+
+def archive_story(post_id: str) -> bool:
+    """Move a posted story's source .txt into the ``used/`` archive.
+
+    Called when a video goes live so the script is retired and the leftover
+    story count drops by one. Idempotent and quiet: returns False (no error)
+    for non-manual posts, already-archived files, or stories whose file was
+    removed by hand — so multi-part series only archive once and re-posts are
+    harmless.
+    """
+    if not post_id.startswith("manual_"):
+        return False
+
+    src = STORIES_DIR / f"{_base_stem(post_id)}.txt"
+    if not src.exists():
+        return False
+
+    USED_DIR.mkdir(exist_ok=True)
+    dest = USED_DIR / src.name
+    src.replace(dest)
+    log.info("Archived used story %s -> %s", src.name, dest)
+    return True
 
 
 def fetch_stories(config: dict, skip_seen: bool = True) -> list[dict]:

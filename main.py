@@ -200,7 +200,8 @@ def upload_next_approved(config: dict):
     """Upload the oldest video not yet on YouTube whose file still exists."""
     from pathlib import Path
     from upload.youtube_upload import upload_video
-    from notify.events import notify_posted, notify_failed
+    from notify.events import notify_posted, notify_failed, notify_low_stock
+    from sourcing.manual_source import archive_story, unused_story_count
     db.init_db()
     for row in db.videos_missing_platform("youtube"):
         if not Path(row["file_path"]).exists():
@@ -212,6 +213,13 @@ def upload_next_approved(config: dict):
             vid = upload_video(row, config)
             notify_posted("YouTube", row["title"],
                           f"https://youtube.com/watch?v={vid}")
+            # Retire the source script so it's never reused (avoids the
+            # repetitive-content penalties that throttle a channel). If a
+            # story was actually retired, nudge Slack when stock runs low.
+            if archive_story(row["post_id"]):
+                threshold = config.get("notifications", {}).get(
+                    "restock_threshold", 5)
+                notify_low_stock(unused_story_count(), threshold)
             return vid
         except Exception as e:
             log.error("[youtube] upload failed for %s: %s", row["post_id"], e)
@@ -225,7 +233,8 @@ def upload_next_tiktok(config: dict):
     """Post the oldest video not yet on TikTok (its own schedule)."""
     from pathlib import Path
     from upload.tiktok_upload import upload_video_tiktok
-    from notify.events import notify_posted, notify_failed
+    from notify.events import notify_posted, notify_failed, notify_low_stock
+    from sourcing.manual_source import archive_story, unused_story_count
     db.init_db()
     if not config.get("tiktok", {}).get("enabled"):
         log.info("TikTok disabled in config; skipping.")
@@ -238,6 +247,11 @@ def upload_next_tiktok(config: dict):
             mode = config["tiktok"].get("mode", "inbox")
             where = "TikTok drafts" if mode == "inbox" else "TikTok"
             notify_posted(where, row["title"])
+            # Idempotent: no-op if YouTube already archived this story.
+            if archive_story(row["post_id"]):
+                threshold = config.get("notifications", {}).get(
+                    "restock_threshold", 5)
+                notify_low_stock(unused_story_count(), threshold)
             return pid
         except Exception as e:
             log.error("[tiktok] upload failed for %s: %s", row["post_id"], e)
