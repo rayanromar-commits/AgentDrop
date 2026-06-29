@@ -20,10 +20,12 @@ subreddits:
   - entitledparents
   - tifu
   - AmItheAsshole
-  - nosleep            # fictional horror stories
-  - LetsNotMeet        # TRUE scary real-life encounters (great hook)
-  - shortscarystories  # very short horror — fits the Shorts length well
   - confession         # personal confessions (high drama/engagement)
+  # NOTE: horror/scary subs (nosleep, LetsNotMeet, shortscarystories,
+  # creepyencounters, horrorstories) are intentionally OFF. On 2026-06-29 the
+  # channel's horror Shorts badly underperformed the AITA/revenge lane
+  # (9-187 views vs 700-950). Staying in the proven niche until it's saturated.
+  # Paused horror scripts live in sourcing/manual_stories/paused/.
 
 # How many top posts to look at per subreddit on each run.
 posts_to_scan_per_subreddit: 25
@@ -61,6 +63,15 @@ extra_blocklist:
   - orgasm
   - bestiality
   - incest
+  # Gross-out / shock content — advertiser-unfriendly, reach-throttled by
+  # YouTube and off-putting for storytime. (The "excrement" petty-revenge
+  # Short on 2026-06-29 got throttled to ~70-190 views vs the usual 700+.)
+  - excrement
+  - feces
+  - faeces
+  - defecat     # defecate / defecation
+  - diarrhea
+  - diarrhoea
 
 # --- LONG-STORY SPLITTING -------------------------------------------
 # Stories longer than one part get split into "Part 1", "Part 2", ...
