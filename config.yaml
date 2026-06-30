@@ -207,9 +207,9 @@ upload:
 # TIKTOK_CLIENT_SECRET in the env and a one-time authorization
 # (python3 -m upload.tiktok_auth).
 tiktok:
-  enabled: false             # flip on after you've authorized (tiktok_auth)
+  enabled: true              # ON: cross-posts to TikTok @storydropper1 (2026-06-30)
   mode: inbox                # inbox  = push to TikTok drafts, you tap Post
-                             #          (works BEFORE app audit)
+                             #          (works BEFORE app audit) <-- CURRENT
                              # direct = auto-publish public (needs audit +
                              #          the video.publish scope)
   privacy_level: SELF_ONLY   # used by 'direct' mode once audited:
