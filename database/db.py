@@ -137,12 +137,41 @@ def init_db() -> None:
             )
             """
         )
+        # Small key/value store for one-time flags (e.g. run-once migrations).
+        conn.execute(
+            """
+            CREATE TABLE IF NOT EXISTS app_meta (
+                key    TEXT PRIMARY KEY,
+                value  TEXT
+            )
+            """
+        )
         # --- lightweight migrations (idempotent) ---
         _add_column_if_missing(conn, "videos", "tiktok_id", "TEXT")
         _add_column_if_missing(conn, "channel_stats", "platform",
                                "TEXT DEFAULT 'youtube'")
         _add_column_if_missing(conn, "video_stats", "platform",
                                "TEXT DEFAULT 'youtube'")
+
+        # ONE-TIME: when TikTok cross-posting was first switched on, the whole
+        # back catalog had a NULL tiktok_id and would have been posted to TikTok
+        # oldest-first, flooding it with old videos out of sync with YouTube.
+        # Mark everything that exists at this moment as already-handled so TikTok
+        # only posts NEW videos going forward (mirrors YouTube). A sentinel in
+        # app_meta makes this run exactly once; videos produced later keep their
+        # NULL tiktok_id and cross-post normally.
+        done = conn.execute(
+            "SELECT 1 FROM app_meta WHERE key = 'tiktok_backlog_skipped'"
+        ).fetchone()
+        if done is None:
+            conn.execute(
+                "UPDATE videos SET tiktok_id = 'backlog_skip' "
+                "WHERE tiktok_id IS NULL"
+            )
+            conn.execute(
+                "INSERT INTO app_meta (key, value) "
+                "VALUES ('tiktok_backlog_skipped', datetime('now'))"
+            )
     conn.close()
 
 

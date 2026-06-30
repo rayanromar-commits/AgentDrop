@@ -298,6 +298,10 @@ def start_scheduler(config: dict) -> None:
     from apscheduler.triggers.cron import CronTrigger
     from zoneinfo import ZoneInfo
 
+    # Ensure the DB exists and one-time migrations run at startup (e.g. the
+    # TikTok backlog-skip), before any scheduled upload fires.
+    db.init_db()
+
     tz_name = config.get("timezone", "America/New_York")
     tz = ZoneInfo(tz_name)
     # Diagnostic: confirm in the logs which timezone is actually active.
