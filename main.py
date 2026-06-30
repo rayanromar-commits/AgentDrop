@@ -44,6 +44,7 @@ def produce_one_video(config: dict):
     from processing.rank import rank_stories
     from processing.split import num_parts, split_text
     from processing.hook import generate_hook
+    from processing.punch_up import punch_up
     from voiceover.tts import synthesize, choose_voice
     from video.assemble import assemble_video
     from review.queue import submit_video
@@ -128,28 +129,43 @@ def produce_one_video(config: dict):
         sep = " " if text[-1:] in ".!?" else ". "
         return f"{text}{sep}{rest}"
 
+    # A fixed closing call-to-action, spoken + shown on screen on the LAST
+    # part only, to turn watchers into commenters/sharers (the engagement
+    # signal that pushes a video past the algorithm's first test audience).
+    outro_cfg = config.get("outro", {})
+    outro_text = (outro_cfg.get("text", "") or "").strip() \
+        if outro_cfg.get("enabled") else ""
+
+    base_id = story["post_id"]
+
     # Build the spoken text per part. Part 1 leads with the hook (then the
     # title for context on multi-part series); later parts keep the "Part N"
-    # cue so new viewers still have context.
+    # cue so new viewers still have context. The body of each part first goes
+    # through a light retention-beat pass (punch_up); the hook/title/"Part N"
+    # cues are added AFTER, so they're never touched.
     body_chunks = split_text(cbody, n)
     chunks = []
     for i, bc in enumerate(body_chunks, 1):
+        part_id = base_id if n == 1 else f"{base_id}_p{i}"
+        bc = punch_up(part_id, bc, config)
         if n == 1:
             # Single video: the hook REPLACES the title as the opener.
-            chunks.append(_opener(hook_line, bc) if hook_line
-                          else f"{ctitle}. {bc}")
+            text = _opener(hook_line, bc) if hook_line else f"{ctitle}. {bc}"
         elif i == 1:
             # First of a series: hook, then the title for context, then Part 1.
             lead = _opener(hook_line, ctitle) if hook_line else ctitle
-            chunks.append(f"{lead}. Part {i}. {bc}")
+            text = f"{lead}. Part {i}. {bc}"
         else:
-            chunks.append(f"{ctitle}. Part {i}. {bc}")
+            text = f"{ctitle}. Part {i}. {bc}"
+        # CTA goes on the final part only (never repeated across a series).
+        if outro_text and i == n:
+            text = f"{text} {outro_text}"
+        chunks.append(text)
 
     log.info("Selected (score %.2f): %s  [%d part(s)]",
              story["captivation_score"], story["title"], n)
 
     budget = sg.get("monthly_tts_char_budget", 110000)
-    base_id = story["post_id"]
     results = []
     completed_all = True
 

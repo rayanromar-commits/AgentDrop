@@ -125,6 +125,18 @@ def init_db() -> None:
             )
             """
         )
+        # AI retention-beat edits, cached per PART (key = part_id) so resumes /
+        # re-renders reuse the exact same narration without paying again. An
+        # empty string means "no usable edit — narrate the original body".
+        conn.execute(
+            """
+            CREATE TABLE IF NOT EXISTS punch_ups (
+                part_id     TEXT PRIMARY KEY,
+                text        TEXT,
+                created_at  TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )
+            """
+        )
         # --- lightweight migrations (idempotent) ---
         _add_column_if_missing(conn, "videos", "tiktok_id", "TEXT")
         _add_column_if_missing(conn, "channel_stats", "platform",
@@ -492,6 +504,32 @@ def save_hook(post_id: str, hook: str) -> None:
             "INSERT INTO hooks (post_id, hook) VALUES (?, ?) "
             "ON CONFLICT(post_id) DO UPDATE SET hook = excluded.hook",
             (post_id, hook),
+        )
+    conn.close()
+
+
+def get_punch_up(part_id: str) -> str | None:
+    """Return the cached retention-beat edit for a part.
+
+    Returns the stored string ("" means "use the original body" — a prior
+    decline/failure), or None if we've never run punch-up for this part.
+    """
+    conn = get_connection()
+    row = conn.execute(
+        "SELECT text FROM punch_ups WHERE part_id = ?", (part_id,)
+    ).fetchone()
+    conn.close()
+    return None if row is None else (row["text"] or "")
+
+
+def save_punch_up(part_id: str, text: str) -> None:
+    """Cache an edited part body (or "" to remember "no usable edit")."""
+    conn = get_connection()
+    with conn:
+        conn.execute(
+            "INSERT INTO punch_ups (part_id, text) VALUES (?, ?) "
+            "ON CONFLICT(part_id) DO UPDATE SET text = excluded.text",
+            (part_id, text),
         )
     conn.close()
 

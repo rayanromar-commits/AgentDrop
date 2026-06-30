@@ -77,6 +77,27 @@ def _get_api_key() -> str:
     return key
 
 
+def _is_punct_only(token: str) -> bool:
+    """True if the token has no letters/digits (e.g. a stray ',' or '--')."""
+    return not any(c.isalnum() for c in token)
+
+
+def _flush_word(words: list[dict], token: str, start, end) -> None:
+    """Append a finished token as a word, merging stray punctuation.
+
+    A punctuation-only token (a lone ',' '.' etc. — which happens when
+    cleaning strips a mention/link and leaves a dangling comma) is glued
+    onto the PREVIOUS word instead of becoming its own caption token. That
+    stops captions from starting with an orphan comma (", talk to her").
+    """
+    if _is_punct_only(token) and words:
+        prev = words[-1]
+        prev["word"] += token
+        prev["end"] = end
+        return
+    words.append({"word": token, "start": start, "end": end})
+
+
 def _chars_to_words(chars: list[str], starts: list[float], ends: list[float]):
     """Group per-character timings into per-word timings."""
     words = []
@@ -87,7 +108,7 @@ def _chars_to_words(chars: list[str], starts: list[float], ends: list[float]):
     for ch, st, en in zip(chars, starts, ends):
         if ch.isspace():
             if current:
-                words.append({"word": current, "start": word_start, "end": word_end})
+                _flush_word(words, current, word_start, word_end)
                 current = ""
                 word_start = None
             continue
@@ -97,7 +118,7 @@ def _chars_to_words(chars: list[str], starts: list[float], ends: list[float]):
         word_end = en
 
     if current:
-        words.append({"word": current, "start": word_start, "end": word_end})
+        _flush_word(words, current, word_start, word_end)
     return words
 
 
@@ -123,6 +144,11 @@ def synthesize(text: str, post_id: str, config: dict, voice: dict | None = None)
         "voice_settings": {
             "stability": vo.get("stability", 0.5),
             "similarity_boost": vo.get("similarity_boost", 0.75),
+            # Narration pace. ElevenLabs accepts 0.7-1.2 (1.0 = normal); a
+            # touch above 1.0 reads tighter/snappier. Because the audio is
+            # generated AT this speed, the returned word timings already
+            # match it, so captions stay in sync automatically.
+            "speed": vo.get("speed", 1.0),
         },
     }
 

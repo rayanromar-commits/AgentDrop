@@ -36,7 +36,10 @@ reddit_time_filter: day
 # --- SCREENING / FILTERING ------------------------------------------
 # A story must fall within this word count to be used.
 # Roughly 100-500 words ≈ a 30-60 second short.
-min_word_count: 100
+# min_word_count is set to keep EVERY video over ~1 minute: at ~165 words/min
+# (voice speed 1.08) a 180-word body + hook + outro CTA narrates to ~70s+.
+# Raising this means fewer short stories qualify — the trade for the 1min+ goal.
+min_word_count: 180
 max_word_count: 500
 
 # Skip posts flagged Not-Safe-For-Work by Reddit.
@@ -106,6 +109,10 @@ voiceover:
   model: eleven_turbo_v2_5    # cheaper/faster; good quality
   stability: 0.5              # 0-1: lower = more expressive, higher = steadier
   similarity_boost: 0.75      # 0-1: how closely to match the voice
+  speed: 1.08                 # narration pace. 0.7-1.2 (1.0 = normal). 1.08-1.12
+                              # reads noticeably snappier without sounding rushed.
+                              # Captions stay in sync automatically (timings come
+                              # back from ElevenLabs at this speed).
 
 # --- VIDEO / CAPTIONS -----------------------------------------------
 video:
@@ -144,6 +151,28 @@ captions:
 hook:
   enabled: true
   model: claude-opus-4-8   # smartest model; ~half a cent per video at 3/day
+
+# --- OUTRO CALL-TO-ACTION --------------------------------------------
+# A fixed closing line the narrator speaks (and that shows on screen,
+# since captions are synced to the narration) on the LAST part of each
+# story. Goal: turn watchers into commenters/sharers — the engagement
+# signal that pushes a video past the algorithm's first test audience.
+# Multi-part series get it on the final part only (never repeated).
+outro:
+  enabled: true
+  text: "Would you have done the same? Share your story in the comments."
+
+# --- SCRIPT RETENTION BEATS (AI, minimal & additive) -----------------
+# Before narration, Claude makes a LIGHT pass over each part's story body
+# and may insert only tiny connective/cliffhanger beats ("but it got
+# worse", "here's the part nobody believes") to keep viewers locked in.
+# It must NOT change, remove, or invent story facts; any edit that
+# shortens the text or grows it past ~25% is discarded and the original
+# is used. Fails safe (no key / error / package missing -> original text),
+# exactly like the hook. Needs ANTHROPIC_API_KEY. ~half a cent per part.
+punch_up:
+  enabled: true
+  model: claude-opus-4-8
 
 # --- REVIEW / APPROVAL ----------------------------------------------
 # "manual" = you approve every video before upload (SAFE DEFAULT).

@@ -80,6 +80,11 @@ def clean_str(text: str) -> str:
     # Remove subreddit and user mentions: r/foo, /r/foo, u/bar, /u/bar
     text = re.sub(r"/?[ru]/\w+", "", text)
 
+    # Stripping a mention/link before a comma leaves " ," — a dangling space
+    # before punctuation. Collapse it so narration doesn't pause oddly and
+    # captions never start on an orphan comma.
+    text = re.sub(r"\s+([,.;:!?])", r"\1", text)
+
     # Expand abbreviations into spoken words.
     text = _expand_abbreviations(text)
 
