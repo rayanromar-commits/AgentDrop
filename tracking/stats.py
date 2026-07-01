@@ -34,6 +34,11 @@ def refresh_stats() -> int:
     id_to_row = {r["youtube_id"]: r for r in uploaded if r["youtube_id"]}
     ids = list(id_to_row.keys())
 
+    # Deeper retention/shares metrics from the Analytics API (empty dict if the
+    # scope isn't granted yet — the snapshot still records Data-API stats).
+    from tracking.analytics import fetch_video_analytics
+    analytics = fetch_video_analytics(ids)
+
     updated = 0
     for i in range(0, len(ids), 50):
         batch = ids[i:i + 50]
@@ -43,6 +48,7 @@ def refresh_stats() -> int:
         for item in resp.get("items", []):
             row = id_to_row[item["id"]]
             s = item.get("statistics", {})
+            a = analytics.get(item["id"], {})
             db.record_stats(
                 post_id=row["post_id"],
                 youtube_id=item["id"],
@@ -50,9 +56,16 @@ def refresh_stats() -> int:
                 views=int(s.get("viewCount", 0)),
                 likes=int(s.get("likeCount", 0)),
                 comments=int(s.get("commentCount", 0)),
+                avg_view_pct=a.get("avg_view_pct"),
+                avg_view_seconds=a.get("avg_view_seconds"),
+                shares=a.get("shares"),
+                est_minutes_watched=a.get("est_minutes_watched"),
+                subscribers_gained=a.get("subscribers_gained"),
             )
             updated += 1
-    log.info("Refreshed stats for %d video(s).", updated)
+    log.info("Refreshed stats for %d video(s)%s.", updated,
+             " (with Analytics retention/shares)" if analytics else
+             " (Data API only — grant yt-analytics.readonly for completion/shares)")
     return updated
 
 
@@ -96,10 +109,12 @@ def print_report() -> None:
         return
     print("\nPerformance by subreddit (best first, by age-normalized score):")
     print(f"  {'subreddit':22} {'score':>7} {'views/day':>10} "
-          f"{'avg views':>10} {'engmt':>7}  n")
+          f"{'avg views':>10} {'compl':>6} {'shares':>7} {'engmt':>7}  n")
     for sub, d in sorted(perf.items(), key=lambda kv: kv[1]["score"], reverse=True):
+        compl = f"{d['avg_completion']:.0f}%" if d.get("avg_completion") is not None else "  -"
         print(f"  r/{sub:20} {d['score']:7.1f} {d['avg_views_per_day']:10.1f} "
-              f"{d['avg_views']:10.0f} {d['engagement_rate'] * 100:6.1f}% {d['n']:>3}")
+              f"{d['avg_views']:10.0f} {compl:>6} {d.get('avg_shares', 0):7.1f} "
+              f"{d['engagement_rate'] * 100:6.1f}% {d['n']:>3}")
 
 
 if __name__ == "__main__":

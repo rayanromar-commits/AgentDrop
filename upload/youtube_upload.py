@@ -27,24 +27,38 @@ CLIENT_SECRET = PROJECT_ROOT / "client_secret.json"
 TOKEN_FILE = PROJECT_ROOT / "token.json"
 
 # Scopes = exactly what we're allowed to do. upload = post videos,
-# readonly = pull stats later (Step 9). Requesting both now avoids
-# having to re-authorize later.
+# readonly = pull view/like/comment stats, yt-analytics.readonly = pull
+# retention/completion/shares from the Analytics API. Adding a scope means
+# the existing token.json must be re-authorized once (delete it + re-run, or
+# re-auth and update Railway's GOOGLE_TOKEN_JSON). See tracking/analytics.py.
 SCOPES = [
     "https://www.googleapis.com/auth/youtube.upload",
     "https://www.googleapis.com/auth/youtube.readonly",
+    "https://www.googleapis.com/auth/yt-analytics.readonly",
 ]
 
 
-def get_authenticated_service():
-    """Return an authorized YouTube API client (runs OAuth if needed)."""
+def get_credentials():
+    """Return valid OAuth credentials, running the browser flow if needed.
+
+    Shared by every Google API client (Data API + Analytics API) so they use
+    one token. Saves/refreshes token.json exactly as before.
+    """
     from google.auth.transport.requests import Request
     from google.oauth2.credentials import Credentials
     from google_auth_oauthlib.flow import InstalledAppFlow
-    from googleapiclient.discovery import build
 
     creds = None
     if TOKEN_FILE.exists():
-        creds = Credentials.from_authorized_user_file(str(TOKEN_FILE), SCOPES)
+        # Load with the token's OWN granted scopes — do NOT force SCOPES here.
+        # If we passed the full SCOPES list, refreshing a token that predates a
+        # newly-added scope (e.g. yt-analytics.readonly) fails with
+        # invalid_scope and would break uploads + stats. The full SCOPES list is
+        # only needed for a fresh authorization (the flow below), which is when
+        # the new scope actually gets granted. Until the user re-auths, the old
+        # token keeps working for upload/readonly and Analytics calls just 403
+        # (handled gracefully in tracking/analytics.py).
+        creds = Credentials.from_authorized_user_file(str(TOKEN_FILE))
 
     if not creds or not creds.valid:
         if creds and creds.expired and creds.refresh_token:
@@ -63,7 +77,21 @@ def get_authenticated_service():
         TOKEN_FILE.write_text(creds.to_json(), encoding="utf-8")
         log.info("Saved authorization token to %s", TOKEN_FILE.name)
 
-    return build("youtube", "v3", credentials=creds)
+    return creds
+
+
+def get_authenticated_service():
+    """Return an authorized YouTube Data API client (runs OAuth if needed)."""
+    from googleapiclient.discovery import build
+
+    return build("youtube", "v3", credentials=get_credentials())
+
+
+def get_analytics_service():
+    """Return an authorized YouTube Analytics API client (v2)."""
+    from googleapiclient.discovery import build
+
+    return build("youtubeAnalytics", "v2", credentials=get_credentials())
 
 
 def upload_video(video_row, config: dict) -> str:

@@ -152,6 +152,15 @@ def init_db() -> None:
                                "TEXT DEFAULT 'youtube'")
         _add_column_if_missing(conn, "video_stats", "platform",
                                "TEXT DEFAULT 'youtube'")
+        # YouTube Analytics API metrics (the Data API can't return these).
+        # avg_view_pct = completion % (0-100), the #1 Shorts ranking signal;
+        # shares = the spread signal; the rest add watch-time context. All
+        # nullable so old snapshots (Data-API-only) stay valid.
+        _add_column_if_missing(conn, "video_stats", "avg_view_pct", "REAL")
+        _add_column_if_missing(conn, "video_stats", "avg_view_seconds", "REAL")
+        _add_column_if_missing(conn, "video_stats", "shares", "INTEGER")
+        _add_column_if_missing(conn, "video_stats", "est_minutes_watched", "REAL")
+        _add_column_if_missing(conn, "video_stats", "subscribers_gained", "INTEGER")
 
         # ONE-TIME: when TikTok cross-posting was first switched on, the whole
         # back catalog had a NULL tiktok_id and would have been posted to TikTok
@@ -208,17 +217,28 @@ def next_rotation_index(key: str) -> int:
     return int(row["value"])
 
 
-def record_stats(post_id, youtube_id, subreddit, views, likes, comments):
-    """Save a performance snapshot for an uploaded video."""
+def record_stats(post_id, youtube_id, subreddit, views, likes, comments,
+                 avg_view_pct=None, avg_view_seconds=None, shares=None,
+                 est_minutes_watched=None, subscribers_gained=None):
+    """Save a performance snapshot for an uploaded video.
+
+    The first six fields come from the YouTube Data API (always present).
+    The trailing five come from the YouTube Analytics API and are None when
+    that scope isn't granted / the call fails — the row is still valid.
+    """
     conn = get_connection()
     with conn:
         conn.execute(
             """
             INSERT INTO video_stats
-                (post_id, youtube_id, subreddit, views, likes, comments)
-            VALUES (?, ?, ?, ?, ?, ?)
+                (post_id, youtube_id, subreddit, views, likes, comments,
+                 avg_view_pct, avg_view_seconds, shares,
+                 est_minutes_watched, subscribers_gained)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             """,
-            (post_id, youtube_id, subreddit, views, likes, comments),
+            (post_id, youtube_id, subreddit, views, likes, comments,
+             avg_view_pct, avg_view_seconds, shares,
+             est_minutes_watched, subscribers_gained),
         )
     conn.close()
 
@@ -228,19 +248,28 @@ def video_performance() -> list[dict]:
 
     Returns one dict per uploaded video with an age-normalized ``score``:
       views_per_day = latest views / days since the video was first tracked
-      engagement    = (likes + comments) / views
-      score         = views_per_day * (1 + 5 * engagement)
+      engagement    = (likes + comments + 3*shares) / views   (shares weighted
+                      heavily — they're the spread signal that breaks a video
+                      out of the subscriber bubble)
+      completion    = avg_view_pct / 100 (0-1), the #1 Shorts ranking signal
+      score         = views_per_day * (1 + 5*engagement) * completion_mult
+                      where completion_mult = 0.5 + completion (so a video
+                      people finish is worth up to 1.5x one they swipe off).
 
-    Age comes from the EARLIEST stats snapshot (a good proxy for upload
-    time, since stats are polled every 6h). Normalizing by age stops older
-    videos from looking "better" just because they've had more time to rack
-    up views; engagement nudges the score toward stories people react to.
+    When Analytics metrics are absent (scope not yet granted, or old rows),
+    shares count as 0 and completion_mult falls back to a neutral 1.0 — so the
+    score degrades gracefully to the old views+engagement behavior.
+
+    Age comes from the EARLIEST stats snapshot (a good proxy for upload time,
+    since stats are polled every 6h). Normalizing by age stops older videos
+    from looking "better" just because they've had more time to rack up views.
     """
     conn = get_connection()
     rows = conn.execute(
         """
         WITH latest AS (
             SELECT post_id, subreddit, views, likes, comments,
+                   avg_view_pct, avg_view_seconds, shares,
                    ROW_NUMBER() OVER (
                        PARTITION BY post_id ORDER BY fetched_at DESC) AS rn
             FROM video_stats
@@ -250,6 +279,7 @@ def video_performance() -> list[dict]:
             FROM video_stats GROUP BY post_id
         )
         SELECT l.post_id, l.subreddit, l.views, l.likes, l.comments,
+               l.avg_view_pct, l.avg_view_seconds, l.shares,
                (julianday('now') - julianday(f.first_at)) AS age_days
         FROM latest l
         JOIN firstseen f ON l.post_id = f.post_id
@@ -263,14 +293,21 @@ def video_performance() -> list[dict]:
         views = r["views"] or 0
         likes = r["likes"] or 0
         comments = r["comments"] or 0
+        shares = r["shares"] or 0
+        avg_view_pct = r["avg_view_pct"]        # None if no Analytics data yet
         # Floor age so a just-uploaded video can't show an infinite rate.
         age_days = max(float(r["age_days"] or 0), 0.5)
         views_per_day = views / age_days
-        engagement = (likes + comments) / max(views, 1)
-        score = views_per_day * (1 + 5 * engagement)
+        engagement = (likes + comments + 3 * shares) / max(views, 1)
+        # Completion multiplier: neutral (1.0) when we have no retention data.
+        completion = (avg_view_pct / 100.0) if avg_view_pct is not None else None
+        completion_mult = (0.5 + completion) if completion is not None else 1.0
+        score = views_per_day * (1 + 5 * engagement) * completion_mult
         out.append({
             "post_id": r["post_id"], "subreddit": r["subreddit"],
             "views": views, "likes": likes, "comments": comments,
+            "shares": shares, "avg_view_pct": avg_view_pct,
+            "avg_view_seconds": r["avg_view_seconds"],
             "age_days": age_days, "views_per_day": views_per_day,
             "engagement_rate": engagement, "score": score,
         })
@@ -292,11 +329,15 @@ def subreddit_performance() -> dict:
     out = {}
     for sub, vs in by_sub.items():
         n = len(vs)
+        # Completion averages only over videos that actually have retention data.
+        with_pct = [v["avg_view_pct"] for v in vs if v["avg_view_pct"] is not None]
         out[sub] = {
             "n": n,
             "avg_views": sum(v["views"] for v in vs) / n,
             "avg_views_per_day": sum(v["views_per_day"] for v in vs) / n,
             "engagement_rate": sum(v["engagement_rate"] for v in vs) / n,
+            "avg_completion": (sum(with_pct) / len(with_pct)) if with_pct else None,
+            "avg_shares": sum(v["shares"] for v in vs) / n,
             "score": sum(v["score"] for v in vs) / n,
         }
     return out

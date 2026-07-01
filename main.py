@@ -318,6 +318,15 @@ def start_scheduler(config: dict) -> None:
     def production_job():
         log.info("[scheduler] Production run (target buffer: %d queued videos).",
                  n_per_day)
+        # Pull the freshest performance data BEFORE ranking so story selection
+        # always uses the most up-to-date completion / shares / views available
+        # (not just whatever the last 6-hourly refresh happened to leave behind).
+        # Fail-safe: a stats hiccup must never block production.
+        try:
+            refresh_performance(config)
+        except Exception as e:
+            log.warning("[scheduler] pre-production stats refresh failed (%s); "
+                        "ranking on last known data.", e)
         while True:
             # Stop once enough videos are queued for the day's uploads.
             backlog = (len(db.videos_by_status("approved"))
