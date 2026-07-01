@@ -207,7 +207,11 @@ upload:
 # TIKTOK_CLIENT_SECRET in the env and a one-time authorization
 # (python3 -m upload.tiktok_auth).
 tiktok:
-  enabled: true              # ON: cross-posts to TikTok @storydropper1 (2026-06-30)
+  enabled: false             # PAUSED 2026-07-01: inbox mode needs manual tapping
+                             # (no automation payoff) + platform unvalidated + YouTube
+                             # not yet dialed in. Re-enable when (a) YouTube is steady
+                             # and (b) TikTok audit clears so 'direct' auto-publish works.
+                             # Was ON 2026-06-30 for @storydropper1.
   mode: inbox                # inbox  = push to TikTok drafts, you tap Post
                              #          (works BEFORE app audit) <-- CURRENT
                              # direct = auto-publish public (needs audit +
