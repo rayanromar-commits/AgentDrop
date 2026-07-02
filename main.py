@@ -192,7 +192,7 @@ def produce_one_video(config: dict):
 
         synthesize(chunk, part_id, config, voice=voice)
         db.record_tts_usage(part_id, char_count)
-        video_path = assemble_video(part_id, config)
+        video_path = assemble_video(part_id, config, subreddit=story.get("subreddit"))
 
         part_title = story["title"] if n == 1 else f"{story['title']} (Part {i}/{n})"
         part_story = {**story, "post_id": part_id, "title": part_title, "body": chunk}

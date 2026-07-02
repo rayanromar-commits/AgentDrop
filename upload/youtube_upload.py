@@ -35,6 +35,13 @@ SCOPES = [
     "https://www.googleapis.com/auth/youtube.upload",
     "https://www.googleapis.com/auth/youtube.readonly",
     "https://www.googleapis.com/auth/yt-analytics.readonly",
+    # force-ssl = edit existing videos (videos.update). Needed by
+    # upload/backfill_youtube_settings.py to blank descriptions / strip tags /
+    # set the Entertainment category on already-posted videos. Adding this
+    # scope requires a ONE-TIME re-auth (delete token.json + re-run, or re-auth
+    # and update Railway's GOOGLE_TOKEN_JSON) — until then the old token keeps
+    # working for upload/readonly/analytics and only videos.update 403s.
+    "https://www.googleapis.com/auth/youtube.force-ssl",
 ]
 
 

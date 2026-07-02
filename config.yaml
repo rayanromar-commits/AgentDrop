@@ -197,8 +197,8 @@ upload:
     - "19:00"
   privacy_status: public      # private | unlisted | public
                               # PUBLIC: uploads are visible to everyone.
-  category_id: "22"           # YouTube category. 22 = People & Blogs,
-                              # 24 = Entertainment, 27 = Education.
+  category_id: "24"           # 24 = Entertainment (always, per channel policy).
+                              # 22 = People & Blogs, 27 = Education.
   made_for_kids: false        # almost always false for these
 
 # --- TIKTOK CROSS-POSTING -------------------------------------------

@@ -1,16 +1,15 @@
 """
-Generate YouTube title / description / hashtags from a story.
+Generate YouTube + TikTok metadata from a story.
 
-Includes a credit line to the source subreddit (see COPYRIGHT_NOTES.md)
-and #Shorts so YouTube treats it as a Short.
+YouTube (per 2026-07-01 channel policy) gets a short title, a BLANK
+description, and NO tags — source credit is burned on-screen as an
+"r/subreddit" caption instead (see video/assemble.py, COPYRIGHT_NOTES.md).
+TikTok still uses inline hashtags in its caption.
 """
 
 import re
 
-# Generic tags that help discovery for this niche.
-BASE_TAGS = ["Shorts", "reddit", "redditstories", "storytime", "redditreadings"]
-
-# Map subreddits to a couple of extra relevant tags.
+# Map subreddits to a couple of extra relevant tags (TikTok captions only).
 SUBREDDIT_TAGS = {
     "AmItheAsshole": ["aita", "amitheasshole"],
     "tifu": ["tifu"],
@@ -34,27 +33,21 @@ def _clean_title(title: str, max_len: int = 95) -> str:
 
 
 def generate_metadata(story: dict) -> dict:
-    """Return {title, description, tags} for a story."""
-    sub = story.get("subreddit", "")
+    """Return {title, description, tags} for a story.
+
+    Channel policy (set 2026-07-01): short punchy titles, NO hashtags, a
+    completely BLANK description, and NO tags. YouTube's recommendation
+    engine classifies Shorts by the video itself (vertical + <3min), so we
+    feed it zero metadata to bias against and let it categorize naturally.
+    Source credit lives as an on-screen "r/subreddit" caption in the video,
+    not in the description. Category is forced to Entertainment via config.
+    """
     title = _clean_title(story["title"])
 
-    # YouTube titles benefit from a #Shorts tag in the title itself.
-    yt_title = f"{title} #Shorts"
-
-    tags = BASE_TAGS + SUBREDDIT_TAGS.get(sub, [])
-    hashtags = " ".join(f"#{re.sub(r'[^A-Za-z0-9]', '', t)}" for t in tags[:6])
-
-    credit = f"Story from r/{sub} — credit to the original poster." if sub else ""
-    description = (
-        f"{title}\n\n"
-        f"{credit}\n\n"
-        f"{hashtags}"
-    ).strip()
-
     return {
-        "title": yt_title,
-        "description": description,
-        "tags": ", ".join(tags),
+        "title": title,       # short & sweet, no #Shorts / no hashtags
+        "description": "",     # intentionally blank — no metadata to bias YouTube
+        "tags": "",            # no tags at all
     }
 
 

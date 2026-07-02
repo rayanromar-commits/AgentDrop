@@ -70,14 +70,25 @@ def _fmt_time(seconds: float) -> str:
     return f"{h}:{m:02d}:{s:02d}.{cs:02d}"
 
 
-def build_captions_ass(words: list[dict], config: dict, out_path: Path) -> None:
-    """Write an .ass subtitle file with word-synced, Shorts-style captions."""
+def build_captions_ass(words: list[dict], config: dict, out_path: Path,
+                       subreddit: str | None = None) -> None:
+    """Write an .ass subtitle file with word-synced, Shorts-style captions.
+
+    If `subreddit` is given, also burns a small, static "r/<subreddit>" credit
+    in a bottom corner for the whole video (source attribution that is shown
+    but never spoken — the description is intentionally blank).
+    """
     cap = config["captions"]
     vid = config["video"]
     n = max(1, int(cap.get("words_per_caption", 3)))
 
     # ASS alignment: 5 = middle-center, 2 = bottom-center.
     alignment = 5 if cap.get("position", "center") == "center" else 2
+
+    # Credit style: small, semi-transparent white, bottom-right (align 3),
+    # thin black outline so it stays legible on any footage. Alpha byte 40
+    # (&H40..) ≈ 75% opaque — present but unobtrusive.
+    credit_font_size = max(28, int(cap.get("font_size", 90) * 0.42))
 
     header = f"""[Script Info]
 ScriptType: v4.00+
@@ -88,6 +99,7 @@ WrapStyle: 0
 [V4+ Styles]
 Format: Name, Fontname, Fontsize, PrimaryColour, OutlineColour, BackColour, Bold, Italic, BorderStyle, Outline, Shadow, Alignment, MarginL, MarginR, MarginV, Encoding
 Style: Caption,{cap.get('font','Arial')},{cap.get('font_size',90)},&H00FFFFFF,&H00000000,&H00000000,1,0,1,{cap.get('outline_width',6)},{cap.get('shadow',0)},{alignment},60,60,0,1
+Style: Credit,{cap.get('font','Arial')},{credit_font_size},&H40FFFFFF,&H40000000,&H00000000,0,0,1,3,0,3,40,40,40,1
 
 [Events]
 Format: Layer, Start, End, Style, MarginL, MarginR, MarginV, Effect, Text
@@ -116,11 +128,23 @@ Format: Layer, Start, End, Style, MarginL, MarginR, MarginV, Effect, Text
             f"Dialogue: 0,{_fmt_time(start)},{_fmt_time(end)},Caption,,0,0,0,,{pop}{text}"
         )
 
+    # Static source credit for the whole video (bottom corner, never spoken).
+    if subreddit:
+        total_end = max((w["end"] for w in words), default=0.0)
+        sub = str(subreddit).replace("\\", "").replace("{", "(").replace("}", ")")
+        lines.append(
+            f"Dialogue: 0,{_fmt_time(0)},{_fmt_time(total_end)},Credit,,0,0,0,,r/{sub}"
+        )
+
     out_path.write_text("\n".join(lines), encoding="utf-8")
 
 
-def assemble_video(post_id: str, config: dict) -> Path:
-    """Build the final MP4 for a story whose voiceover already exists."""
+def assemble_video(post_id: str, config: dict, subreddit: str | None = None) -> Path:
+    """Build the final MP4 for a story whose voiceover already exists.
+
+    `subreddit` (optional) burns a small "r/<subreddit>" source credit in a
+    bottom corner of the video.
+    """
     OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
 
     audio_path = VOICE_DIR / f"{post_id}.mp3"
@@ -136,7 +160,7 @@ def assemble_video(post_id: str, config: dict) -> Path:
     # so the subtitles filter can reference it by a simple filename
     # (avoids fussy path-escaping in the filtergraph).
     ass_path = OUTPUT_DIR / f"{post_id}.ass"
-    build_captions_ass(words, config, ass_path)
+    build_captions_ass(words, config, ass_path, subreddit=subreddit)
 
     bg_clip = next_clip()
     log.info("Using background clip: %s", bg_clip.name)
@@ -209,6 +233,6 @@ if __name__ == "__main__":
         sys.exit(1)
 
     log.info("Assembling video for: %s", chosen["title"])
-    final = assemble_video(chosen["post_id"], cfg)
+    final = assemble_video(chosen["post_id"], cfg, subreddit=chosen.get("subreddit"))
     print(f"\nFinished video: {final}")
     print("Open it with:  open '%s'" % final)

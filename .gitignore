@@ -33,3 +33,7 @@ footage/*.mov
 # Compressed, render-ready footage (1080x1920, audio stripped). These are
 # small enough to commit and are what the cloud uses (see footage_library).
 # The raw 4K masters in footage/ stay ignored above.
+
+# token backups (secrets)
+token.json.bak
+token.json*
