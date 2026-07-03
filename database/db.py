@@ -137,6 +137,19 @@ def init_db() -> None:
             )
             """
         )
+        # AI-generated YouTube title (exaggerated/superlative), cached per STORY
+        # (key = post_id, the base story id) so every part of a series shares the
+        # same base title and re-renders don't regenerate. "" = a prior
+        # decline/failure -> fall back to the cleaned raw story title.
+        conn.execute(
+            """
+            CREATE TABLE IF NOT EXISTS titles (
+                post_id     TEXT PRIMARY KEY,
+                title       TEXT,
+                created_at  TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )
+            """
+        )
         # AI voice-direction: the narration body with ElevenLabs v3 audio tags
         # (e.g. [scoffs], [sighs]) inserted. Cached per PART (key = part_id) so
         # resumes / re-renders reuse the exact same tagged text without paying
@@ -614,6 +627,32 @@ def save_punch_up(part_id: str, text: str) -> None:
             "INSERT INTO punch_ups (part_id, text) VALUES (?, ?) "
             "ON CONFLICT(part_id) DO UPDATE SET text = excluded.text",
             (part_id, text),
+        )
+    conn.close()
+
+
+def get_title(post_id: str) -> str | None:
+    """Return the cached AI title for a story.
+
+    Returns the stored string ("" means "use the raw title" — a prior
+    decline/failure), or None if we've never generated a title for this story.
+    """
+    conn = get_connection()
+    row = conn.execute(
+        "SELECT title FROM titles WHERE post_id = ?", (post_id,)
+    ).fetchone()
+    conn.close()
+    return None if row is None else (row["title"] or "")
+
+
+def save_title(post_id: str, title: str) -> None:
+    """Cache an AI title (or "" to remember "no usable title")."""
+    conn = get_connection()
+    with conn:
+        conn.execute(
+            "INSERT INTO titles (post_id, title) VALUES (?, ?) "
+            "ON CONFLICT(post_id) DO UPDATE SET title = excluded.title",
+            (post_id, title),
         )
     conn.close()
 

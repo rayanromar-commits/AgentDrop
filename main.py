@@ -44,6 +44,7 @@ def produce_one_video(config: dict):
     from processing.rank import rank_stories
     from processing.split import num_parts, split_text
     from processing.hook import generate_hook
+    from processing.title import generate_title
     from processing.punch_up import punch_up
     from processing.voice_direction import add_voice_direction
     from voiceover.tts import synthesize, choose_voice
@@ -124,6 +125,15 @@ def produce_one_video(config: dict):
     hook_line = generate_hook(story["post_id"], ctitle, cbody,
                               story["subreddit"], config)
 
+    # Write an EXAGGERATED, superlative YouTube title (one per story, cached).
+    # This is the DISPLAY title only — it drives homepage CTR and is NEVER
+    # spoken; the narration keeps using the real story title (ctitle) for
+    # context. Falls back to the raw title on any problem — see
+    # processing/title.py.
+    ai_title = generate_title(story["post_id"], ctitle, cbody,
+                              story["subreddit"], config)
+    display_title = ai_title or story["title"]
+
     def _opener(text: str, rest: str) -> str:
         """Join an opening line to the rest, avoiding doubled punctuation."""
         text = text.strip()
@@ -197,7 +207,7 @@ def produce_one_video(config: dict):
         db.record_tts_usage(part_id, char_count)
         video_path = assemble_video(part_id, config, subreddit=story.get("subreddit"))
 
-        part_title = story["title"] if n == 1 else f"{story['title']} (Part {i}/{n})"
+        part_title = display_title if n == 1 else f"{display_title} (Part {i}/{n})"
         part_story = {**story, "post_id": part_id, "title": part_title, "body": chunk}
         result = submit_video(part_story, video_path, config)
         results.append(result)

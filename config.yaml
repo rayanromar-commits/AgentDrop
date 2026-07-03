@@ -171,6 +171,19 @@ hook:
   enabled: true
   model: claude-opus-4-8   # smartest model; ~half a cent per video at 3/day
 
+# --- TITLE (YouTube homepage CTR) ------------------------------------
+# The raw Reddit title is a flat summary ("Airport no pickup"). Claude
+# rewrites it as a SHORT, EXAGGERATED, superlative line ("The Most
+# ENTITLED Airport Demand Ever!") — the title is a top CTR/discovery
+# lever and shows on the homepage shelf. DISPLAY only: never spoken (the
+# narration keeps the real story title for context). One per story,
+# cached; multi-part series share the base title + "(Part i/n)". Honors
+# the video-settings policy (short, caps + punctuation, NO hashtags).
+# Fails safe (no key / error / SKIP -> raw title). Needs ANTHROPIC_API_KEY.
+title:
+  enabled: true
+  model: claude-opus-4-8
+
 # --- OUTRO CALL-TO-ACTION --------------------------------------------
 # A fixed closing line the narrator speaks (and that shows on screen,
 # since captions are synced to the narration) on the LAST part of each
