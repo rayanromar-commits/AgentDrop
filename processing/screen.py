@@ -123,11 +123,17 @@ def screen_story(story: dict, config: dict) -> tuple[bool, list[str]]:
     word_count = len(cleaned.split())
 
     # 2. Length window. With splitting enabled, long stories are allowed
-    #    (they'll be cut into parts) up to words_per_part * max_parts.
+    #    (they'll be cut into parts) up to words_per_part * max_parts. When the
+    #    condense pass is on, allow even longer stories through — they'll be
+    #    tightened down to the ceiling at production instead of skipped — up to
+    #    condense.max_source_words (beyond which condensing would gut the story).
     lo = config["min_word_count"]
     split_cfg = config.get("splitting", {})
     if split_cfg.get("enabled"):
         hi = split_cfg.get("words_per_part", 375) * split_cfg.get("max_parts", 8)
+        ccfg = config.get("condense", {})
+        if ccfg.get("enabled"):
+            hi = max(hi, ccfg.get("max_source_words", 1200))
     else:
         hi = config["max_word_count"]
     if word_count < lo:

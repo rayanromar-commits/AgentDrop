@@ -219,6 +219,19 @@ voice_direction:
   enabled: true
   model: claude-opus-4-8
 
+# Auto-shorten: if a story is longer than the part cap allows
+# (splitting.words_per_part * splitting.max_parts ≈ 360 words), Claude tightens
+# it down to fit — keeping the whole arc and the ending — instead of the story
+# being SKIPPED. Paste stories you like even if they're a bit long; this trims
+# them. Stories longer than max_source_words are still skipped (too long to
+# condense without gutting). Fails safe (no key / error / guard reject -> the
+# story is left as-is, and may then be skipped). Needs ANTHROPIC_API_KEY.
+condense:
+  enabled: true
+  model: claude-opus-4-8
+  max_source_words: 1200   # screen: allow stories up to this (they'll be
+                           # condensed); longer than this is rejected.
+
 # --- REVIEW / APPROVAL ----------------------------------------------
 # "manual" = you approve every video before upload (SAFE DEFAULT).
 # "auto"   = uploads automatically with no approval. Don't switch to

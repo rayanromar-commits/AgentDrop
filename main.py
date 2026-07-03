@@ -47,6 +47,7 @@ def produce_one_video(config: dict):
     from processing.title import generate_title
     from processing.punch_up import punch_up
     from processing.voice_direction import add_voice_direction
+    from processing.condense import condense_body
     from voiceover.tts import synthesize, choose_voice
     from video.assemble import assemble_video
     from review.queue import submit_video
@@ -106,6 +107,13 @@ def produce_one_video(config: dict):
     # Decide how many parts this story becomes.
     split_cfg = config.get("splitting", {})
     if split_cfg.get("enabled"):
+        # If the story is over the part cap's word ceiling, tighten it to fit
+        # (Claude shortens it, keeping the arc) instead of skipping it. Cached;
+        # fails safe to the original body (which may then still be skipped).
+        ceiling = split_cfg.get("words_per_part", 375) * split_cfg.get("max_parts", 8)
+        if words > ceiling:
+            cbody = condense_body(story["post_id"], ctitle, cbody, ceiling, config)
+            words = len(f"{ctitle} {cbody}".split())
         n = num_parts(words, split_cfg.get("words_per_part", 375),
                       split_cfg.get("max_parts", 8))
         if n is None:

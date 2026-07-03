@@ -137,6 +137,17 @@ def init_db() -> None:
             )
             """
         )
+        # AI-condensed story body (shortened to fit the part cap), cached per
+        # STORY (key = post_id). "" = a prior decline/failure -> use the raw body.
+        conn.execute(
+            """
+            CREATE TABLE IF NOT EXISTS condensed (
+                post_id     TEXT PRIMARY KEY,
+                text        TEXT,
+                created_at  TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )
+            """
+        )
         # AI-generated YouTube title (exaggerated/superlative), cached per STORY
         # (key = post_id, the base story id) so every part of a series shares the
         # same base title and re-renders don't regenerate. "" = a prior
@@ -627,6 +638,32 @@ def save_punch_up(part_id: str, text: str) -> None:
             "INSERT INTO punch_ups (part_id, text) VALUES (?, ?) "
             "ON CONFLICT(part_id) DO UPDATE SET text = excluded.text",
             (part_id, text),
+        )
+    conn.close()
+
+
+def get_condensed(post_id: str) -> str | None:
+    """Return the cached condensed body for a story.
+
+    Returns the stored string ("" means "use the raw body" — a prior
+    decline/failure), or None if we've never condensed this story.
+    """
+    conn = get_connection()
+    row = conn.execute(
+        "SELECT text FROM condensed WHERE post_id = ?", (post_id,)
+    ).fetchone()
+    conn.close()
+    return None if row is None else (row["text"] or "")
+
+
+def save_condensed(post_id: str, text: str) -> None:
+    """Cache a condensed body (or "" to remember "no usable condense")."""
+    conn = get_connection()
+    with conn:
+        conn.execute(
+            "INSERT INTO condensed (post_id, text) VALUES (?, ?) "
+            "ON CONFLICT(post_id) DO UPDATE SET text = excluded.text",
+            (post_id, text),
         )
     conn.close()
 
