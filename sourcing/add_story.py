@@ -76,11 +76,11 @@ def add_one() -> Path | None:
     print(f"\n✅ Saved {path.name}  ({word_count} words)")
     if word_count < 100:
         print(f"   ⚠️  Only {word_count} words — the screener may skip it (too short).")
-    elif word_count > 400:
+    elif word_count > 120:
         import math
-        parts = math.ceil(word_count / 375)
-        print(f"   ℹ️  ~{word_count} words → will auto-split into about {parts} parts "
-              "(Part 1, Part 2, ...).")
+        parts = math.ceil(word_count / 120)  # words_per_part in config.yaml
+        print(f"   ℹ️  ~{word_count} words → auto-splits into about {parts} parts "
+              "(~50s each, Part 1, Part 2, ...).")
     return path
 
 
