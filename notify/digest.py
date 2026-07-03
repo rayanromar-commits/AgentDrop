@@ -18,7 +18,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 from agentdrop_common import setup_logging
 from database import db
 from notify.slack import send_slack
-from sourcing.manual_source import unused_story_count
+from sourcing.manual_source import restock_status
 from tracking.stats import fetch_channel_stats, refresh_stats
 
 log = setup_logging()
@@ -46,7 +46,7 @@ def build_digest(config: dict) -> str:
     """Gather metrics and return the Slack message text."""
     ncfg = config.get("notifications", {})
     top_n = ncfg.get("top_n", 3)
-    restock_threshold = ncfg.get("restock_threshold", 5)
+    restock_min_days = ncfg.get("restock_min_days", 4)
 
     # Refresh the snapshots the digest reads from.
     refresh_stats()             # per-video views/likes/comments
@@ -81,10 +81,17 @@ def build_digest(config: dict) -> str:
                     if v["youtube_id"] else "")
             lines.append(f"{i}. {title} — {v['views']:,} views  {link}".rstrip())
 
-    unused = unused_story_count()
-    lines += ["", f"*Unused stories:* {unused}"]
-    if unused <= restock_threshold:
-        lines.append(f"⚠️ *Restock soon* — only {unused} stories left to produce.")
+    rs = restock_status(config)
+    lines += [
+        "",
+        f"*Queue:* {rs['stories']} stories ≈ *{rs['uploads']} uploads* "
+        f"≈ {rs['days_runway']} days at {rs['uploads_per_day']}/day",
+    ]
+    if rs["days_runway"] <= restock_min_days:
+        lines.append(
+            f"⚠️ *Restock soon* — only ~{rs['days_runway']} days of uploads left "
+            f"({rs['uploads']} videos). Add more stories."
+        )
 
     return "\n".join(lines)
 

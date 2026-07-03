@@ -19,16 +19,21 @@ def notify_failed(stage: str, detail: str) -> None:
     send_slack(f"⚠️ *{stage} failed* — {detail}")
 
 
-def notify_low_stock(remaining: int, threshold: int) -> None:
-    """Ping Slack the moment unused stories hit/cross the restock threshold.
+def notify_low_stock(status: dict, min_days: float) -> None:
+    """Ping Slack when the queue's RUNWAY drops to/below `min_days`.
 
-    Fires at posting time (not just in the daily digest) so a restock can
-    happen before the queue runs dry — repetitive/duplicate content is what
-    gets a channel throttled. Sends one nudge per post while at or below the
-    threshold, so the reminder escalates as the count keeps dropping.
+    Measured in UPLOADS/days, not stories — a story fans out into ~3 videos, so
+    upload runway is the truer signal. `status` is sourcing.manual_source.
+    restock_status(): {stories, uploads, uploads_per_day, days_runway}. Fires at
+    posting time (not just the daily digest) so a restock can happen before the
+    queue runs dry; one nudge per post while at/below the threshold, so it
+    escalates as the runway keeps shrinking.
     """
-    if remaining > threshold:
+    if status["days_runway"] > min_days:
         return
-    tail = ("*out of stories* — produce/queue more now." if remaining <= 0
-            else f"only *{remaining}* unused {'story' if remaining == 1 else 'stories'} left.")
+    if status["uploads"] <= 0:
+        tail = "*out of uploads* — produce/queue more stories now."
+    else:
+        tail = (f"only *{status['uploads']}* uploads (~{status['days_runway']} "
+                f"days) left across {status['stories']} stories.")
     send_slack(f"📉 *Restock stories* — {tail}")

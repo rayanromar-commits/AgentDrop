@@ -238,7 +238,7 @@ def upload_next_approved(config: dict):
     from pathlib import Path
     from upload.youtube_upload import upload_video
     from notify.events import notify_posted, notify_failed, notify_low_stock
-    from sourcing.manual_source import archive_story, unused_story_count
+    from sourcing.manual_source import archive_story, restock_status
     db.init_db()
     for row in db.videos_missing_platform("youtube"):
         if not Path(row["file_path"]).exists():
@@ -254,9 +254,9 @@ def upload_next_approved(config: dict):
             # repetitive-content penalties that throttle a channel). If a
             # story was actually retired, nudge Slack when stock runs low.
             if archive_story(row["post_id"]):
-                threshold = config.get("notifications", {}).get(
-                    "restock_threshold", 5)
-                notify_low_stock(unused_story_count(), threshold)
+                min_days = config.get("notifications", {}).get(
+                    "restock_min_days", 4)
+                notify_low_stock(restock_status(config), min_days)
             return vid
         except Exception as e:
             log.error("[youtube] upload failed for %s: %s", row["post_id"], e)
@@ -271,7 +271,7 @@ def upload_next_tiktok(config: dict):
     from pathlib import Path
     from upload.tiktok_upload import upload_video_tiktok
     from notify.events import notify_posted, notify_failed, notify_low_stock
-    from sourcing.manual_source import archive_story, unused_story_count
+    from sourcing.manual_source import archive_story, restock_status
     db.init_db()
     if not config.get("tiktok", {}).get("enabled"):
         log.info("TikTok disabled in config; skipping.")
@@ -286,9 +286,9 @@ def upload_next_tiktok(config: dict):
             notify_posted(where, row["title"])
             # Idempotent: no-op if YouTube already archived this story.
             if archive_story(row["post_id"]):
-                threshold = config.get("notifications", {}).get(
-                    "restock_threshold", 5)
-                notify_low_stock(unused_story_count(), threshold)
+                min_days = config.get("notifications", {}).get(
+                    "restock_min_days", 4)
+                notify_low_stock(restock_status(config), min_days)
             return pid
         except Exception as e:
             log.error("[tiktok] upload failed for %s: %s", row["post_id"], e)

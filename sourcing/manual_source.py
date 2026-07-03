@@ -14,6 +14,7 @@ The file name (without .txt) is used as the unique post id, so each
 file is only ever used once (dedup works just like with Reddit).
 """
 
+import math
 import re
 import sys
 from pathlib import Path
@@ -125,17 +126,70 @@ def fetch_stories(config: dict, skip_seen: bool = True) -> list[dict]:
     return stories
 
 
+def _unused_paths() -> list[Path]:
+    """Top-level .txt stories not yet produced (unseen post_id)."""
+    from database import db
+    if not STORIES_DIR.exists():
+        return []
+    return [
+        p for p in STORIES_DIR.glob("*.txt")
+        if not db.post_already_seen("manual_" + p.stem)
+    ]
+
+
 def unused_story_count() -> int:
     """How many manual stories haven't been produced yet (restock signal).
 
     Counts .txt files whose post_id we haven't already seen/used. Mirrors the
     skip_seen filter in fetch_stories() but without the per-call logging.
     """
-    from database import db
+    return len(_unused_paths())
 
-    if not STORIES_DIR.exists():
+
+def _story_total_words(path: Path) -> int:
+    """Word count of a story file (title + body), skipping the subreddit line."""
+    lines = [l for l in path.read_text(encoding="utf-8").splitlines() if l.strip()]
+    if not lines:
         return 0
-    return sum(
-        1 for path in STORIES_DIR.glob("*.txt")
-        if not db.post_already_seen("manual_" + path.stem)
-    )
+    title, rest = lines[0], lines[1:]
+    if rest and rest[0].lower().startswith("subreddit:"):
+        rest = rest[1:]
+    return len((title + " " + " ".join(rest)).split())
+
+
+def _parts_for(total_words: int, config: dict) -> int:
+    """How many uploads (parts) a story becomes — mirrors the production logic.
+
+    0 means the story would be SKIPPED (too long even to condense).
+    """
+    split_cfg = (config or {}).get("splitting", {})
+    if not split_cfg.get("enabled"):
+        return 1
+    wpp = split_cfg.get("words_per_part", 120)
+    maxp = split_cfg.get("max_parts", 3)
+    ceiling = wpp * maxp
+    if total_words <= ceiling:
+        return max(1, math.ceil(total_words / wpp))
+    ccfg = (config or {}).get("condense", {})
+    if ccfg.get("enabled") and total_words <= ccfg.get("max_source_words", 1200):
+        return maxp                      # condensed down to fit the cap
+    return 0                             # too long -> skipped
+
+
+def unused_upload_count(config: dict) -> int:
+    """Total UPLOADS (videos) the unused stories will produce.
+
+    Each story fans out into multiple parts, so uploads is the truer runway
+    measure than story count. Skipped (too-long) stories contribute 0.
+    """
+    return sum(_parts_for(_story_total_words(p), config) for p in _unused_paths())
+
+
+def restock_status(config: dict) -> dict:
+    """Runway snapshot: stories, uploads, uploads/day, and days of runway."""
+    stories = unused_story_count()
+    uploads = unused_upload_count(config)
+    per_day = len((config or {}).get("upload", {}).get("upload_times", [])) or 3
+    days = round(uploads / per_day, 1) if per_day else 0.0
+    return {"stories": stories, "uploads": uploads,
+            "uploads_per_day": per_day, "days_runway": days}

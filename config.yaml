@@ -302,7 +302,9 @@ notifications:
   channel: slack             # slack (email support can be added later)
   digest_time: "20:00"       # 24h clock, Central (uses the scheduler timezone)
   top_n: 3                   # how many top videos to list
-  restock_threshold: 5       # warn when unused stories <= this many
+  restock_min_days: 4        # warn when the queue's UPLOAD runway (not story
+                             # count) drops to this many days or fewer. Each
+                             # story ≈ 3 uploads, so runway = uploads ÷ posts/day.
 
 # --- SPENDING SAFEGUARDS (hard limits the agent will not cross) -----
 safeguards:
