@@ -74,13 +74,17 @@ def add_one() -> Path | None:
 
     word_count = len(body.split())
     print(f"\n✅ Saved {path.name}  ({word_count} words)")
+    # config.yaml: words_per_part=120, max_parts=3 -> a ~360-word ceiling.
     if word_count < 100:
         print(f"   ⚠️  Only {word_count} words — the screener may skip it (too short).")
+    elif word_count > 360:
+        print(f"   ⛔ {word_count} words is OVER the ~360-word limit — this story "
+              "will be SKIPPED (max 3 parts). Trim it to <=360 words.")
     elif word_count > 120:
         import math
-        parts = math.ceil(word_count / 120)  # words_per_part in config.yaml
-        print(f"   ℹ️  ~{word_count} words → auto-splits into about {parts} parts "
-              "(~50s each, Part 1, Part 2, ...).")
+        parts = math.ceil(word_count / 120)
+        print(f"   ℹ️  ~{word_count} words → auto-splits into {parts} parts "
+              "(~50s each).")
     return path
 
 

@@ -94,10 +94,11 @@ splitting:
                          # stays under the 1-minute hard cap. Lowered from 375
                          # (~2:15/part) on 2026-07-02. split_text balances into
                          # EQUAL parts, so no part ever exceeds ~120 words.
-  max_parts: 8           # stories needing more parts than this are skipped.
-                         # At 120 w/part a 500-word story -> ~5 parts. If we
-                         # want LESS fragmentation (fewer parts/story), lower
-                         # this — but it makes long stories get skipped.
+  max_parts: 3           # HARD CAP (user 2026-07-03): no story becomes more
+                         # than 3 videos — less fragmentation, fewer weak later
+                         # parts. At 120 w/part this = a ~360-WORD CEILING:
+                         # stories longer than that are SKIPPED (not truncated),
+                         # so source/trim stories to <=360 words (100-350 ideal).
 
 # --- VOICEOVER (TTS = Text To Speech) -------------------------------
 voiceover:
