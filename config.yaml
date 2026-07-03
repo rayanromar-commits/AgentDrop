@@ -120,7 +120,12 @@ voiceover:
   # Fallback single voice (used only if the 'voices' list above is empty).
   voice_id: 21m00Tcm4TlvDq8ikWAM
   voice_name: Rachel          # just a human-readable label for logs
-  model: eleven_turbo_v2_5    # cheaper/faster; good quality
+  model: eleven_v3            # expressive model that PERFORMS inline audio tags
+                              # ([sighs], [scoffs], ...) inserted by the
+                              # voice_direction pass — sounds like a real person,
+                              # not flat TTS. Verified to return word timestamps
+                              # so captions stay in sync. If a request errors,
+                              # tts.py falls back once to eleven_turbo_v2_5.
   stability: 0.5              # 0-1: lower = more expressive, higher = steadier
   similarity_boost: 0.75      # 0-1: how closely to match the voice
   speed: 1.08                 # narration pace. 0.7-1.2 (1.0 = normal). 1.08-1.12
@@ -185,6 +190,18 @@ outro:
 # is used. Fails safe (no key / error / package missing -> original text),
 # exactly like the hook. Needs ANTHROPIC_API_KEY. ~half a cent per part.
 punch_up:
+  enabled: true
+  model: claude-opus-4-8
+
+# After punch_up, Claude inserts a FEW ElevenLabs v3 audio tags ([sighs],
+# [scoffs], [laughs], [whispers], ...) into each part's body so the v3 voice
+# PERFORMS emotion instead of reading flat — our main differentiator from the
+# sea of identical reddit-TTS Shorts. It may ONLY add bracketed tags: the words
+# are checked to be byte-for-byte identical after tags are stripped, so no story
+# text can change. Tags are heard but never shown (tts.py strips [...] from
+# captions). Fails safe (no key / error / guard reject -> plain narration),
+# exactly like punch_up. Needs ANTHROPIC_API_KEY. ~half a cent per part.
+voice_direction:
   enabled: true
   model: claude-opus-4-8
 

@@ -102,7 +102,7 @@ Style: Caption,{cap.get('font','Arial')},{cap.get('font_size',90)},&H00FFFFFF,&H
 Style: Credit,{cap.get('font','Arial')},{credit_font_size},&H40FFFFFF,&H40000000,&H00000000,0,0,1,3,0,3,40,40,40,1
 
 [Events]
-Format: Layer, Start, End, Style, MarginL, MarginR, MarginV, Effect, Text
+Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
 """
 
     # Punch-in: each caption fades in while scaling 80% -> 100% for a snappy

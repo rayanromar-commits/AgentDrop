@@ -137,6 +137,20 @@ def init_db() -> None:
             )
             """
         )
+        # AI voice-direction: the narration body with ElevenLabs v3 audio tags
+        # (e.g. [scoffs], [sighs]) inserted. Cached per PART (key = part_id) so
+        # resumes / re-renders reuse the exact same tagged text without paying
+        # again. An empty string means "no usable tagging — narrate the plain
+        # body" (a prior decline/failure).
+        conn.execute(
+            """
+            CREATE TABLE IF NOT EXISTS voice_directions (
+                part_id     TEXT PRIMARY KEY,
+                text        TEXT,
+                created_at  TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )
+            """
+        )
         # Small key/value store for one-time flags (e.g. run-once migrations).
         conn.execute(
             """
@@ -598,6 +612,32 @@ def save_punch_up(part_id: str, text: str) -> None:
     with conn:
         conn.execute(
             "INSERT INTO punch_ups (part_id, text) VALUES (?, ?) "
+            "ON CONFLICT(part_id) DO UPDATE SET text = excluded.text",
+            (part_id, text),
+        )
+    conn.close()
+
+
+def get_voice_direction(part_id: str) -> str | None:
+    """Return the cached audio-tagged narration for a part.
+
+    Returns the stored string ("" means "use the plain body" — a prior
+    decline/failure), or None if we've never run voice-direction for this part.
+    """
+    conn = get_connection()
+    row = conn.execute(
+        "SELECT text FROM voice_directions WHERE part_id = ?", (part_id,)
+    ).fetchone()
+    conn.close()
+    return None if row is None else (row["text"] or "")
+
+
+def save_voice_direction(part_id: str, text: str) -> None:
+    """Cache a tagged part body (or "" to remember "no usable tagging")."""
+    conn = get_connection()
+    with conn:
+        conn.execute(
+            "INSERT INTO voice_directions (part_id, text) VALUES (?, ?) "
             "ON CONFLICT(part_id) DO UPDATE SET text = excluded.text",
             (part_id, text),
         )

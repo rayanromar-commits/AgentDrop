@@ -33,6 +33,10 @@ log = setup_logging()
 OUTPUT_DIR = DATA_DIR / "media" / "voiceover"
 API_BASE = "https://api.elevenlabs.io/v1/text-to-speech"
 
+# Proven, always-available model used if the configured primary model (e.g.
+# eleven_v3) errors on a request. Its with-timestamps alignment is verified.
+FALLBACK_MODEL = "eleven_turbo_v2_5"
+
 
 def _voice_pool(vo: dict) -> list[dict]:
     """Return the list of voices to rotate through.
@@ -99,13 +103,36 @@ def _flush_word(words: list[dict], token: str, start, end) -> None:
 
 
 def _chars_to_words(chars: list[str], starts: list[float], ends: list[float]):
-    """Group per-character timings into per-word timings."""
+    """Group per-character timings into per-word timings.
+
+    ElevenLabs v3 audio tags (e.g. ``[scoffs]``, ``[sighs]``) are PERFORMED as
+    non-verbal sounds but still surface as literal characters in the alignment.
+    We drop everything inside ``[...]`` (and the brackets) at the character
+    level so tags are heard in the audio but never rendered on-screen — and the
+    timings of the real words around them stay pristine (no caption inherits the
+    tag's start time). Non-v3 models simply never emit brackets, so this is a
+    no-op for them.
+    """
     words = []
     current = ""
     word_start = None
     word_end = None
+    in_tag = False
 
     for ch, st, en in zip(chars, starts, ends):
+        if in_tag:
+            # Skip every character until the tag closes.
+            if ch == "]":
+                in_tag = False
+            continue
+        if ch == "[":
+            # A tag begins: close any word in progress, then swallow the tag.
+            if current:
+                _flush_word(words, current, word_start, word_end)
+                current = ""
+                word_start = None
+            in_tag = True
+            continue
         if ch.isspace():
             if current:
                 _flush_word(words, current, word_start, word_end)
@@ -138,22 +165,37 @@ def synthesize(text: str, post_id: str, config: dict, voice: dict | None = None)
 
     url = f"{API_BASE}/{voice['id']}/with-timestamps"
     headers = {"xi-api-key": api_key, "Content-Type": "application/json"}
-    payload = {
-        "text": text,
-        "model_id": vo.get("model", "eleven_turbo_v2_5"),
-        "voice_settings": {
-            "stability": vo.get("stability", 0.5),
-            "similarity_boost": vo.get("similarity_boost", 0.75),
-            # Narration pace. ElevenLabs accepts 0.7-1.2 (1.0 = normal); a
-            # touch above 1.0 reads tighter/snappier. Because the audio is
-            # generated AT this speed, the returned word timings already
-            # match it, so captions stay in sync automatically.
-            "speed": vo.get("speed", 1.0),
-        },
-    }
 
-    log.info("Requesting voiceover from ElevenLabs (voice: %s)...", voice.get("name"))
-    resp = requests.post(url, headers=headers, json=payload, timeout=120)
+    def _payload(model_id: str) -> dict:
+        return {
+            "text": text,
+            "model_id": model_id,
+            "voice_settings": {
+                "stability": vo.get("stability", 0.5),
+                "similarity_boost": vo.get("similarity_boost", 0.75),
+                # Narration pace. ElevenLabs accepts 0.7-1.2 (1.0 = normal); a
+                # touch above 1.0 reads tighter/snappier. Because the audio is
+                # generated AT this speed, the returned word timings already
+                # match it, so captions stay in sync automatically.
+                "speed": vo.get("speed", 1.0),
+            },
+        }
+
+    # Primary model from config (v3 for expressive audio tags). If it errors,
+    # fall back ONCE to the proven turbo model so a batch never dies over a v3
+    # hiccup — any audio tags left in the text are harmless plain characters
+    # there (older models just don't perform them) and get stripped from
+    # captions the same way. FALLBACK_MODEL differs from the primary, so we
+    # don't retry the same failing model.
+    primary = vo.get("model", "eleven_turbo_v2_5")
+    log.info("Requesting voiceover from ElevenLabs (voice: %s, model: %s)...",
+             voice.get("name"), primary)
+    resp = requests.post(url, headers=headers, json=_payload(primary), timeout=120)
+    if resp.status_code != 200 and primary != FALLBACK_MODEL:
+        log.warning("ElevenLabs %s failed (%s: %s); retrying with %s.",
+                    primary, resp.status_code, resp.text[:200], FALLBACK_MODEL)
+        resp = requests.post(url, headers=headers,
+                             json=_payload(FALLBACK_MODEL), timeout=120)
     if resp.status_code != 200:
         raise RuntimeError(
             f"ElevenLabs error {resp.status_code}: {resp.text[:300]}"

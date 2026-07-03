@@ -45,6 +45,7 @@ def produce_one_video(config: dict):
     from processing.split import num_parts, split_text
     from processing.hook import generate_hook
     from processing.punch_up import punch_up
+    from processing.voice_direction import add_voice_direction
     from voiceover.tts import synthesize, choose_voice
     from video.assemble import assemble_video
     from review.queue import submit_video
@@ -141,13 +142,15 @@ def produce_one_video(config: dict):
     # Build the spoken text per part. Part 1 leads with the hook (then the
     # title for context on multi-part series); later parts keep the "Part N"
     # cue so new viewers still have context. The body of each part first goes
-    # through a light retention-beat pass (punch_up); the hook/title/"Part N"
-    # cues are added AFTER, so they're never touched.
+    # through a light retention-beat pass (punch_up), then a voice-direction
+    # pass that inserts ElevenLabs v3 audio tags ([sighs] etc.); the
+    # hook/title/"Part N" cues are added AFTER, so they're never touched.
     body_chunks = split_text(cbody, n)
     chunks = []
     for i, bc in enumerate(body_chunks, 1):
         part_id = base_id if n == 1 else f"{base_id}_p{i}"
         bc = punch_up(part_id, bc, config)
+        bc = add_voice_direction(part_id, bc, config)
         if n == 1:
             # Single video: the hook REPLACES the title as the opener.
             text = _opener(hook_line, bc) if hook_line else f"{ctitle}. {bc}"
