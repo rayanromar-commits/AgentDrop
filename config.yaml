@@ -22,9 +22,13 @@ content_type: quiz
 # --- QUIZ CHANNEL (only used when content_type: quiz) ---------------
 quiz:
   dataset: sourcing/quiz_data/football.json  # which category JSON to pull from
-  questions_per_video: 8                      # emoji clues per Short
+  questions_per_video: 5                      # emoji clues per Short (~27s at a 3s timer)
   batch: 5                                     # candidate round-sets sampled per fetch
   handle: "@FootyEmoji"                        # on-screen watermark — change to your handle
+  # Optional background music: drop a rights-cleared track (e.g. from the
+  # YouTube Audio Library) in the repo and set its path here. If unset, a
+  # synthesized trivia bed is used. Example: assets/trivia_bed.mp3
+  music:
 
 story_source: manual
 
