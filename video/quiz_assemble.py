@@ -57,6 +57,23 @@ def _center(d: ImageDraw.ImageDraw, y: int, text: str, font, fill) -> None:
     d.text(((W - w) / 2, y), text, font=font, fill=fill)
 
 
+def _fit_font(d: ImageDraw.ImageDraw, text: str, max_w: int, size: int,
+              min_size: int = 30) -> ImageFont.FreeTypeFont:
+    """Largest font <= `size` whose `text` fits in `max_w` (so long prompts /
+    player names never clip, whatever the dataset)."""
+    while size > min_size:
+        f = _font(size)
+        if d.textbbox((0, 0), text, font=f)[2] <= max_w:
+            return f
+        size -= 4
+    return _font(min_size)
+
+
+def _center_fit(d: ImageDraw.ImageDraw, y: int, text: str, size: int, fill,
+                max_w: int = W - 100) -> None:
+    _center(d, y, text, _fit_font(d, text, max_w, size), fill)
+
+
 def _base(handle: str) -> tuple[Image.Image, ImageDraw.ImageDraw]:
     img = Image.new("RGB", (W, H), BG)
     d = ImageDraw.Draw(img)
@@ -78,7 +95,7 @@ def _paste_emoji(img: Image.Image, emoji_str: str, cy: int, box: int) -> None:
 
 def _intro_frame(prompt: str, total: int, handle: str) -> Image.Image:
     img, d = _base(handle)
-    _center(d, 720, prompt, _font(84), WHITE)
+    _center_fit(d, 720, prompt, 84, WHITE)
     _center(d, 840, "by emoji", _font(64), ACCENT)
     _center(d, 1040, f"{total} rounds — how many can you get?", _font(46), MUTED)
     return img
@@ -87,7 +104,7 @@ def _intro_frame(prompt: str, total: int, handle: str) -> Image.Image:
 def _question_frame(prompt, emoji_str, count, idx, total, handle) -> Image.Image:
     img, d = _base(handle)
     _center(d, 210, f"{idx}/{total}", _font(54), MUTED)
-    _center(d, 300, prompt, _font(66), WHITE)
+    _center_fit(d, 300, prompt, 66, WHITE)
     _paste_emoji(img, emoji_str, 880, 440)
     cx, cy, r = W // 2, 1360, 120
     d.ellipse([cx - r, cy - r, cx + r, cy + r], outline=ACCENT, width=10)
@@ -98,20 +115,22 @@ def _question_frame(prompt, emoji_str, count, idx, total, handle) -> Image.Image
 def _reveal_frame(prompt, emoji_str, answer, clue, idx, total, handle) -> Image.Image:
     img, d = _base(handle)
     _center(d, 210, f"{idx}/{total}", _font(54), MUTED)
-    _center(d, 300, prompt, _font(66), WHITE)
+    _center_fit(d, 300, prompt, 66, WHITE)
     _paste_emoji(img, emoji_str, 820, 360)
-    _center(d, 1180, answer.upper(), _font(96), GREEN)
+    _center_fit(d, 1180, answer.upper(), 96, GREEN)
     if clue:
-        _center(d, 1320, clue, _font(50), MUTED)
+        _center_fit(d, 1320, clue, 50, MUTED)
     return img
 
 
 def _outro_frame(handle: str) -> Image.Image:
     img, d = _base(handle)
-    _center(d, 780, "How many did", _font(80), WHITE)
-    _center(d, 880, "you get?", _font(80), WHITE)
-    _center(d, 1050, "Comment your score 👇", _font(56), ACCENT)
-    _center(d, 1180, "Follow for daily quizzes", _font(48), MUTED)
+    _center(d, 760, "How many did", _font(80), WHITE)
+    _center(d, 860, "you get?", _font(80), WHITE)
+    _center(d, 1040, "Comment your score", _font(56), ACCENT)
+    cx, y = W // 2, 1150                            # down-chevron (no emoji glyph)
+    d.polygon([(cx - 34, y), (cx + 34, y), (cx, y + 42)], fill=ACCENT)
+    _center(d, 1250, "Follow for daily quizzes", _font(48), MUTED)
     return img
 
 
