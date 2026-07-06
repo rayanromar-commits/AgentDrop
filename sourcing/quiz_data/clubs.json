@@ -1,0 +1,23 @@
+{
+  "category": "club",
+  "prompt": "GUESS THE CLUB",
+  "questions": [
+    {"answer": "Manchester United", "emoji": "🔴😈",   "clue": "Premier League • Red Devils"},
+    {"answer": "Liverpool",         "emoji": "🔴🐦",   "clue": "Premier League • You'll Never Walk Alone"},
+    {"answer": "Arsenal",           "emoji": "🔴⚪🔫", "clue": "Premier League • The Gunners"},
+    {"answer": "Chelsea",           "emoji": "🔵🦁",   "clue": "Premier League • The Blues"},
+    {"answer": "Manchester City",   "emoji": "🔵💙",   "clue": "Premier League • The Cityzens"},
+    {"answer": "Tottenham",         "emoji": "⚪🐓",   "clue": "Premier League • Spurs"},
+    {"answer": "Real Madrid",       "emoji": "⚪👑",   "clue": "La Liga • Los Blancos"},
+    {"answer": "Barcelona",         "emoji": "🔵🔴🇪🇸", "clue": "La Liga • Blaugrana"},
+    {"answer": "Atlético Madrid",   "emoji": "🔴⚪🐻", "clue": "La Liga • Los Colchoneros"},
+    {"answer": "Bayern Munich",     "emoji": "🔴🇩🇪",   "clue": "Bundesliga • Die Roten"},
+    {"answer": "Borussia Dortmund", "emoji": "🟡⚫🐝", "clue": "Bundesliga • Die Schwarzgelben"},
+    {"answer": "Juventus",          "emoji": "⚫⚪🦓", "clue": "Serie A • The Old Lady"},
+    {"answer": "AC Milan",          "emoji": "🔴⚫🇮🇹", "clue": "Serie A • The Rossoneri"},
+    {"answer": "Inter Milan",       "emoji": "🔵⚫🐍", "clue": "Serie A • The Nerazzurri"},
+    {"answer": "Napoli",            "emoji": "🔵🌋",   "clue": "Serie A • Vesuvius blue"},
+    {"answer": "Paris Saint-Germain","emoji": "🔴🔵🗼", "clue": "Ligue 1 • Les Parisiens"},
+    {"answer": "Ajax",              "emoji": "🔴⚪🇳🇱", "clue": "Eredivisie • Total Football"}
+  ]
+}

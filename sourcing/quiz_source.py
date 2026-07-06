@@ -33,16 +33,31 @@ from database import db
 log = setup_logging()
 
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
-DEFAULT_DATASET = "sourcing/quiz_data/football.json"
+DEFAULT_DATASETS = ["sourcing/quiz_data/football.json"]
+
+
+def _dataset_paths(config: dict) -> list[str]:
+    """The list of quiz-type datasets to rotate through (config quiz.datasets),
+    falling back to a single quiz.dataset, then the default."""
+    q = config.get("quiz", {})
+    if q.get("datasets"):
+        return list(q["datasets"])
+    if q.get("dataset"):
+        return [q["dataset"]]
+    return DEFAULT_DATASETS
 
 
 def _load_dataset(config: dict) -> dict:
-    qcfg = config.get("quiz", {})
-    rel = qcfg.get("dataset", DEFAULT_DATASET)
+    """Load the NEXT quiz-type dataset in rotation, so consecutive videos differ
+    (players -> clubs -> legends -> ...) — variety YouTube rewards over one
+    format repeated. The rotation counter persists across restarts."""
+    paths = _dataset_paths(config)
+    idx = db.next_rotation_index("quiz_dataset") % len(paths)
+    rel = paths[idx]
     path = (PROJECT_ROOT / rel).resolve()
     if not path.exists():
         raise FileNotFoundError(
-            f"Quiz dataset not found: {path}. Set quiz.dataset in config.yaml."
+            f"Quiz dataset not found: {path}. Check quiz.datasets in config.yaml."
         )
     data = json.loads(path.read_text(encoding="utf-8"))
     if not data.get("questions"):

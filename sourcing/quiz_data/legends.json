@@ -1,0 +1,21 @@
+{
+  "category": "legend",
+  "prompt": "GUESS THE LEGEND",
+  "questions": [
+    {"answer": "Pelé",              "emoji": "🇧🇷👑",  "clue": "Brazil • 3x World Cup"},
+    {"answer": "Diego Maradona",    "emoji": "🇦🇷✋",  "clue": "Argentina • Hand of God, 1986"},
+    {"answer": "Zinedine Zidane",   "emoji": "🇫🇷🤕",  "clue": "France • 1998 • the headbutt"},
+    {"answer": "Ronaldinho",        "emoji": "🇧🇷😁",  "clue": "Brazil • Barça magic"},
+    {"answer": "David Beckham",     "emoji": "🏴󠁧󠁢󠁥󠁮󠁧󠁿🎯", "clue": "England • free-kick king"},
+    {"answer": "Johan Cruyff",      "emoji": "🇳🇱🔄",  "clue": "Netherlands • the Turn"},
+    {"answer": "Ronaldo Nazário",   "emoji": "🇧🇷🦷",  "clue": "Brazil • O Fenômeno (R9)"},
+    {"answer": "Kaká",              "emoji": "🇧🇷🙏",  "clue": "Brazil • 2007 Ballon d'Or"},
+    {"answer": "Andrés Iniesta",    "emoji": "🇪🇸🪄",  "clue": "Spain • 2010 WC winning goal"},
+    {"answer": "Xavi",              "emoji": "🇪🇸🎼",  "clue": "Spain • the metronome"},
+    {"answer": "Gianluigi Buffon",  "emoji": "🇮🇹🧤",  "clue": "Italy • goalkeeping legend"},
+    {"answer": "Francesco Totti",   "emoji": "🇮🇹🐺",  "clue": "Italy • Roma icon"},
+    {"answer": "Thierry Henry",     "emoji": "🇫🇷🔫",  "clue": "France • Arsenal legend"},
+    {"answer": "Andrea Pirlo",      "emoji": "🇮🇹🍷",  "clue": "Italy • the Architect"},
+    {"answer": "Steven Gerrard",    "emoji": "🏴󠁧󠁢󠁥󠁮󠁧󠁿🔴", "clue": "England • Liverpool captain"}
+  ]
+}

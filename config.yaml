@@ -21,7 +21,13 @@ content_type: quiz
 
 # --- QUIZ CHANNEL (only used when content_type: quiz) ---------------
 quiz:
-  dataset: sourcing/quiz_data/football.json  # which category JSON to pull from
+  # Rotate through these quiz TYPES so consecutive videos differ (players ->
+  # clubs -> legends -> ...) — variety YouTube rewards over one format repeated.
+  # Add more JSONs here as the channel grows (nations, stadiums, career-path...).
+  datasets:
+    - sourcing/quiz_data/football.json        # guess the footballer
+    - sourcing/quiz_data/clubs.json           # guess the club
+    - sourcing/quiz_data/legends.json         # guess the legend
   questions_per_video: 5                      # emoji clues per Short (~27s at a 3s timer)
   batch: 5                                     # candidate round-sets sampled per fetch
   handle: "@FootyEmoji"                        # on-screen watermark — change to your handle
