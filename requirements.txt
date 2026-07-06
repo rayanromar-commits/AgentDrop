@@ -16,3 +16,8 @@ google-auth-oauthlib>=1.0       # YouTube OAuth login (Step 8)
 APScheduler>=3.10     # run on a schedule           (Step 9)
 tzdata>=2024.1        # timezone database for zoneinfo on Linux/cloud
 anthropic>=0.40       # Claude API — writes the cold-open hook line
+
+# --- Quiz channel (content_type: quiz) ---
+Pillow>=10.0          # render quiz slides (emoji-riddle renderer)
+emoji>=2.10           # split emoji clue strings into individual emoji
+certifi>=2024.1       # CA bundle for fetching OpenMoji assets (Py3.14 urllib)

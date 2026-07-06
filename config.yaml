@@ -10,6 +10,22 @@
 #   manual  = read .txt files you drop into sourcing/manual_stories/
 #             (use this until your Reddit API access is approved)
 #   reddit  = pull live from the Reddit API (needs approved API keys)
+
+# --- CONTENT TYPE ---------------------------------------------------
+# What kind of channel this pipeline produces:
+#   story = Reddit-story narration Shorts (the original StoryDropper channel)
+#   quiz  = emoji-riddle quiz Shorts ("Guess the X by emoji") — the NEW channel
+# The quiz path ignores story_source / subreddits / voiceover / splitting and
+# uses the `quiz:` block below instead.
+content_type: quiz
+
+# --- QUIZ CHANNEL (only used when content_type: quiz) ---------------
+quiz:
+  dataset: sourcing/quiz_data/football.json  # which category JSON to pull from
+  questions_per_video: 8                      # emoji clues per Short
+  batch: 5                                     # candidate round-sets sampled per fetch
+  handle: "@FootyEmoji"                        # on-screen watermark — change to your handle
+
 story_source: manual
 
 # Which subreddits to pull stories from. Add/remove as you like.

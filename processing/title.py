@@ -22,6 +22,7 @@ Test it:  python3 -m processing.title
 """
 
 import os
+import re
 import sys
 from pathlib import Path
 
@@ -153,6 +154,114 @@ def generate_title(post_id: str, title: str, body: str, subreddit: str,
     db.save_title(post_id, text)
     log.info("[title] %s -> %r", post_id, text)
     return text
+
+
+SERIES_SYSTEM_PROMPT = """You are the title writer for a viral short-form video \
+channel (YouTube Shorts) that narrates real Reddit stories (AITA, petty revenge, \
+entitled people, confessions). A long story is being posted as a SERIES of N \
+sequential clips (Part 1, Part 2, ...). Your job: write N titles — ONE per part — \
+that are DISTINCT from each other, so the parts do NOT look like duplicate \
+re-uploads (identical titles get the later parts suppressed to 0 views).
+
+Each title must:
+- Be a SHORT, EXAGGERATED, superlative line that makes someone tap: superlatives \
+("most", "worst", "craziest", "-est", "ever"), ONE word in ALL CAPS (INSANE, \
+ENTITLED, PETTY, SAVAGE), a clear side to take, a curiosity gap that does NOT \
+resolve the story.
+- Reflect a DIFFERENT beat/angle of the story from the other parts — escalation, \
+the twist, the payback, the fallout — so the N titles read as different videos, \
+not one title with a number bolted on.
+- Be 4-9 words, at most ~60 characters, Title Case with exactly ONE all-caps \
+power word, ending in . ! or ?.
+
+Hard rules:
+- Do NOT number them or write "Part 1/2/3" — the app appends part numbers itself.
+- NO hashtags, NO emojis, NO surrounding quotes.
+- Do NOT invent facts not in the story. Exaggerated FRAMING only.
+- No slurs, nothing sexually explicit.
+
+Output EXACTLY N lines, one title per line, in part order. Nothing else — no \
+numbering, no preamble, no blank lines."""
+
+
+def generate_series_titles(base_id: str, title: str, body: str, subreddit: str,
+                           n: int, config: dict) -> list[str] | None:
+    """Return N distinct titles (one per part) for a multi-part story.
+
+    Differentiates a series so its parts don't share one headline (the
+    identical-title signal that helps land later parts in the 0-view jail).
+    Cached per part_id (``{base_id}_pI``) in the titles table so re-renders /
+    resumes never regenerate. Returns None (caller falls back to
+    ``base title (Part i/n)``) whenever the feature is off, the key is missing,
+    the call fails, or the result is unusable — nothing breaks.
+    """
+    if n <= 1:
+        return None
+    tcfg = (config or {}).get("title", {})
+    if not tcfg.get("enabled", False):
+        return None
+
+    # Cache hit: every part already has a stored title.
+    cached = [db.get_title(f"{base_id}_p{i}") for i in range(1, n + 1)]
+    if all(c for c in cached):  # non-None and non-empty for every part
+        return cached  # type: ignore[return-value]
+
+    load_dotenv()
+    if not os.getenv("ANTHROPIC_API_KEY"):
+        log.warning("[title] no API key; series falls back to a shared title.")
+        return None
+    try:
+        import anthropic
+    except ImportError:
+        log.warning("[title] 'anthropic' not installed; shared series title.")
+        return None
+
+    body = (body or "").strip()
+    if len(body) > MAX_BODY_CHARS:
+        body = body[:MAX_BODY_CHARS] + " […]"
+    user = (
+        f"Subreddit: r/{subreddit}.\n\n"
+        f"Original (boring) title: {title}\n\n"
+        f"Full story (it will be split into {n} sequential parts):\n{body}\n\n"
+        f"Write exactly {n} distinct titles now, one per line, in part order."
+    )
+
+    model = tcfg.get("model", DEFAULT_MODEL)
+    try:
+        client = anthropic.Anthropic()
+        resp = client.messages.create(
+            model=model,
+            max_tokens=400,
+            system=SERIES_SYSTEM_PROMPT,
+            output_config={"effort": "medium"},
+            messages=[{"role": "user", "content": user}],
+        )
+    except Exception as e:
+        log.error("[title] series generation failed (%s); shared title.", e)
+        return None
+
+    text = "".join(b.text for b in resp.content if b.type == "text").strip()
+    lines = [ln.strip().strip('"').strip("'").strip()
+             for ln in text.splitlines() if ln.strip()]
+    # Strip any leading "1." / "1)" / "- " the model may add despite the rules.
+    lines = [re.sub(r"^\s*(?:\d+[.)]|-|\*)\s*", "", ln).strip() for ln in lines]
+    lines = [ln.replace("#Shorts", "").replace("#shorts", "").strip()
+             for ln in lines]
+
+    # Must be exactly N usable, distinct titles — else fall back safely.
+    ok = (len(lines) == n
+          and all(ln and "#" not in ln and len(ln) <= MAX_TITLE_CHARS
+                  for ln in lines)
+          and len({ln.lower() for ln in lines}) == n)
+    if not ok:
+        log.warning("[title] unusable series titles for %s (%d lines); "
+                    "shared title.", base_id, len(lines))
+        return None
+
+    for i, ln in enumerate(lines, 1):
+        db.save_title(f"{base_id}_p{i}", ln)
+    log.info("[title] %s -> %d distinct part titles", base_id, n)
+    return lines
 
 
 if __name__ == "__main__":
