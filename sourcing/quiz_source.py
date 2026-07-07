@@ -35,6 +35,30 @@ log = setup_logging()
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 DEFAULT_DATASETS = ["sourcing/quiz_data/football.json"]
 
+# Rotating, curiosity-gap titles so every upload is different (identical titles
+# read as duplicate content and get throttled — the StoryDropper lesson).
+# {subj} = singular category (footballer/club/legend), {subjs} = plural.
+TITLE_TEMPLATES = [
+    "Can you guess it? 🤔",
+    "Did you get it right? ⚽",
+    "Can you guess all 5 {subjs}? 🔥",
+    "Only 1% can name these {subjs} 🤯",
+    "Bet you can't get 5/5 😏",
+    "Name all 5 {subjs}! 💪",
+    "How many {subjs} can you name? ⚽",
+    "True fans score 5/5 🏆",
+    "Guess the {subj} by emoji 🤔",
+    "5 {subjs} — how many did you get? 🔥",
+    "Guess these 5 {subjs} ⚽",
+    "Comment your score 👇 {subjs} edition",
+]
+
+
+def _pick_title(category: str, rng: random.Random) -> str:
+    subj = category
+    subjs = category + "s"
+    return rng.choice(TITLE_TEMPLATES).format(subj=subj, subjs=subjs)
+
 
 def _dataset_paths(config: dict) -> list[str]:
     """The list of quiz-type datasets to rotate through (config quiz.datasets),
@@ -108,7 +132,7 @@ def fetch_stories(config: dict, skip_seen: bool = True) -> list[dict]:
         stories.append({
             "post_id": post_id,
             "subreddit": category,          # repurposed as the category tag
-            "title": f"{prompt.title()} by Emoji! ⚽",
+            "title": _pick_title(category, rng),
             "body": body,                   # JSON payload for quiz_assemble
             "score": 0,
             "over_18": False,
