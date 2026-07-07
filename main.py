@@ -44,7 +44,7 @@ def produce_one_video(config: dict):
     from processing.rank import rank_stories
     from processing.split import num_parts, split_text
     from processing.hook import generate_hook
-    from processing.title import generate_title
+    from processing.title import generate_title, generate_series_titles
     from processing.punch_up import punch_up
     from processing.voice_direction import add_voice_direction
     from processing.condense import condense_body
@@ -142,6 +142,15 @@ def produce_one_video(config: dict):
                               story["subreddit"], config)
     display_title = ai_title or story["title"]
 
+    # For a multi-part series, write a DISTINCT title per part (one API call)
+    # so siblings don't share one headline — an identical title across parts is
+    # a duplicate signal that helps land the later parts in the 0-view jail.
+    # Falls back to the shared "base (Part i/n)" title on any problem.
+    part_titles = None
+    if n > 1:
+        part_titles = generate_series_titles(story["post_id"], ctitle, cbody,
+                                             story["subreddit"], n, config)
+
     def _opener(text: str, rest: str) -> str:
         """Join an opening line to the rest, avoiding doubled punctuation."""
         text = text.strip()
@@ -215,7 +224,13 @@ def produce_one_video(config: dict):
         db.record_tts_usage(part_id, char_count)
         video_path = assemble_video(part_id, config, subreddit=story.get("subreddit"))
 
-        part_title = display_title if n == 1 else f"{display_title} (Part {i}/{n})"
+        if n == 1:
+            part_title = display_title
+        elif part_titles:
+            # Distinct per-part title; still tag the part number for the viewer.
+            part_title = f"{part_titles[i - 1]} (Part {i}/{n})"
+        else:
+            part_title = f"{display_title} (Part {i}/{n})"
         part_story = {**story, "post_id": part_id, "title": part_title, "body": chunk}
         result = submit_video(part_story, video_path, config)
         results.append(result)
@@ -233,18 +248,38 @@ def produce_one_video(config: dict):
     return results or None
 
 
+# A multi-part series must not put two of its parts on YouTube within this
+# many hours. At 3 uploads/day (~5-10h apart) this pushes each subsequent part
+# to the NEXT day, so siblings never cluster into a same-day burst — the
+# pattern YouTube reads as duplicate/repetitive content and drops to 0 views.
+SERIES_SPACING_HOURS = 20
+
+
 def upload_next_approved(config: dict):
-    """Upload the oldest video not yet on YouTube whose file still exists."""
+    """Upload the oldest eligible video not yet on YouTube.
+
+    "Eligible" adds a series-spacing guard on top of oldest-first: a part is
+    skipped if another part of the SAME story was posted to YouTube within the
+    last SERIES_SPACING_HOURS. If every waiting video is a too-recent sibling,
+    we post nothing this slot (the parts wait for tomorrow) rather than firing
+    a duplicate burst.
+    """
     from pathlib import Path
     from upload.youtube_upload import upload_video
     from notify.events import notify_posted, notify_failed, notify_low_stock
     from sourcing.manual_source import archive_story, restock_status
     db.init_db()
+    held_for_spacing = 0
     for row in db.videos_missing_platform("youtube"):
         if not Path(row["file_path"]).exists():
             log.warning("Approved video file missing (%s); marking 'missing' "
                         "and skipping.", row["file_path"])
             db.set_video_status(row["post_id"], "missing")
+            continue
+        # Series spacing: hold this part if a sibling was posted very recently.
+        base = db.base_story_id(row["post_id"])
+        if db.youtube_sibling_uploaded_since(base, SERIES_SPACING_HOURS):
+            held_for_spacing += 1
             continue
         try:
             vid = upload_video(row, config)
@@ -262,7 +297,12 @@ def upload_next_approved(config: dict):
             log.error("[youtube] upload failed for %s: %s", row["post_id"], e)
             notify_failed("YouTube upload", f"{row['post_id']}: {e}")
             return None
-    log.info("No videos waiting for YouTube upload.")
+    if held_for_spacing:
+        log.info("No eligible video: %d queued part(s) held so series siblings "
+                 "stay >%dh apart (they post on a later day).",
+                 held_for_spacing, SERIES_SPACING_HOURS)
+    else:
+        log.info("No videos waiting for YouTube upload.")
     return None
 
 
@@ -349,12 +389,16 @@ def start_scheduler(config: dict) -> None:
             log.warning("[scheduler] pre-production stats refresh failed (%s); "
                         "ranking on last known data.", e)
         while True:
-            # Stop once enough videos are queued for the day's uploads.
-            backlog = (len(db.videos_by_status("approved"))
-                       + len(db.videos_by_status("pending")))
-            if backlog >= n_per_day:
-                log.info("[scheduler] %d videos queued (>= %d); production done.",
-                         backlog, n_per_day)
+            # Stop once enough DISTINCT stories are queued — not enough videos.
+            # The series-spacing rule posts at most one part per story per day,
+            # so a full day of uploads needs n_per_day *different* stories in
+            # the buffer, each contributing one part. Counting distinct stories
+            # (a 3-part story counts as 1) keeps production making fresh stories
+            # until the buffer can feed a diverse, non-clustered upload day.
+            queued_stories = db.distinct_queued_stories()
+            if queued_stories >= n_per_day:
+                log.info("[scheduler] %d distinct stories queued (>= %d); "
+                         "production done.", queued_stories, n_per_day)
                 break
             try:
                 res = produce_one_video(config)

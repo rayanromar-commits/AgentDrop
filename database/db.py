@@ -10,6 +10,7 @@ helper functions the rest of AgentDrop calls.
 """
 
 import os
+import re
 import sqlite3
 from pathlib import Path
 
@@ -186,6 +187,10 @@ def init_db() -> None:
         )
         # --- lightweight migrations (idempotent) ---
         _add_column_if_missing(conn, "videos", "tiktok_id", "TEXT")
+        # When a video was posted to YouTube. Powers the series-spacing rule
+        # (don't upload two parts of the same story within a day). NULL for
+        # rows uploaded before this column existed — treated as "long ago".
+        _add_column_if_missing(conn, "videos", "uploaded_at", "TIMESTAMP")
         _add_column_if_missing(conn, "channel_stats", "platform",
                                "TEXT DEFAULT 'youtube'")
         _add_column_if_missing(conn, "video_stats", "platform",
@@ -534,7 +539,64 @@ def set_video_status(post_id: str, status: str, file_path: str | None = None,
                          (tiktok_id, post_id))
         conn.execute("UPDATE videos SET status=? WHERE post_id=?",
                      (status, post_id))
+        # Stamp the YouTube upload time the first time a video is marked
+        # 'uploaded' (leaves any earlier stamp intact). Feeds the spacing rule.
+        if status == "uploaded":
+            conn.execute(
+                "UPDATE videos SET uploaded_at = datetime('now') "
+                "WHERE post_id=? AND uploaded_at IS NULL",
+                (post_id,),
+            )
     conn.close()
+
+
+def base_story_id(post_id: str) -> str:
+    """Strip a '_pN' part suffix to get the base story id.
+
+    'manual_foo_p3' -> 'manual_foo'; a single-part id is returned unchanged.
+    """
+    return re.sub(r"_p\d+$", "", post_id)
+
+
+def youtube_sibling_uploaded_since(base_id: str, hours: float) -> bool:
+    """True if any part of this story went to YouTube within the last `hours`.
+
+    Used to space a multi-part series out: we refuse to post a second part of
+    the same base story until this returns False, so siblings land on
+    different days instead of clustering into a same-day burst (which YouTube
+    reads as duplicate/repetitive content and drops into the 0-view jail).
+    """
+    conn = get_connection()
+    row = conn.execute(
+        """
+        SELECT 1 FROM videos
+        WHERE youtube_id IS NOT NULL
+          AND uploaded_at IS NOT NULL
+          AND uploaded_at >= datetime('now', ?)
+          AND (post_id = ? OR post_id LIKE ? ESCAPE '\\')
+        LIMIT 1
+        """,
+        (f"-{hours} hours", base_id,
+         base_id.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_")
+         + "\\_p%"),
+    ).fetchone()
+    conn.close()
+    return row is not None
+
+
+def distinct_queued_stories() -> int:
+    """How many distinct base stories have a video waiting in the queue.
+
+    Counts unique base ids among not-yet-uploaded videos (status pending or
+    approved). Production tops the buffer up to N *distinct stories* — not N
+    videos — so the spacing rule always has a different-story part to post.
+    """
+    conn = get_connection()
+    rows = conn.execute(
+        "SELECT post_id FROM videos WHERE status IN ('pending', 'approved')"
+    ).fetchall()
+    conn.close()
+    return len({base_story_id(r["post_id"]) for r in rows})
 
 
 def videos_missing_platform(platform: str) -> list:
