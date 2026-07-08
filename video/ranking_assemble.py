@@ -204,18 +204,22 @@ def _ffmpeg():
 
 
 def _segment(image_path, overlay_png, dur, out_path):
-    """Full-bleed Ken Burns image + the title/list/caption overlay."""
-    frames = int(dur * FPS)
-    vf = (f"[0:v]scale=2160:3840:force_original_aspect_ratio=increase,"
-          f"crop=2160:3840,zoompan=z='min(zoom+0.0011,1.12)':d={frames}:"
+    """Full-bleed Ken Burns image + the title/list/caption overlay.
+
+    Smooth zoom: input fed AT the output fps, and the zoom accumulates one small
+    step per frame (d=1 with pzoom) so it never resets/judders."""
+    frames = max(int(dur * FPS), 1)
+    incr = round(0.12 / frames, 5)                  # ease from 1.0 -> ~1.12 over the clip
+    vf = (f"[0:v]scale=2400:4267:force_original_aspect_ratio=increase,"
+          f"crop=2400:4267,zoompan=z='min(max(pzoom,1.0)+{incr},1.13)':d=1:"
           f"x='iw/2-(iw/zoom/2)':y='ih/2-(ih/zoom/2)':s={W}x{H}:fps={FPS}[bg];"
           f"[bg][1:v]overlay=0:0,format=yuv420p[v]")
     subprocess.run([_ffmpeg(), "-y",
-                    "-loop", "1", "-t", str(dur), "-i", str(image_path),
+                    "-framerate", str(FPS), "-loop", "1", "-t", str(dur), "-i", str(image_path),
                     "-loop", "1", "-t", str(dur), "-i", str(overlay_png),
                     "-filter_complex", vf, "-map", "[v]",
                     "-c:v", "libx264", "-preset", "veryfast", "-pix_fmt", "yuv420p",
-                    "-t", str(dur), str(out_path)], check=True, capture_output=True)
+                    "-r", str(FPS), "-t", str(dur), str(out_path)], check=True, capture_output=True)
 
 
 def render_ranking_video(post_id, payload, config=None) -> Path:
@@ -272,23 +276,36 @@ def render_ranking_video(post_id, payload, config=None) -> Path:
         subprocess.run([ff, "-y", "-f", "concat", "-safe", "0", "-i", str(lst),
                         "-c", "copy", str(silent)], check=True, capture_output=True)
 
-        # Voiceover only — music bed removed per feedback (a real track can be
-        # mixed back later via config ranking.music).
-        inputs = ["-i", str(silent)]
-        filt, labels, idx = [], [], 1
-        for i, vp in enumerate(vo_files):
-            if not vp:
-                continue
-            inputs += ["-i", str(vp)]
-            ms = int((starts[i] + (0.1 if i == 0 else 0.2)) * 1000)
-            filt.append(f"[{idx}:a]volume=1.6,adelay={ms}|{ms}[a{idx}]")
-            labels.append(f"[a{idx}]"); idx += 1
-        filt.append("".join(labels) +
-                    f"amix=inputs={len(labels)}:normalize=0:duration=longest[a]")
+        # Build audio PER SEGMENT (each VO padded to its own segment length) and
+        # concatenate, so narration stays perfectly locked to its image — no
+        # timestamp drift between the zoom and the voice.
+        alist = []
+        for i, (vp, d) in enumerate(zip(vo_files, durs)):
+            aw = tmpd / f"a{i}.wav"
+            delay = 100 if i == 0 else 200
+            if vp:
+                subprocess.run([ff, "-y", "-i", str(vp), "-af",
+                                f"volume=1.6,adelay={delay}|{delay},apad",
+                                "-t", str(d), "-ar", "44100", "-ac", "1",
+                                "-c:a", "pcm_s16le", str(aw)],
+                               check=True, capture_output=True)
+            else:
+                subprocess.run([ff, "-y", "-f", "lavfi", "-t", str(d),
+                                "-i", "anullsrc=r=44100:cl=mono",
+                                "-c:a", "pcm_s16le", str(aw)],
+                               check=True, capture_output=True)
+            alist.append(aw)
+        alst = tmpd / "audiolist.txt"
+        alst.write_text("".join(f"file '{a}'\n" for a in alist), encoding="utf-8")
+        full_audio = tmpd / "audio.wav"
+        subprocess.run([ff, "-y", "-f", "concat", "-safe", "0", "-i", str(alst),
+                        "-c", "copy", str(full_audio)], check=True, capture_output=True)
+
         out_path = OUTPUT_DIR / f"{post_id}.mp4"
-        log.info("[ranking] %d VO clips (no music) -> %s", idx - 1, out_path.name)
-        subprocess.run([ff, "-y", *inputs, "-filter_complex", ";".join(filt),
-                        "-map", "0:v", "-map", "[a]", "-c:v", "copy",
+        log.info("[ranking] %d VO clips (per-segment sync) -> %s",
+                 sum(1 for v in vo_files if v), out_path.name)
+        subprocess.run([ff, "-y", "-i", str(silent), "-i", str(full_audio),
+                        "-map", "0:v", "-map", "1:a", "-c:v", "copy",
                         "-c:a", "aac", "-b:a", "160k", "-shortest", str(out_path)],
                        check=True, capture_output=True)
     return out_path
