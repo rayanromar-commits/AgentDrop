@@ -39,7 +39,7 @@ def _produce_ranking(config: dict):
     voiceover renderer over NASA images, and queues it. Single video, no split.
     """
     import json as _json
-    from sourcing.ranking_source import fetch_stories as rank_fetch
+    from sourcing.ranking_source import fetch_stories as rank_fetch, youtube_title
     from video.ranking_assemble import render_ranking_video
     from review.queue import submit_video
 
@@ -57,9 +57,11 @@ def _produce_ranking(config: dict):
         return None
 
     item = candidates[0]
-    payload = _json.loads(item["body"])
+    payload = _json.loads(item["body"])   # on-screen title stays payload["title"]
     log.info("Producing ranking Short %s: %s", item["post_id"], item["title"])
     video_path = render_ranking_video(item["post_id"], payload, config)
+    # Give YouTube a VARIED title (metadata) so daily uploads don't look duplicate.
+    item["title"] = youtube_title(item["title"], item["post_id"])
     result = submit_video(item, video_path, config)
     db.save_post(post_id=item["post_id"], subreddit=item["subreddit"],
                  title=item["title"], body=item["body"], score=0,

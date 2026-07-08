@@ -17,6 +17,7 @@ Config (config.yaml):
 import hashlib
 import json
 import random
+import re
 import sys
 from pathlib import Path
 
@@ -38,6 +39,30 @@ def _dataset_dir(config: dict) -> Path:
 
 def _post_id(title: str) -> str:
     return "rank_" + hashlib.sha1(title.encode("utf-8")).hexdigest()[:10]
+
+
+# Varied YouTube (metadata) titles so the channel isn't every-day "Top 5 Most X
+# In The Universe" (that repeated structure reads as duplicate content). The
+# on-screen title stays "Top 5 ..." — only the YouTube title rotates.
+_YT_TEMPLATES = [
+    "Top 5 {s} 🌌", "Ranking the {s}", "The {s}, Ranked", "The Universe's {s}",
+    "You Won't Believe the {s} 😳", "These Are the {s}", "I Ranked the {s} 🚀",
+    "{s} — From 5 To 1", "The Most Insane {s} In Space", "Nobody Talks About the {s}",
+]
+
+
+def _subject(title: str) -> str:
+    """'Top 5 Most DANGEROUS Planets In The Universe' -> 'Most Dangerous Planets'."""
+    s = re.sub(r"^\s*top\s*\d+\s*", "", title, flags=re.I)
+    s = re.sub(r"\s+in\s+the\s+universe\s*$", "", s, flags=re.I)
+    s = re.sub(r"\s+in\s+(our\s+)?solar\s+system\s*$", "", s, flags=re.I)
+    return s.strip().title() or title
+
+
+def youtube_title(dataset_title: str, seed: str) -> str:
+    """A varied, non-repetitive YouTube title derived from the ranking topic."""
+    t = random.Random(seed).choice(_YT_TEMPLATES).format(s=_subject(dataset_title))
+    return t[:95]
 
 
 def fetch_stories(config: dict, skip_seen: bool = True) -> list[dict]:
