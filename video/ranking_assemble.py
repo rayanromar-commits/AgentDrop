@@ -237,21 +237,25 @@ def render_ranking_video(post_id, payload, config=None) -> Path:
     order = list(payload["items"])
     random.Random(post_id).shuffle(order)
 
+    # plan entries: (image, revealed_ranks, cur_rank, caption, voiceover_text).
+    # Caption stays clean (name + fact); the voiceover adds "Number N" for clarity.
     nebula = fetch_image("colorful nebula", prefer="nebula")
-    plan = [(nebula, set(), None, f"{title}. {hook}")]      # intro
+    plan = [(nebula, set(), None, hook or title, f"{title}. {hook}")]
     revealed = set()
     for it in order:
         revealed = revealed | {it["rank"]}
         img = fetch_image(it["query"], prefer=it["name"]) or nebula
-        plan.append((img, set(revealed), it["rank"], f"{it['name']}. {it['stat']}."))
-    plan.append((nebula, set(range(1, 6)), None, "Follow for more cosmic countdowns."))
+        cap = f"{it['name']}. {it['stat']}."
+        plan.append((img, set(revealed), it["rank"], cap, f"Number {it['rank']}. {cap}"))
+    plan.append((nebula, set(range(1, 6)), None, "Follow for more cosmic countdowns.",
+                 "Follow for more cosmic countdowns."))
 
     with tempfile.TemporaryDirectory() as tmp:
         tmpd = Path(tmp)
         seg_files, durs, vo_files, starts = [], [], [], []
         t = 0.0
-        for i, (img, rev, cur, cap) in enumerate(plan):
-            res = vo(cap, f"vo{i}")
+        for i, (img, rev, cur, cap, votext) in enumerate(plan):
+            res = vo(votext, f"vo{i}")
             dur = round((float(res["duration"]) if res else 2.5)
                         + (0.3 if cur is not None else 0.5), 2)
             ov = tmpd / f"ov{i}.png"
