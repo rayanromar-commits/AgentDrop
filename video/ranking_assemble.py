@@ -36,9 +36,9 @@ OUTPUT_DIR = PROJECT_ROOT / "output"
 
 W, H = 1080, 1920
 FPS = 30
-RANK_SEC = 3.6
-INTRO_SEC = 3.2
-OUTRO_SEC = 2.6
+RANK_SEC = 6.0                    # per rank — lingering, cinematic (30-40s total)
+INTRO_SEC = 5.5                   # fits the voiceover intro
+OUTRO_SEC = 3.0
 XFADE = 0.5                       # crossfade duration between segments
 
 WHITE = (245, 247, 255)

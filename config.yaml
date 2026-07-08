@@ -262,12 +262,10 @@ timezone: America/Chicago
 
 # --- UPLOAD SCHEDULE ------------------------------------------------
 upload:
-  videos_per_day: 3
+  videos_per_day: 1           # start slow (1/day); raise when ready
   # 24-hour clock, your computer's local time. One upload per time.
   upload_times:
-    - "09:00"
-    - "14:00"
-    - "19:00"
+    - "17:00"
   privacy_status: public      # private | unlisted | public
                               # PUBLIC: uploads are visible to everyone.
   category_id: "24"           # 24 = Entertainment (always, per channel policy).
