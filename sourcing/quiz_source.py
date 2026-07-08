@@ -39,25 +39,34 @@ DEFAULT_DATASETS = ["sourcing/quiz_data/football.json"]
 # read as duplicate content and get throttled — the StoryDropper lesson).
 # {subj} = singular category (footballer/club/legend), {subjs} = plural.
 TITLE_TEMPLATES = [
-    "Can you guess it? 🤔",
-    "Did you get it right? ⚽",
-    "Can you guess all 5 {subjs}? 🔥",
-    "Only 1% can name these {subjs} 🤯",
-    "Bet you can't get 5/5 😏",
-    "Name all 5 {subjs}! 💪",
-    "How many {subjs} can you name? ⚽",
-    "True fans score 5/5 🏆",
-    "Guess the {subj} by emoji 🤔",
-    "5 {subjs} — how many did you get? 🔥",
-    "Guess these 5 {subjs} ⚽",
-    "Comment your score 👇 {subjs} edition",
+    # questions
+    "Can you guess it? 🤔", "How many {subjs} can you name? ⚽",
+    "Did you get them all right? ✅", "Can YOU beat this quiz? 🔥",
+    "Do you actually know your {subjs}? 👀", "Real fan or fraud? 🤨",
+    # challenges / difficulty
+    "Only 1% can name these {subjs} 🤯", "Bet you can't get 5/5 😏",
+    "Nobody gets #4… 👀", "Impossible {subj} quiz? 🧠",
+    "Casuals get 0/5 😅", "This is harder than it looks 👀",
+    "5/5 = certified genius 🏆", "Even legends struggle with this ⚽",
+    # hooks / statements
+    "These emojis broke everyone 🤯", "You'll rage at number 3 😤",
+    "Guess all 5 or you're not a real fan 🔥", "#1 fooled everybody 😳",
+    "The emojis say it all… 🤔", "Miss one and you fail 💀",
+    # score / engagement
+    "Comment your score 👇", "Drop your score below ⬇️",
+    "What did you get? 👀", "Tag someone who'd fail this 😂",
+    # emoji-guess framing
+    "Guess the {subj} from the emojis ⚡", "5 {subjs}, 5 emojis — go! 🚀",
+    "Name the {subj} in 3 seconds ⏱️", "Emoji {subj} challenge 🔥",
 ]
 
 
-def _pick_title(category: str, rng: random.Random) -> str:
+def _pick_title(category: str, seed: str) -> str:
+    """Deterministic-but-varied title per video (seeded by the round-set id) —
+    diverse structures so YouTube doesn't read repeated titles as duplicates."""
     subj = category
     subjs = category + "s"
-    return rng.choice(TITLE_TEMPLATES).format(subj=subj, subjs=subjs)
+    return random.Random(seed).choice(TITLE_TEMPLATES).format(subj=subj, subjs=subjs)
 
 
 def _dataset_paths(config: dict) -> list[str]:
@@ -132,7 +141,7 @@ def fetch_stories(config: dict, skip_seen: bool = True) -> list[dict]:
         stories.append({
             "post_id": post_id,
             "subreddit": category,          # repurposed as the category tag
-            "title": _pick_title(category, rng),
+            "title": _pick_title(category, post_id),
             "body": body,                   # JSON payload for quiz_assemble
             "score": 0,
             "over_18": False,
