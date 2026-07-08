@@ -144,7 +144,7 @@ voiceover:
                               # tts.py falls back once to eleven_turbo_v2_5.
   stability: 0.5              # 0-1: lower = more expressive, higher = steadier
   similarity_boost: 0.75      # 0-1: how closely to match the voice
-  speed: 1.18                 # narration pace. 0.7-1.2 (1.0 = normal). 1.08-1.12
+  speed: 0.93                 # narration pace. 0.7-1.2 (1.0 = normal). 1.08-1.12
                               # reads noticeably snappier without sounding rushed.
                               # Captions stay in sync automatically (timings come
                               # back from ElevenLabs at this speed).
