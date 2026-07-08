@@ -22,6 +22,7 @@ Test it:  python3 -m processing.title
 """
 
 import os
+import random
 import re
 import sys
 from pathlib import Path
@@ -46,31 +47,44 @@ MAX_BODY_CHARS = 3500
 # homepage shelf). Kept tight so titles stay punchy.
 MAX_TITLE_CHARS = 70
 
+# Distinct title STYLES to rotate through — identical-sounding titles across a
+# channel ("The Most X EVER!" every time) read as repetitive and get suppressed,
+# so each video is written in a different structural style.
+TITLE_STYLES = [
+    ("superlative", 'over-the-top "-est"/"most" framing with ONE ALL-CAPS power '
+                    'word. e.g. "Her Most ENTITLED Demand Yet."'),
+    ("question", 'a question that begs the viewer to pick a side. '
+                 'e.g. "Would You Have Given It Back?"'),
+    ("shocking statement", 'a flat, jaw-dropping fact pulled from the story. '
+                           'e.g. "She Called The Cops On A 6-Year-Old."'),
+    ("in medias res", 'drop into the wildest moment or a quoted line. '
+                      'e.g. "\\"Get Off My Lawn\\" — Then She Keyed His Car."'),
+    ("curiosity gap", 'tease the escalation/twist without resolving it. '
+                      'e.g. "What My Sister Did Next Ended Us."'),
+    ("first person", 'a confessional first-person line. '
+                     'e.g. "I Said No, And My Family Disowned Me."'),
+    ("callout", "name the villain's move plainly. "
+                'e.g. "The Bride Banned Her Own Sister."'),
+]
+
 SYSTEM_PROMPT = """You are the title writer for a viral short-form video channel \
 (YouTube Shorts) that narrates real Reddit stories (AITA, petty revenge, \
-entitled people, confessions). Your ONE job: rewrite the story's boring title \
-as a SHORT, EXAGGERATED, superlative title that makes someone stop and tap.
+entitled people, confessions). Rewrite the story's boring title as a SHORT, \
+scroll-stopping YouTube title.
 
-What a great title does:
-- Uses SUPERLATIVE, over-the-top framing: "most", "worst", "craziest", \
-"pettiest", "-est" words, "ever", "of all time", "you'll ever see". Make it \
-sound like the single most extreme version of this story that exists.
-- Puts ONE word in ALL CAPS for punch (e.g. INSANE, ENTITLED, PETTY, SAVAGE).
-- Frames a side to take — someone is clearly wrong, someone got destroyed, a \
-line got crossed — so viewers itch to weigh in.
-- Teases the conflict WITHOUT resolving it (curiosity gap). Do NOT give away \
-the ending.
+CRITICAL: this channel posts many videos a day, and titles that all sound the \
+same get flagged as repetitive and SUPPRESSED. Write the title in the exact \
+STYLE requested in the user message so every video reads differently.
+
+Whatever the style, a great title frames a side to take or a curiosity gap so \
+viewers itch to comment, and teases the conflict WITHOUT giving away the ending.
 
 Hard rules:
-- SHORT: aim for 4-9 words, at most ~60 characters. It must fit the homepage \
-shelf. Shorter and punchier is better.
-- Use normal Title Case with exactly ONE all-caps power word, and end with \
-punctuation (. ! or ?) — this channel's style.
-- NO hashtags, NO "#Shorts", NO emojis, NO surrounding quotes, NO "Part 1".
-- Do NOT invent facts that aren't in the story. Exaggerated FRAMING is fine \
-("her most entitled demand"); inventing events that didn't happen is not — it \
-gets the video flagged.
-- Do not use slurs or sexually explicit wording.
+- SHORT: 4-10 words, ~60 characters max.
+- Title Case; end with . ! or ?. NO hashtags, NO "#Shorts", NO emojis, NO \
+surrounding quotes, NO "Part 1".
+- Do NOT invent facts that aren't in the story — exaggerated FRAMING is fine, \
+fabricating events is not (it gets the video flagged). No slurs / explicit wording.
 
 If — and ONLY if — you genuinely cannot beat the story's own title, reply with \
 exactly: SKIP
@@ -78,7 +92,8 @@ exactly: SKIP
 Output ONLY the title line (or SKIP). Nothing else — no preamble, no quotes."""
 
 
-def _build_user_message(title: str, body: str, subreddit: str) -> str:
+def _build_user_message(title: str, body: str, subreddit: str,
+                        style: tuple[str, str]) -> str:
     body = (body or "").strip()
     if len(body) > MAX_BODY_CHARS:
         body = body[:MAX_BODY_CHARS] + " […]"
@@ -86,7 +101,8 @@ def _build_user_message(title: str, body: str, subreddit: str) -> str:
         f"Subreddit: r/{subreddit}.\n\n"
         f"Original (boring) title: {title}\n\n"
         f"Story:\n{body}\n\n"
-        "Write the exaggerated, superlative title now."
+        f"Write the title in this STYLE — {style[0]}: {style[1]}\n"
+        "Write it now."
     )
 
 
@@ -127,7 +143,9 @@ def generate_title(post_id: str, title: str, body: str, subreddit: str,
             output_config={"effort": "medium"},
             messages=[{
                 "role": "user",
-                "content": _build_user_message(title, body, subreddit),
+                "content": _build_user_message(
+                    title, body, subreddit,
+                    random.Random(post_id).choice(TITLE_STYLES)),  # rotate styles
             }],
         )
     except Exception as e:  # never let a title failure break production
