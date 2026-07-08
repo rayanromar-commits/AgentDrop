@@ -32,6 +32,42 @@ def show_config(config: dict) -> None:
     log.info("Upload privacy : %s", config["upload"]["privacy_status"])
 
 
+def _produce_ranking(config: dict):
+    """Produce ONE cinematic 'Top 5' ranking Short (content_type=ranking).
+
+    Pulls an unused ranking list, renders it with the Ken Burns / crossfade /
+    voiceover renderer over NASA images, and queues it. Single video, no split.
+    """
+    import json as _json
+    from sourcing.ranking_source import fetch_stories as rank_fetch
+    from video.ranking_assemble import render_ranking_video
+    from review.queue import submit_video
+
+    db.init_db()
+    sg = config.get("safeguards", {})
+    max_per_day = sg.get("max_videos_per_day", 4)
+    if db.videos_produced_today() >= max_per_day:
+        log.warning("Daily cap reached (%d videos). Skipping ranking production.",
+                    max_per_day)
+        return None
+
+    candidates = rank_fetch(config, skip_seen=True)
+    if not candidates:
+        log.warning("No fresh ranking lists available (dataset exhausted?).")
+        return None
+
+    item = candidates[0]
+    payload = _json.loads(item["body"])
+    log.info("Producing ranking Short %s: %s", item["post_id"], item["title"])
+    video_path = render_ranking_video(item["post_id"], payload, config)
+    result = submit_video(item, video_path, config)
+    db.save_post(post_id=item["post_id"], subreddit=item["subreddit"],
+                 title=item["title"], body=item["body"], score=0,
+                 word_count=item.get("word_count", 0), status="used")
+    log.info("Produced ranking -> %s (%s)", result["path"], result["status"])
+    return [result]
+
+
 def produce_one_video(config: dict):
     """Source -> screen -> rank -> narrate -> assemble -> queue.
 
@@ -39,6 +75,9 @@ def produce_one_video(config: dict):
     stories, several "Part N" videos for long ones). Returns a list of
     produced video results, or None if nothing was made. Spends TTS.
     """
+    if config.get("content_type", "story") == "ranking":
+        return _produce_ranking(config)
+
     from sourcing.get_stories import fetch_stories
     from processing.screen import screen_story, clean_str
     from processing.rank import rank_stories

@@ -16,3 +16,7 @@ google-auth-oauthlib>=1.0       # YouTube OAuth login (Step 8)
 APScheduler>=3.10     # run on a schedule           (Step 9)
 tzdata>=2024.1        # timezone database for zoneinfo on Linux/cloud
 anthropic>=0.40       # Claude API — writes the cold-open hook line
+
+# --- Ranking channel (content_type: ranking) ---
+Pillow>=10.0          # render the cinematic rank captions
+certifi>=2024.1       # CA bundle for fetching NASA images (Py3.14 urllib)

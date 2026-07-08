@@ -17,7 +17,8 @@ venv/
 __pycache__/
 *.pyc
 database/*.db
-media/clip_cache/
+media/*
+!media/clip_source.py
 voiceover/output/
 video/output/
 review/pending/

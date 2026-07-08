@@ -10,6 +10,21 @@
 #   manual  = read .txt files you drop into sourcing/manual_stories/
 #             (use this until your Reddit API access is approved)
 #   reddit  = pull live from the Reddit API (needs approved API keys)
+
+# --- CONTENT TYPE ---------------------------------------------------
+# What this pipeline produces:
+#   story   = Reddit-story narration Shorts
+#   ranking = cinematic "Top 5 ___" space countdowns (this channel)
+content_type: ranking
+
+# --- RANKING CHANNEL (only used when content_type: ranking) ---------
+ranking:
+  dataset_dir: sourcing/ranking_data   # folder of "Top 5" list JSONs
+  voiceover: intro                     # intro | full | off  (realistic TTS)
+  # Optional majestic music track (rights-cleared, e.g. YouTube Audio Library);
+  # if unset, a synthesized cinematic bed is used. Example: assets/epic.mp3
+  music:
+
 story_source: manual
 
 # Which subreddits to pull stories from. Add/remove as you like.
