@@ -265,7 +265,7 @@ upload:
   videos_per_day: 1           # start slow (1/day); raise when ready
   # 24-hour clock, your computer's local time. One upload per time.
   upload_times:
-    - "17:00"
+    - "09:00"
   privacy_status: public      # private | unlisted | public
                               # PUBLIC: uploads are visible to everyone.
   category_id: "24"           # 24 = Entertainment (always, per channel policy).

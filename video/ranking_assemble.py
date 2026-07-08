@@ -1,13 +1,12 @@
 """
-Cinematic ranking renderer — "Top 5 ___" space countdowns.
+Cinematic ranking renderer — building "Top 5" tier-list countdowns.
 
-Turns a ranking payload {title, hook, items:[{rank,name,stat,query}]} into a
-premium vertical Short: NASA images with Ken Burns motion, bold animated
-captions, crossfade transitions, an intro hook and an outro CTA. (Audio —
-majestic music bed + whoosh/impact SFX + TTS voiceover — is layered in a second
-pass; this module produces the moving picture.)
+Format: a title on top, a persistent 1->5 list that starts empty and fills in as
+each item is revealed (countdown #5 -> #1), the current item's NASA image with
+Ken Burns motion, big YELLOW outlined text, a full ElevenLabs voiceover reading
++ explaining every item, and a mood-matched music bed (ominous / angelic / epic
+/ mysterious, chosen from the title).
 
-Standalone test (fetches NASA images + renders the dangerous-planets demo):
     python3 -m video.ranking_assemble
 """
 
@@ -36,80 +35,137 @@ OUTPUT_DIR = PROJECT_ROOT / "output"
 
 W, H = 1080, 1920
 FPS = 30
-RANK_SEC = 6.0                    # per rank — lingering, cinematic (30-40s total)
-INTRO_SEC = 5.5                   # fits the voiceover intro
-OUTRO_SEC = 3.0
-XFADE = 0.5                       # crossfade duration between segments
+BG = (8, 9, 16)
+YELLOW = (255, 213, 0)
+DIM = (95, 99, 120)
+NARRATOR = {"id": "pNInz6obpgDQGcFmaJgB", "name": "Adam"}   # deep documentary voice
 
-WHITE = (245, 247, 255)
-MUTED = (176, 184, 204)
-ACCENT = (120, 200, 255)          # cool cosmic blue
-GOLD = (255, 209, 102)            # #1 highlight
+# Layout: title top, 1-5 list down the left, current image panel on the right.
+TITLE_Y = 70
+ROW_YS = [520, 776, 1032, 1288, 1544]          # rank 1..5, top to bottom
+ROW_X = 60
+NAME_X = 210
+NAME_MAX_W = 400
+PANEL = (600, 560, 430, 560)                    # x, y, w, h (image on the right)
 
 
 def _font(sz):
     return ImageFont.truetype(str(FONT), sz)
 
 
-def _fit(d, text, max_w, size, min_size=34):
+def _text(d, xy, text, size, fill=YELLOW, anchor="lm", stroke=7):
+    d.text(xy, text, font=_font(size), fill=fill, anchor=anchor,
+           stroke_width=stroke, stroke_fill=(0, 0, 0))
+
+
+def _fit(d, text, max_w, size, min_size=30):
     while size > min_size:
-        f = _font(size)
-        if d.textbbox((0, 0), text, font=f)[2] <= max_w:
-            return f
+        if d.textlength(text, font=_font(size)) <= max_w:
+            return size
         size -= 4
-    return _font(min_size)
+    return min_size
 
 
-def _center(d, y, text, font, fill):
-    w = d.textbbox((0, 0), text, font=font)[2]
-    d.text(((W - w) / 2, y), text, font=font, fill=fill)
+def _draw_title(d, title):
+    """Big yellow outlined title, wrapped to <=2 lines, centered at top."""
+    words = title.upper().split()
+    line1, line2 = title.upper(), ""
+    if d.textlength(title.upper(), font=_font(72)) > W - 90 and len(words) > 2:
+        mid = len(words) // 2
+        line1, line2 = " ".join(words[:mid]), " ".join(words[mid:])
+    size = _fit(d, max(line1, line2, key=len), W - 90, 78)
+    if line2:
+        _text(d, (W // 2, TITLE_Y + 40), line1, size, anchor="mm")
+        _text(d, (W // 2, TITLE_Y + 40 + size + 14), line2, size, anchor="mm")
+    else:
+        _text(d, (W // 2, TITLE_Y + 60), line1, size, anchor="mm")
 
 
-def _scrim(img, top_frac, strength=225):
-    """Darken the lower part of a frame (transparent -> dark) for text legibility."""
-    grad = Image.new("L", (1, H), 0)
-    y0 = int(H * top_frac)
-    for y in range(y0, H):
-        grad.putpixel((0, y), int(strength * (y - y0) / (H - y0)))
-    alpha = grad.resize((W, H))
-    black = Image.new("RGBA", (W, H), (5, 7, 14, 255))
-    black.putalpha(alpha)
-    img.alpha_composite(black)
-
-
-def _rank_caption(item, total) -> Image.Image:
-    """Full-frame transparent overlay: rank badge + name + stat, bottom third."""
+def _overlay(title, by_rank, revealed_ranks, cur_rank) -> Image.Image:
+    """Full-frame RGBA: title + the 1-5 list (filled for revealed ranks). The
+    image-panel area is left transparent (the photo composites there)."""
     img = Image.new("RGBA", (W, H), (0, 0, 0, 0))
-    _scrim(img, 0.52)
     d = ImageDraw.Draw(img)
-    is_one = item["rank"] == 1
-    accent = GOLD if is_one else ACCENT
-    _center(d, 1150, f"#{item['rank']}", _font(150), accent)
-    _center(d, 1330, item["name"].upper(),
-            _fit(d, item["name"].upper(), W - 140, 104), WHITE)
-    _center(d, 1470, item["stat"], _fit(d, item["stat"], W - 130, 52), MUTED)
+    _draw_title(d, title)
+    for rank in range(1, 6):
+        y = ROW_YS[rank - 1]
+        cur = rank == cur_rank
+        _text(d, (ROW_X, y), str(rank), 104 if cur else 92,
+              fill=YELLOW if rank in revealed_ranks else DIM)
+        it = by_rank.get(rank)
+        if rank in revealed_ranks and it:
+            name = it["name"].upper()
+            _text(d, (NAME_X, y), name, _fit(d, name, NAME_MAX_W, 62 if cur else 54))
+        else:
+            _text(d, (NAME_X, y), "______", 54, fill=DIM)
     return img
 
 
-def _intro_caption(title, hook) -> Image.Image:
-    img = Image.new("RGBA", (W, H), (0, 0, 0, 0))
-    _scrim(img, 0.0, strength=150)          # gentle full darken so title pops
-    d = ImageDraw.Draw(img)
-    # Split "Top 5 ..." onto two lines around the number for punch.
-    _center(d, 760, title.upper(),
-            _fit(d, title.upper(), W - 120, 96), WHITE)
-    if hook:
-        _center(d, 1040, hook, _fit(d, hook, W - 140, 52), ACCENT)
-    return img
+def _mood(title: str) -> str:
+    t = title.lower()
+    if any(w in t for w in ("dangerous", "deadl", "terrifying", "scary",
+                            "killer", "destroy", "violent", "hostile", "worst")):
+        return "ominous"
+    if any(w in t for w in ("beautiful", "stunning", "gorgeous", "breathtaking",
+                            "serene", "peaceful", "colorful", "amazing")):
+        return "angelic"
+    if any(w in t for w in ("biggest", "largest", "most massive", "most powerful",
+                            "greatest", "strongest", "epic", "extreme")):
+        return "epic"
+    if any(w in t for w in ("strangest", "mysterious", "weird", "bizarre",
+                            "unexplained", "signals", "secret")):
+        return "mysterious"
+    return "cinematic"
 
 
-def _outro_caption() -> Image.Image:
-    img = Image.new("RGBA", (W, H), (0, 0, 0, 0))
-    _scrim(img, 0.0, strength=170)
-    d = ImageDraw.Draw(img)
-    _center(d, 820, "Which one shocked you?", _font(70), WHITE)
-    _center(d, 960, "Follow for more 🚀", _font(58), ACCENT)
-    return img
+# (mood -> low chord frequencies, shimmer freq, shimmer amp)
+_MOODS = {
+    "ominous":   ([36.7, 73.4, 87.3, 110.0], 220.0, 0.006),   # D minor, dark
+    "angelic":   ([130.8, 164.8, 196.0, 261.6], 1046.5, 0.02),  # C major, bright
+    "epic":      ([49.0, 65.4, 98.0, 130.8], 523.3, 0.012),    # power/major
+    "mysterious": ([55.0, 73.4, 98.0, 146.8], 880.0, 0.01),    # suspended
+    "cinematic": ([55.0, 82.4, 110.0, 164.8], 880.0, 0.012),
+}
+
+
+def _synth_bed(total, reveal_times, transition_times, mood, path, sr=44100):
+    """Mood-matched music bed + whoosh (transitions) + impact (reveals)."""
+    n = int(total * sr)
+    buf = [0.0] * n
+    chord, shf, sha = _MOODS.get(mood, _MOODS["cinematic"])
+    amps = [0.05, 0.045, 0.04, 0.03]
+    for k in range(n):
+        env = min(1.0, k / (sr * 2.5)) * min(1.0, (n - k) / (sr * 1.5))
+        s = sum(a * math.sin(2 * math.pi * f * (k / sr)) for f, a in zip(amps, chord))
+        s += sha * math.sin(2 * math.pi * shf * (k / sr)) * (
+            0.5 + 0.5 * math.sin(2 * math.pi * 0.15 * (k / sr)))
+        buf[k] += s
+
+    def imp(t0):
+        st = int(t0 * sr)
+        for k in range(int(0.45 * sr)):
+            i = st + k
+            if 0 <= i < n:
+                e = math.exp(-(k / sr) * 11)
+                buf[i] += 0.5 * e * math.sin(2 * math.pi * 68 * (k / sr)) \
+                    + 0.1 * e * (random.random() * 2 - 1)
+
+    def wh(t0):
+        st = int((t0 - 0.28) * sr)
+        for k in range(int(0.55 * sr)):
+            i = st + k
+            if 0 <= i < n:
+                buf[i] += 0.12 * math.sin(math.pi * k / (0.55 * sr)) \
+                    * (random.random() * 2 - 1)
+
+    for t in transition_times:
+        wh(t)
+    for t in reveal_times:
+        imp(t)
+    with wave.open(str(path), "w") as w:
+        w.setnchannels(1); w.setsampwidth(2); w.setframerate(sr)
+        w.writeframes(b"".join(
+            struct.pack("<h", int(max(-1.0, min(1.0, s)) * 32767)) for s in buf))
 
 
 def _ffmpeg():
@@ -120,171 +176,109 @@ def _ffmpeg():
         return "ffmpeg"
 
 
-def _kenburns_segment(image_path, caption_png, dur, out_path, zoom_in=True):
-    """Render one segment: Ken Burns on the image + a fading-in caption overlay."""
+def _segment(image_path, overlay_png, dur, out_path):
+    """Black frame + Ken Burns image in the panel + the title/list overlay."""
+    px, py, pw, ph = PANEL
     frames = int(dur * FPS)
-    # Pre-scale to 2x cover so the zoom stays crisp, then zoompan to frame size.
-    if zoom_in:
-        z = "min(zoom+0.0012,1.14)"
-    else:                                   # start zoomed, ease out
-        z = "if(eq(on,0),1.14,max(zoom-0.0012,1.0))"
     vf = (
-        f"[0:v]scale=2160:3840:force_original_aspect_ratio=increase,"
-        f"crop=2160:3840,zoompan=z='{z}':d={frames}:"
-        f"x='iw/2-(iw/zoom/2)':y='ih/2-(ih/zoom/2)':s={W}x{H}:fps={FPS}[bg];"
-        f"[1:v]format=rgba,fade=in:st=0:d=0.5:alpha=1[cap];"
-        f"[bg][cap]overlay=0:0,format=yuv420p[v]"
+        f"[1:v]scale={pw*2}:{ph*2}:force_original_aspect_ratio=increase,"
+        f"crop={pw*2}:{ph*2},zoompan=z='min(zoom+0.0011,1.12)':d={frames}:"
+        f"x='iw/2-(iw/zoom/2)':y='ih/2-(ih/zoom/2)':s={pw}x{ph}:fps={FPS}[img];"
+        f"[0:v][img]overlay={px}:{py}[b];[b][2:v]overlay=0:0,format=yuv420p[v]"
     )
-    cmd = [
-        _ffmpeg(), "-y",
-        "-loop", "1", "-t", str(dur), "-i", str(image_path),
-        "-loop", "1", "-t", str(dur), "-i", str(caption_png),
-        "-filter_complex", vf, "-map", "[v]",
-        "-c:v", "libx264", "-preset", "veryfast", "-t", str(dur), str(out_path),
-    ]
-    subprocess.run(cmd, check=True, capture_output=True)
-
-
-def _synth_ranking_audio(total, reveal_times, transition_times, path, sr=44100):
-    """A cinematic space bed (low drone chord + shimmer) with a whoosh on each
-    transition and a low impact/boom on each rank reveal — synth so it's
-    rights-clean. A real majestic track can replace the bed via ranking.music."""
-    n = int(total * sr)
-    buf = [0.0] * n
-    chord = [(55.0, 0.05), (82.4, 0.045), (110.0, 0.04), (164.8, 0.028)]  # A1/E2/A2/E3
-    for k in range(n):
-        env = min(1.0, k / (sr * 2.5)) * min(1.0, (n - k) / (sr * 1.5))    # swell in/out
-        s = sum(a * math.sin(2 * math.pi * f * (k / sr)) for f, a in chord)
-        s += 0.012 * math.sin(2 * math.pi * 880 * (k / sr)) * (
-            0.5 + 0.5 * math.sin(2 * math.pi * 0.2 * (k / sr)))            # shimmer
-        buf[k] += s
-
-    def impact(t0):
-        st = int(t0 * sr)
-        for k in range(int(0.45 * sr)):
-            i = st + k
-            if 0 <= i < n:
-                e = math.exp(-(k / sr) * 11)
-                buf[i] += 0.6 * e * math.sin(2 * math.pi * 70 * (k / sr)) \
-                    + 0.12 * e * (random.random() * 2 - 1)
-
-    def whoosh(t0):
-        st = int((t0 - 0.28) * sr)
-        for k in range(int(0.55 * sr)):
-            i = st + k
-            if 0 <= i < n:
-                buf[i] += 0.15 * math.sin(math.pi * k / (0.55 * sr)) \
-                    * (random.random() * 2 - 1)
-
-    for t in transition_times:
-        whoosh(t)
-    for t in reveal_times:
-        impact(t)
-    with wave.open(str(path), "w") as w:
-        w.setnchannels(1); w.setsampwidth(2); w.setframerate(sr)
-        w.writeframes(b"".join(
-            struct.pack("<h", int(max(-1.0, min(1.0, s)) * 32767)) for s in buf))
-
-
-def _xfade_concat(segments, durs, out_path):
-    """Crossfade-chain the segment clips into one video."""
-    inputs = []
-    for s in segments:
-        inputs += ["-i", str(s)]
-    # Build the xfade chain with cumulative offsets.
-    filt, prev, running = [], "[0:v]", durs[0]
-    for i in range(1, len(segments)):
-        off = round(running - XFADE, 3)
-        lbl = f"[x{i}]"
-        filt.append(f"{prev}[{i}:v]xfade=transition=fade:duration={XFADE}:"
-                    f"offset={off}{lbl}")
-        prev = lbl
-        running += durs[i] - XFADE
-    cmd = [_ffmpeg(), "-y", *inputs,
-           "-filter_complex", ";".join(filt), "-map", prev,
+    cmd = [_ffmpeg(), "-y",
+           "-f", "lavfi", "-t", str(dur),
+           "-i", f"color=c=0x{BG[0]:02x}{BG[1]:02x}{BG[2]:02x}:s={W}x{H}:r={FPS}",
+           "-loop", "1", "-t", str(dur), "-i", str(image_path),
+           "-loop", "1", "-t", str(dur), "-i", str(overlay_png),
+           "-filter_complex", vf, "-map", "[v]",
            "-c:v", "libx264", "-preset", "veryfast", "-pix_fmt", "yuv420p",
-           "-movflags", "+faststart", str(out_path)]
+           "-t", str(dur), str(out_path)]
     subprocess.run(cmd, check=True, capture_output=True)
 
 
 def render_ranking_video(post_id, payload, config=None) -> Path:
-    """Render the cinematic (silent) countdown video. Audio added in a 2nd pass."""
     title = payload["title"]
     hook = payload.get("hook", "")
     items = sorted(payload["items"], key=lambda x: -x["rank"])   # #5 -> #1
+    by_rank = {it["rank"]: it for it in payload["items"]}
     OUTPUT_DIR.mkdir(exist_ok=True)
+    ff = _ffmpeg()
+
+    from voiceover.tts import synthesize
+
+    def vo(text, tag):
+        try:
+            return synthesize(text, f"{post_id}_{tag}", config or {}, voice=NARRATOR)
+        except Exception as e:
+            log.warning("[ranking] VO '%s' failed: %s", tag, e)
+            return None
+
+    # Build the segment plan: (image, revealed_ranks, cur_rank, vo_text).
+    nebula = fetch_image("colorful nebula", prefer="nebula")
+    plan = [(nebula, set(), None, f"{title}. {hook}")]
+    revealed = set()
+    for it in items:
+        revealed = revealed | {it["rank"]}
+        img = fetch_image(it["query"], prefer=it["name"]) or nebula
+        plan.append((img, set(revealed), it["rank"],
+                     f"Number {it['rank']}. {it['name']}. {it['stat']}."))
+    plan.append((by_rank[items[-1]["rank"]] and
+                 fetch_image(items[-1]["query"], prefer=items[-1]["name"]) or nebula,
+                 set(range(1, 6)), None,
+                 "Which one shocked you the most? Follow for more cosmic countdowns."))
 
     with tempfile.TemporaryDirectory() as tmp:
         tmpd = Path(tmp)
-        segs, durs = [], []
+        seg_files, durs, vo_files, starts = [], [], [], []
+        t = 0.0
+        for i, (img, rev, cur, votext) in enumerate(plan):
+            res = vo(votext, f"vo{i}")
+            vlen = float(res["duration"]) if res else 3.0
+            pad = 0.7 if i == 0 else (0.9 if cur is not None else 1.0)
+            dur = round(vlen + pad, 2)
+            ov = tmpd / f"ov{i}.png"
+            _overlay(title, by_rank, rev, cur).save(ov)
+            seg = tmpd / f"seg{i}.mp4"
+            _segment(img, ov, dur, seg)
+            seg_files.append(seg); durs.append(dur)
+            vo_files.append(res["audio"] if res else None)
+            starts.append(t); t += dur
+        total = t
 
-        # Intro over a nebula.
-        nebula = (fetch_image("colorful nebula", prefer="nebula")
-                  or fetch_image(items[-1]["query"], prefer=items[-1]["name"]))
-        cap = tmpd / "cap_intro.png"; _intro_caption(title, hook).save(cap)
-        seg = tmpd / "seg_intro.mp4"
-        _kenburns_segment(nebula, cap, INTRO_SEC, seg, zoom_in=True)
-        segs.append(seg); durs.append(INTRO_SEC)
-
-        # Ranks #5 -> #1.
-        for i, it in enumerate(items):
-            img = fetch_image(it["query"], prefer=it["name"]) or nebula
-            cap = tmpd / f"cap_{i}.png"; _rank_caption(it, len(items)).save(cap)
-            seg = tmpd / f"seg_{i}.mp4"
-            _kenburns_segment(img, cap, RANK_SEC, seg, zoom_in=(i % 2 == 0))
-            segs.append(seg); durs.append(RANK_SEC)
-
-        # Outro.
-        cap = tmpd / "cap_outro.png"; _outro_caption().save(cap)
-        seg = tmpd / "seg_outro.mp4"
-        _kenburns_segment(nebula, cap, OUTRO_SEC, seg, zoom_in=False)
-        segs.append(seg); durs.append(OUTRO_SEC)
-
+        # Concatenate the (silent) segments.
+        lst = tmpd / "list.txt"
+        lst.write_text("".join(f"file '{s}'\n" for s in seg_files), encoding="utf-8")
         silent = tmpd / "silent.mp4"
-        log.info("[ranking] crossfading %d segments...", len(segs))
-        _xfade_concat(segs, durs, silent)
+        subprocess.run([ff, "-y", "-f", "concat", "-safe", "0", "-i", str(lst),
+                        "-c", "copy", str(silent)], check=True, capture_output=True)
 
-        # Segment timeline (matches _xfade_concat's cumulative offsets).
-        offsets, run = [], durs[0]
-        for i in range(1, len(durs)):
-            offsets.append(round(run - XFADE, 3))
-            run += durs[i] - XFADE
-        total = run
-        reveal_times = offsets[:len(items)]      # transition INTO each rank
-        transition_times = offsets               # whoosh on every cut
-
+        # Mood music bed + SFX.
         bed = tmpd / "bed.wav"
-        _synth_ranking_audio(total, reveal_times, transition_times, bed)
+        _synth_bed(total, starts[1:-1], starts, _mood(title), bed)
 
-        # Realistic voiceover intro (title + hook), unless disabled.
-        vo_path = None
-        if (config or {}).get("ranking", {}).get("voiceover", "intro") != "off":
-            try:
-                from voiceover.tts import synthesize
-                narrator = {"id": "pNInz6obpgDQGcFmaJgB", "name": "Adam"}  # deep
-                res = synthesize(f"{title}. {hook}", f"{post_id}_vo",
-                                 config or {}, voice=narrator)
-                vo_path = res["audio"]
-            except Exception as e:
-                log.warning("[ranking] voiceover failed (%s); music+SFX only.", e)
-
+        # Mix: bed + each voiceover clip delayed to its segment start.
+        inputs = ["-i", str(silent), "-i", str(bed)]
+        filt = ["[1:a]volume=0.5[bed]"]
+        mixlabels = ["[bed]"]
+        idx = 2
+        for i, vf_path in enumerate(vo_files):
+            if not vf_path:
+                continue
+            inputs += ["-i", str(vf_path)]
+            ms = int((starts[i] + (0.2 if i == 0 else 0.3)) * 1000)
+            filt.append(f"[{idx}:a]volume=1.9,adelay={ms}|{ms}[a{idx}]")
+            mixlabels.append(f"[a{idx}]")
+            idx += 1
+        filt.append("".join(mixlabels) +
+                    f"amix=inputs={len(mixlabels)}:normalize=0:duration=first[a]")
         out_path = OUTPUT_DIR / f"{post_id}.mp4"
-        ff = _ffmpeg()
-        if vo_path:
-            cmd = [ff, "-y", "-i", str(silent), "-i", str(bed), "-i", str(vo_path),
-                   "-filter_complex",
-                   "[1:a]volume=1.0[b];[2:a]adelay=250|250,volume=1.8[v];"
-                   "[b][v]amix=inputs=2:duration=first:normalize=0[a]",
-                   "-map", "0:v", "-map", "[a]",
-                   "-c:v", "copy", "-c:a", "aac", "-b:a", "160k", "-shortest",
-                   str(out_path)]
-        else:
-            cmd = [ff, "-y", "-i", str(silent), "-i", str(bed),
-                   "-map", "0:v", "-map", "1:a",
-                   "-c:v", "copy", "-c:a", "aac", "-b:a", "160k", "-shortest",
-                   str(out_path)]
-        log.info("[ranking] mixing audio -> %s", out_path.name)
-        subprocess.run(cmd, check=True, capture_output=True)
+        log.info("[ranking] mixing %d voiceover clips + %s bed -> %s",
+                 idx - 2, _mood(title), out_path.name)
+        subprocess.run([ff, "-y", *inputs, "-filter_complex", ";".join(filt),
+                        "-map", "0:v", "-map", "[a]", "-c:v", "copy",
+                        "-c:a", "aac", "-b:a", "160k", "-shortest", str(out_path)],
+                       check=True, capture_output=True)
     return out_path
 
 
