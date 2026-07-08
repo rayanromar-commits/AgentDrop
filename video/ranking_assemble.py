@@ -48,7 +48,8 @@ ML, MR = 60, 120                     # left / right margins
 TITLE_CY = 205                       # title center (below the Dynamic Island)
 LIST_X = 70
 LIST_YS = [560, 690, 820, 950, 1080]  # compact 1..5 rows, upper-left
-CAP_CY = 1660                        # caption band center (bottom ~380px)
+CAP_CY = 1480                        # caption center — raised into the eye-line
+                                     # (midway between the list end and the bottom)
 
 
 def _font(sz):
@@ -79,7 +80,7 @@ def _wrap(d, text, max_w, size):
     return lines
 
 
-def _scrim(img, top_h=300, bot_h=460):
+def _scrim(img, top_h=300, bot_h=600):
     """Darken the top and bottom bands so title + captions stay legible."""
     ov = Image.new("RGBA", (W, H), (0, 0, 0, 0))
     d = ImageDraw.Draw(ov)

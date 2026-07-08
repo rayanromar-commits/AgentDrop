@@ -417,7 +417,26 @@ def start_scheduler(config: dict) -> None:
     prod_hour = (first_hh - 1) % 24
     n_per_day = config["upload"]["videos_per_day"]
 
+    # Optional start date — the agent stays idle until this date, so a manually
+    # scheduled first post isn't doubled up by the automation.
+    from datetime import date
+    _start = config.get("start_date")
+
+    def _active_today() -> bool:
+        if not _start:
+            return True
+        try:
+            sd = date.fromisoformat(str(_start))
+        except Exception:
+            return True
+        if datetime.now(tz).date() < sd:
+            log.info("[scheduler] before start_date %s — idle today.", sd)
+            return False
+        return True
+
     def production_job():
+        if not _active_today():
+            return
         log.info("[scheduler] Production run (target buffer: %d queued videos).",
                  n_per_day)
         # Pull the freshest performance data BEFORE ranking so story selection
@@ -457,10 +476,13 @@ def start_scheduler(config: dict) -> None:
     sched.add_job(production_job, CronTrigger(hour=prod_hour, minute=0, timezone=tz),
                   id="produce", name="daily production")
 
-    # Upload one approved video at each configured time.
+    # Upload one approved video at each configured time (idle before start_date).
+    def upload_job():
+        if _active_today():
+            upload_next_approved(config)
     for t in times:
         hh, mm = (int(x) for x in t.split(":"))
-        sched.add_job(lambda: upload_next_approved(config),
+        sched.add_job(upload_job,
                       CronTrigger(hour=hh, minute=mm, timezone=tz),
                       id=f"upload_{t}", name=f"upload at {t}")
 

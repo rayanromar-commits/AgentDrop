@@ -25,6 +25,10 @@ ranking:
   # if unset, a synthesized cinematic bed is used. Example: assets/epic.mp3
   music:
 
+# The agent stays idle until this date, then produces + posts daily. Set so the
+# first automated video goes out 2026-07-09 (the manual July-8 post covers the 8th).
+start_date: "2026-07-09"
+
 story_source: manual
 
 # Which subreddits to pull stories from. Add/remove as you like.
