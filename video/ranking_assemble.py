@@ -112,11 +112,12 @@ def _caption_layout(d, caption, cs, max_w, cy):
     return words
 
 
-def _word_png(word, cx, cy) -> Image.Image:
+def _word_png(word, cx, cy, size=CAP_SIZE) -> Image.Image:
     """Full-frame transparent PNG with one word in NEON at (cx, cy)."""
     img = Image.new("RGBA", (W, H), (0, 0, 0, 0))
-    _text(ImageDraw.Draw(img), (cx, cy), word, CAP_SIZE, fill=NEON,
-          anchor="mm", stroke=8)
+    stroke = 9 if size >= 60 else 8
+    _text(ImageDraw.Draw(img), (cx, cy), word, size, fill=NEON,
+          anchor="mm", stroke=stroke)
     return img
 
 
@@ -126,8 +127,8 @@ def _align_words(cap_words, vo_words):
     def key(s):
         return re.sub(r"[^a-z0-9]", "", s.lower())
     out, vi = [], 0
-    for (w, _, _) in cap_words:
-        k = key(w)
+    for item in cap_words:
+        k = key(item[0])
         if not k or vi >= len(vo_words):
             out.append(None)
             continue
@@ -155,8 +156,16 @@ def _overlay(title, by_rank, revealed_ranks, cur_rank, caption):
         ts -= 4
         tlines = _wrap(d, title.upper(), W - ML - MR, ts)
     y = TITLE_CY - (len(tlines) - 1) * (ts + 12) // 2
+    tfont = _font(ts)
+    tspace = d.textlength(" ", font=tfont)
+    title_words = []                     # per-word centres (for intro karaoke)
     for ln in tlines:
         _text(d, (W // 2, y), ln, ts, fill=WHITE, anchor="mm", stroke=9)
+        x = (W - d.textlength(ln, font=tfont)) / 2
+        for w in ln.split():
+            ww = d.textlength(w, font=tfont)
+            title_words.append((w, x + ww / 2, y, ts))
+            x += ww + tspace
         y += ts + 14
 
     # Compact tier list (left) — text sits directly on the image (no panel).
@@ -179,7 +188,7 @@ def _overlay(title, by_rank, revealed_ranks, cur_rank, caption):
         cap_words = _caption_layout(d, caption, CAP_SIZE, W - ML - MR, CAP_CY)
         for (w, cx, cy) in cap_words:
             _text(d, (cx, cy), w, CAP_SIZE, fill=WHITE, anchor="mm", stroke=8)
-    return img, cap_words
+    return img, cap_words, title_words
 
 
 def _mood(title: str) -> str:
@@ -305,7 +314,9 @@ def render_ranking_video(post_id, payload, config=None) -> Path:
     # plan entries: (image, revealed_ranks, cur_rank, caption, voiceover_text).
     # Caption stays clean (name + fact); the voiceover adds "Number N" for clarity.
     nebula = fetch_image("colorful nebula", prefer="nebula")
-    plan = [(nebula, set(), None, hook or title, f"{title}. {hook}")]
+    # Intro: the voice reads the TITLE first, then the hook. The title karaokes
+    # up top (it's already on screen); the hook is the bottom caption after it.
+    plan = [(nebula, set(), None, hook, f"{title}. {hook}")]
     revealed = set()
     for it in order:
         revealed = revealed | {it["rank"]}
@@ -324,22 +335,28 @@ def render_ranking_video(post_id, payload, config=None) -> Path:
             dur = round((float(res["duration"]) if res else 2.5)
                         + (0.3 if cur is not None else 0.5), 2)
             ov = tmpd / f"ov{i}.png"
-            base_img, cap_words = _overlay(title, by_rank, rev, cur, cap)
+            base_img, cap_words, title_words = _overlay(title, by_rank, rev, cur, cap)
             base_img.save(ov)
             # Karaoke: a neon-green copy of each spoken word, timed to the voice.
+            # Intro (i==0): the voice reads the TITLE first, so highlight the title
+            # words up top, THEN the hook caption at the bottom.
+            if i == 0:
+                kara = title_words + [(w, cx, cy, CAP_SIZE) for (w, cx, cy) in cap_words]
+            else:
+                kara = [(w, cx, cy, CAP_SIZE) for (w, cx, cy) in cap_words]
             word_ovs = []
-            if res and cap_words:
+            if res and kara:
                 try:
                     vo_words = json.load(open(res["words"]))
                 except Exception:
                     vo_words = []
                 delay = 0.1 if i == 0 else 0.2          # matches the audio adelay
-                for k, ((w, cx, cy), tm) in enumerate(
-                        zip(cap_words, _align_words(cap_words, vo_words))):
+                for k, ((w, cx, cy, size), tm) in enumerate(
+                        zip(kara, _align_words(kara, vo_words))):
                     if not tm or tm[1] <= tm[0]:
                         continue
                     wp = tmpd / f"w{i}_{k}.png"
-                    _word_png(w, cx, cy).save(wp)
+                    _word_png(w, cx, cy, size).save(wp)
                     word_ovs.append((wp, tm[0] + delay, tm[1] + delay))
             seg = tmpd / f"seg{i}.mp4"
             _segment(img, ov, word_ovs, dur, seg)
