@@ -39,7 +39,9 @@ OUTPUT_DIR = PROJECT_ROOT / "output"
 
 W, H = 1080, 1920
 FPS = 30
-YELLOW = (255, 213, 0)
+YELLOW = (255, 213, 0)          # the tier list
+WHITE = (250, 251, 255)         # the title
+LIGHT_GREEN = (150, 255, 140)   # the captions
 DIM = (180, 184, 200)
 NARRATOR = {"id": "pNInz6obpgDQGcFmaJgB", "name": "Adam"}
 
@@ -96,15 +98,15 @@ def _overlay(title, by_rank, revealed_ranks, cur_rank, caption) -> Image.Image:
     _scrim(img)
     d = ImageDraw.Draw(img)
 
-    # Title (top band): big, wrapped to <=2 lines (shrink only if it overflows).
-    ts = 62
+    # Title (top band): WHITE, bold, wrapped to <=2 lines (shrink if it overflows).
+    ts = 68
     tlines = _wrap(d, title.upper(), W - ML - MR, ts)
-    while len(tlines) > 2 and ts > 36:
+    while len(tlines) > 2 and ts > 38:
         ts -= 4
         tlines = _wrap(d, title.upper(), W - ML - MR, ts)
     y = TITLE_CY - (len(tlines) - 1) * (ts + 12) // 2
     for ln in tlines:
-        _text(d, (W // 2, y), ln, ts, anchor="mm", stroke=7)
+        _text(d, (W // 2, y), ln, ts, fill=WHITE, anchor="mm", stroke=9)
         y += ts + 14
 
     # Compact tier list (left) — text sits directly on the image (no panel).
@@ -126,7 +128,7 @@ def _overlay(title, by_rank, revealed_ranks, cur_rank, caption) -> Image.Image:
         clines = _wrap(d, caption, W - ML - MR, cs)[:3]
         yy = CAP_CY - (len(clines) - 1) * (cs + 6) // 2
         for ln in clines:
-            _text(d, (W // 2, yy), ln, cs, anchor="mm", stroke=7)
+            _text(d, (W // 2, yy), ln, cs, fill=LIGHT_GREEN, anchor="mm", stroke=8)
             yy += cs + 10
     return img
 
