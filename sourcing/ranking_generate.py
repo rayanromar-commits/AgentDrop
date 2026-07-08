@@ -30,30 +30,51 @@ PROJECT_ROOT = Path(__file__).resolve().parent.parent
 DATA_DIR = PROJECT_ROOT / "sourcing" / "ranking_data"
 MODEL = "claude-opus-4-8"
 
+# The channel is COSMOS-locked (NASA public-domain image moat), so every topic
+# stays in space — but the SUBJECT TYPES and ANGLES are deliberately spread as
+# wide as possible. Repetitive/samey topics + titles are what got the old story
+# channel suppressed, so breadth here is the product, not a nice-to-have. Keep
+# adding rows; the generator picks one at random per run.
 TOPICS = [
-    # Planets & solar system
-    "most dangerous planets", "hottest planets", "strangest exoplanets ever found",
-    "most extreme places in the solar system", "planets where it rains something bizarre",
-    "biggest planets ever discovered", "most Earth-like exoplanets",
-    "windiest planets", "planets with the wildest storms",
-    # Moons
+    # --- Planets & solar system ---
+    "most dangerous planets", "hottest planets", "coldest planets",
+    "strangest exoplanets ever found", "most extreme places in the solar system",
+    "planets where it rains something bizarre", "biggest planets ever discovered",
+    "most Earth-like exoplanets", "windiest planets", "planets with the wildest storms",
+    "planets that shouldn't exist", "loneliest rogue planets drifting in the dark",
+    "planets with the longest and shortest days", "most toxic atmospheres in space",
+    # --- Moons ---
     "strangest moons", "moons that could hold alien life", "most volcanic moons",
-    # Stars
-    "biggest stars in the universe", "most powerful explosions in space",
-    "strangest types of stars", "closest stars that could go supernova",
-    # Galaxies & deep space
+    "moons with hidden underground oceans", "moons weirder than any planet",
+    # --- Stars ---
+    "biggest stars in the universe", "strangest types of stars",
+    "closest stars that could go supernova", "most powerful explosions in space",
+    "oldest stars in the universe", "stars that break the laws of physics",
+    "brightest stars you can actually see", "stars that are already dead",
+    # --- Galaxies & deep space ---
     "largest galaxies", "most beautiful nebulae", "biggest black holes",
     "most mysterious objects in space", "strangest signals from space",
     "coldest places in the universe", "brightest objects in the universe",
-    "biggest structures in the universe",
-    # Phenomena & events
+    "biggest structures in the universe", "emptiest places in the universe",
+    "most colorful things in space", "galaxies on a collision course",
+    # --- Phenomena, events & physics ---
     "deadliest cosmic events", "things that could end all life on Earth from space",
     "most terrifying facts about black holes", "fastest things in the universe",
-    # Space history & people (NASA / public-domain imagery)
-    "most important space missions in history",
-    "people who changed how we see the universe",
+    "loudest events in the universe", "most powerful forces in the universe",
+    "weirdest things Einstein was right about", "cosmic events you could actually survive",
+    "slowest processes in the universe", "biggest numbers in astronomy",
+    # --- Human space history & missions (NASA / public-domain imagery) ---
+    "most important space missions in history", "people who changed how we see the universe",
     "greatest astronomers of all time", "most famous astronauts in history",
-    "most iconic photos NASA ever took",
+    "most iconic photos NASA ever took", "riskiest moments in spaceflight",
+    "most incredible things left on other worlds", "wildest spacecraft ever built",
+    "space missions that failed spectacularly", "longest space journeys ever made",
+    # --- Mysteries, records & "what if" framings (breaks the superlative monotony) ---
+    "unsolved mysteries of the universe", "cosmic coincidences that seem impossible",
+    "things scientists still can't explain about space",
+    "what the universe will look like in a trillion years",
+    "places in space that would kill you instantly", "most Earth-sized surprises in space",
+    "space facts that sound fake but are true", "smallest things in the universe",
 ]
 
 SYSTEM = """You write viral "Top 5" space-ranking YouTube Shorts. Return ONE JSON \
@@ -61,6 +82,13 @@ object (and nothing else) with this exact shape:
 
 {
   "title": "Top 5 Most DANGEROUS Planets In The Universe",
+  "yt_titles": [
+    "These 5 Planets Would Kill You Instantly",
+    "Why Does Planet #1 Even Exist?? 😳",
+    "Ranking the Deadliest Planets in the Universe",
+    "I Didn't Know Space Was This Terrifying",
+    "5 Planets NASA Wishes You Knew About"
+  ],
   "hook": "Number one shouldn't even exist.",
   "category": "planets",
   "items": [
@@ -70,8 +98,14 @@ object (and nothing else) with this exact shape:
 }
 
 Rules:
-- title: SHORT, dramatic, superlative, ONE word in ALL CAPS (DANGEROUS, LARGEST, \
-STRANGEST). Format "Top 5 ... ".
+- title: the ON-SCREEN title. SHORT, dramatic, superlative, ONE word in ALL CAPS \
+(DANGEROUS, LARGEST, STRANGEST). Format "Top 5 ... ".
+- yt_titles: EXACTLY 5 YouTube titles for THIS video, each WILDLY different from \
+the others and from the on-screen title. This is the single most important field \
+for the channel — repetitive titles get a channel suppressed. Vary EVERYTHING: \
+some a question, some a bold claim, some a curiosity gap, some first-person, some \
+number-led; vary length; most with NO emoji (at most one has an emoji). NEVER just \
+reword "Top 5 X" five times. Make each one a title a different creator might write.
 - hook: one punchy line teasing #1 (curiosity gap), spoken in the intro.
 - stat: ONE vivid, FACTUALLY ACCURATE line for that object (a real number/detail).
 - query: a NASA image-library search term that reliably returns a clear image of \
@@ -137,6 +171,18 @@ def generate_ranking(topic: str | None = None) -> dict | None:
         if not all(k in it for k in ("rank", "name", "stat", "query")):
             log.warning("[rank-gen] item missing fields.")
             return None
+    # Normalize YouTube title variants: keep only distinct non-empty strings.
+    variants = [t.strip() for t in data.get("yt_titles", [])
+                if isinstance(t, str) and t.strip()]
+    seen, deduped = set(), []
+    for t in variants:
+        if t.lower() not in seen:
+            seen.add(t.lower())
+            deduped.append(t)
+    data["yt_titles"] = deduped
+    if len(deduped) < 3:
+        log.warning("[rank-gen] only %d title variant(s) for %r (want 5).",
+                    len(deduped), data.get("title"))
     return data
 
 

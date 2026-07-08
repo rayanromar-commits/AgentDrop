@@ -61,7 +61,9 @@ def _produce_ranking(config: dict):
     log.info("Producing ranking Short %s: %s", item["post_id"], item["title"])
     video_path = render_ranking_video(item["post_id"], payload, config)
     # Give YouTube a VARIED title (metadata) so daily uploads don't look duplicate.
-    item["title"] = youtube_title(item["title"], item["post_id"])
+    # Prefers the wildly-distinct variants Claude baked into the dataset.
+    item["title"] = youtube_title(item["title"], item["post_id"],
+                                  payload.get("yt_titles"))
     result = submit_video(item, video_path, config)
     db.save_post(post_id=item["post_id"], subreddit=item["subreddit"],
                  title=item["title"], body=item["body"], score=0,

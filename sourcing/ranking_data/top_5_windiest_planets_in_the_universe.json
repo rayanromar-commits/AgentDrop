@@ -1,0 +1,44 @@
+{
+  "title": "Top 5 WINDIEST Planets In The Universe",
+  "hook": "Number one has winds that break the speed of sound.",
+  "category": "planets",
+  "items": [
+    {
+      "rank": 5,
+      "name": "Mars",
+      "stat": "Dust storms whip winds up to 60 mph and can engulf the entire planet for weeks.",
+      "query": "Mars Viking"
+    },
+    {
+      "rank": 4,
+      "name": "Jupiter",
+      "stat": "Jet streams roar at 400 mph, driving the centuries-old Great Red Spot storm.",
+      "query": "Jupiter Cassini"
+    },
+    {
+      "rank": 3,
+      "name": "Uranus",
+      "stat": "Winds reach 560 mph on a planet tipped completely on its side.",
+      "query": "Uranus Voyager"
+    },
+    {
+      "rank": 2,
+      "name": "Saturn",
+      "stat": "Equatorial winds blast at 1,100 mph, among the fastest in the solar system.",
+      "query": "Saturn Cassini"
+    },
+    {
+      "rank": 1,
+      "name": "Neptune",
+      "stat": "Supersonic winds scream up to 1,300 mph, the fastest known on any planet.",
+      "query": "Neptune Voyager"
+    }
+  ],
+  "yt_titles": [
+    "What Would Happen If You Stood On The Windiest Planet Ever Found?",
+    "These 5 Planets Have Winds That Could Rip You Apart",
+    "I Ranked the Most Violent Wind Storms in the Cosmos",
+    "7,000 mph winds. On a planet made of glass rain.",
+    "Nowhere on Earth compares to what's blowing across these worlds"
+  ]
+}

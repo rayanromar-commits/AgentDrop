@@ -3,10 +3,42 @@
   "hook": "Number one shouldn't even exist.",
   "category": "planets",
   "items": [
-    {"rank": 5, "name": "Venus",        "stat": "462°C surface — hot enough to melt lead", "query": "Venus computer simulated global view"},
-    {"rank": 4, "name": "Jupiter",      "stat": "Radiation that would kill you in seconds",        "query": "Jupiter Cassini"},
-    {"rank": 3, "name": "HD 189733 b",  "stat": "Rains molten glass — sideways at 5,400 mph",  "query": "HD 189733b exoplanet"},
-    {"rank": 2, "name": "55 Cancri e",  "stat": "An ocean of lava on a diamond world",             "query": "55 Cancri e exoplanet"},
-    {"rank": 1, "name": "KELT-9b",      "stat": "4,300°C — hotter than most stars",       "query": "KELT-9b exoplanet"}
+    {
+      "rank": 5,
+      "name": "Venus",
+      "stat": "462°C surface — hot enough to melt lead",
+      "query": "Venus computer simulated global view"
+    },
+    {
+      "rank": 4,
+      "name": "Jupiter",
+      "stat": "Radiation that would kill you in seconds",
+      "query": "Jupiter Cassini"
+    },
+    {
+      "rank": 3,
+      "name": "HD 189733 b",
+      "stat": "Rains molten glass — sideways at 5,400 mph",
+      "query": "HD 189733b exoplanet"
+    },
+    {
+      "rank": 2,
+      "name": "55 Cancri e",
+      "stat": "An ocean of lava on a diamond world",
+      "query": "55 Cancri e exoplanet"
+    },
+    {
+      "rank": 1,
+      "name": "KELT-9b",
+      "stat": "4,300°C — hotter than most stars",
+      "query": "KELT-9b exoplanet"
+    }
+  ],
+  "yt_titles": [
+    "What Would Happen If You Landed On These 5 Planets?",
+    "I Ranked the Deadliest Worlds We've Ever Discovered",
+    "This Planet Rains Molten Glass Sideways",
+    "5 planets so hostile they make Earth feel like paradise",
+    "Nowhere in the universe is more terrifying than #1 on this list"
   ]
 }

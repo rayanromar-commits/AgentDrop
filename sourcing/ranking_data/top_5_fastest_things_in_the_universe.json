@@ -1,0 +1,44 @@
+{
+  "title": "Top 5 FASTEST Things In The Universe",
+  "hook": "Number one crosses your entire room a billion times per second.",
+  "category": "phenomena",
+  "items": [
+    {
+      "rank": 5,
+      "name": "Voyager 1 Spacecraft",
+      "stat": "Travels at about 61,000 km/h relative to the Sun, the fastest human-made object leaving the solar system.",
+      "query": "Voyager 1 spacecraft"
+    },
+    {
+      "rank": 4,
+      "name": "Parker Solar Probe",
+      "stat": "Hit about 692,000 km/h near the Sun, the fastest human-made object ever built.",
+      "query": "Parker Solar Probe artist concept"
+    },
+    {
+      "rank": 3,
+      "name": "Pulsar PSR J0952-0607",
+      "stat": "Spins 707 times every single second, its surface whipping around at a fraction of light speed.",
+      "query": "pulsar neutron star artist concept"
+    },
+    {
+      "rank": 2,
+      "name": "Blazar Relativistic Jets",
+      "stat": "Blast plasma outward at over 99.9% the speed of light across thousands of light-years.",
+      "query": "Hubble blazar jet"
+    },
+    {
+      "rank": 1,
+      "name": "Light (Photons)",
+      "stat": "Travels at exactly 299,792,458 meters per second, the ultimate cosmic speed limit nothing can beat.",
+      "query": "Hubble deep field light"
+    }
+  ],
+  "yt_titles": [
+    "What's Faster Than Light? The Answer Broke My Brain",
+    "5 Cosmic Speed Demons That Make a Rocket Look Frozen",
+    "Nothing beats these—ranked from slow to unimaginable",
+    "I Studied the Universe's Fastest Things So You Don't Have To",
+    "Could Anything Really Outrun a Beam of Light?"
+  ]
+}

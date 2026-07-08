@@ -1,0 +1,44 @@
+{
+  "title": "Top 5 STRANGEST Stars In The Universe",
+  "hook": "Number one is spinning 700 times every single second.",
+  "category": "stars",
+  "items": [
+    {
+      "rank": 5,
+      "name": "Red Giant Betelgeuse",
+      "stat": "So huge it would swallow Mars if placed at our Sun's center, about 700 times wider than the Sun.",
+      "query": "Hubble Betelgeuse"
+    },
+    {
+      "rank": 4,
+      "name": "White Dwarf Sirius B",
+      "stat": "A dying star crushed to Earth's size, where a teaspoon of it weighs about 5 tons.",
+      "query": "Hubble Sirius B white dwarf"
+    },
+    {
+      "rank": 3,
+      "name": "Magnetar",
+      "stat": "Its magnetic field is a thousand trillion times stronger than Earth's, enough to erase a credit card from 100,000 miles away.",
+      "query": "magnetar neutron star artist concept"
+    },
+    {
+      "rank": 2,
+      "name": "Hypergiant UY Scuti",
+      "stat": "One of the largest known stars, roughly 1,700 times the Sun's radius.",
+      "query": "UY Scuti hypergiant star"
+    },
+    {
+      "rank": 1,
+      "name": "Millisecond Pulsar",
+      "stat": "This neutron star spins over 700 times per second, its surface racing at a quarter the speed of light.",
+      "query": "pulsar neutron star Chandra"
+    }
+  ],
+  "yt_titles": [
+    "What if I told you some stars are made of pure diamond?",
+    "5 Stars So Bizarre Scientists Barely Believe They Exist",
+    "The strangest object in the universe isn't a black hole",
+    "I ranked the weirdest stars ever discovered and #1 shocked me",
+    "Zombie stars, diamond stars, and something even stranger ⭐"
+  ]
+}

@@ -1,0 +1,44 @@
+{
+  "title": "Top 5 BIGGEST Stars In The Universe",
+  "hook": "Number one could swallow our entire solar system whole.",
+  "category": "stars",
+  "items": [
+    {
+      "rank": 5,
+      "name": "Antares",
+      "stat": "This red supergiant is about 700 times the Sun's radius and 10,000 times brighter.",
+      "query": "Antares red supergiant Hubble"
+    },
+    {
+      "rank": 4,
+      "name": "Betelgeuse",
+      "stat": "About 760 times the Sun's radius — if placed here, it would engulf Mars's orbit.",
+      "query": "Betelgeuse star Hubble"
+    },
+    {
+      "rank": 3,
+      "name": "VY Canis Majoris",
+      "stat": "A hypergiant around 1,400 times the Sun's radius, once thought the largest known star.",
+      "query": "VY Canis Majoris Hubble"
+    },
+    {
+      "rank": 2,
+      "name": "WOH G64",
+      "stat": "This dusty supergiant spans roughly 1,540 times the Sun's radius in the Large Magellanic Cloud.",
+      "query": "WOH G64 star"
+    },
+    {
+      "rank": 1,
+      "name": "Stephenson 2-18",
+      "stat": "About 2,150 times the Sun's radius — over 10 billion Suns could fit inside it.",
+      "query": "Stephenson 2-18 red supergiant"
+    }
+  ],
+  "yt_titles": [
+    "What Is the Largest Star We've Ever Found?",
+    "These 5 Stars Make Our Sun Look Like a Speck of Dust",
+    "I Ranked the 5 Biggest Stars in the Universe",
+    "Stephenson 2-18 is So Big It Breaks Your Brain 🤯",
+    "5 Monster Stars That Could Swallow Our Entire Solar System"
+  ]
+}

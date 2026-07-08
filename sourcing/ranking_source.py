@@ -48,6 +48,11 @@ _YT_TEMPLATES = [
     "Top 5 {s} 🌌", "Ranking the {s}", "The {s}, Ranked", "The Universe's {s}",
     "You Won't Believe the {s} 😳", "These Are the {s}", "I Ranked the {s} 🚀",
     "{s} — From 5 To 1", "The Most Insane {s} In Space", "Nobody Talks About the {s}",
+    "Wait Until You See #1 — {s}", "Space Is Scarier Than You Think: {s}",
+    "Scientists Ranked the {s}", "{s} That Sound Fake But Are Real",
+    "This Is Why Space Terrifies Me — {s}", "I Wasn't Ready for the {s}",
+    "The {s} No One Told You About", "Can You Guess the #1 {s}?",
+    "{s} (Number 1 Broke My Brain)", "Everything About the {s} Is Wild",
 ]
 
 
@@ -59,10 +64,19 @@ def _subject(title: str) -> str:
     return s.strip().title() or title
 
 
-def youtube_title(dataset_title: str, seed: str) -> str:
-    """A varied, non-repetitive YouTube title derived from the ranking topic."""
-    t = random.Random(seed).choice(_YT_TEMPLATES).format(s=_subject(dataset_title))
-    return t[:95]
+def youtube_title(dataset_title: str, seed: str,
+                  variants: list[str] | None = None) -> str:
+    """A varied, non-repetitive YouTube title for this ranking.
+
+    Prefers the wildly-distinct `yt_titles` Claude baked into the dataset (the
+    strongest anti-repetition lever); falls back to the template pool for older
+    datasets that predate that field.
+    """
+    rng = random.Random(seed)
+    pool = [t.strip() for t in (variants or []) if isinstance(t, str) and t.strip()]
+    if pool:
+        return rng.choice(pool)[:95]
+    return rng.choice(_YT_TEMPLATES).format(s=_subject(dataset_title))[:95]
 
 
 def fetch_stories(config: dict, skip_seen: bool = True) -> list[dict]:
