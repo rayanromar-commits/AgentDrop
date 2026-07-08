@@ -17,6 +17,7 @@ in a phone-audible register.
 import json
 import math
 import random
+import re
 import struct
 import subprocess
 import sys
@@ -40,9 +41,10 @@ OUTPUT_DIR = PROJECT_ROOT / "output"
 W, H = 1080, 1920
 FPS = 30
 YELLOW = (255, 213, 0)          # the tier list
-WHITE = (250, 251, 255)         # the title
-LIGHT_GREEN = (150, 255, 140)   # the captions
+WHITE = (250, 251, 255)         # the title + caption base
+NEON = (57, 255, 20)            # the word currently being spoken (karaoke)
 DIM = (180, 184, 200)
+CAP_SIZE = 74                   # caption font size — big, attention-grabbing
 NARRATOR = {"id": "pNInz6obpgDQGcFmaJgB", "name": "Adam"}
 
 # Safe-zone layout.
@@ -93,7 +95,55 @@ def _scrim(img, top_h=300, bot_h=600):
     img.alpha_composite(ov)
 
 
-def _overlay(title, by_rank, revealed_ranks, cur_rank, caption) -> Image.Image:
+def _caption_layout(d, caption, cs, max_w, cy):
+    """Wrap the caption and return each word's centre position (for karaoke)."""
+    lines = _wrap(d, caption, max_w, cs)[:3]
+    font = _font(cs)
+    space = d.textlength(" ", font=font)
+    words = []
+    yy = cy - (len(lines) - 1) * (cs + 10) // 2
+    for ln in lines:
+        x = (W - d.textlength(ln, font=font)) / 2          # centred line
+        for w in ln.split():
+            ww = d.textlength(w, font=font)
+            words.append((w, x + ww / 2, yy))
+            x += ww + space
+        yy += cs + 12
+    return words
+
+
+def _word_png(word, cx, cy) -> Image.Image:
+    """Full-frame transparent PNG with one word in NEON at (cx, cy)."""
+    img = Image.new("RGBA", (W, H), (0, 0, 0, 0))
+    _text(ImageDraw.Draw(img), (cx, cy), word, CAP_SIZE, fill=NEON,
+          anchor="mm", stroke=8)
+    return img
+
+
+def _align_words(cap_words, vo_words):
+    """Map each displayed caption word to a (start,end) from the ElevenLabs word
+    timestamps (matches by alphanumeric content, so punctuation lines up)."""
+    def key(s):
+        return re.sub(r"[^a-z0-9]", "", s.lower())
+    out, vi = [], 0
+    for (w, _, _) in cap_words:
+        k = key(w)
+        if not k or vi >= len(vo_words):
+            out.append(None)
+            continue
+        start = vo_words[vi]["start"]
+        end, acc = vo_words[vi]["end"], ""
+        while vi < len(vo_words) and len(acc) < len(k):
+            acc += key(vo_words[vi]["word"])
+            end = vo_words[vi]["end"]
+            vi += 1
+        out.append((start, end))
+    return out
+
+
+def _overlay(title, by_rank, revealed_ranks, cur_rank, caption):
+    """Returns (overlay_image, caption_word_positions). Caption base is WHITE;
+    the neon per-word highlights are composited later, timed to the voice."""
     img = Image.new("RGBA", (W, H), (0, 0, 0, 0))
     _scrim(img)
     d = ImageDraw.Draw(img)
@@ -122,15 +172,14 @@ def _overlay(title, by_rank, revealed_ranks, cur_rank, caption) -> Image.Image:
         else:
             _text(d, (LIST_X + 92, yy), "—", 44, fill=DIM, stroke=8)
 
-    # Caption (bottom band).
+    # Caption (bottom band): big WHITE base. The neon per-word highlight is
+    # composited later (timed to the voiceover).
+    cap_words = []
     if caption:
-        cs = 56
-        clines = _wrap(d, caption, W - ML - MR, cs)[:3]
-        yy = CAP_CY - (len(clines) - 1) * (cs + 6) // 2
-        for ln in clines:
-            _text(d, (W // 2, yy), ln, cs, fill=LIGHT_GREEN, anchor="mm", stroke=8)
-            yy += cs + 10
-    return img
+        cap_words = _caption_layout(d, caption, CAP_SIZE, W - ML - MR, CAP_CY)
+        for (w, cx, cy) in cap_words:
+            _text(d, (cx, cy), w, CAP_SIZE, fill=WHITE, anchor="mm", stroke=8)
+    return img, cap_words
 
 
 def _mood(title: str) -> str:
@@ -206,23 +255,32 @@ def _ffmpeg():
         return "ffmpeg"
 
 
-def _segment(image_path, overlay_png, dur, out_path):
-    """Full-bleed Ken Burns image + the title/list/caption overlay.
+def _segment(image_path, overlay_png, word_overlays, dur, out_path):
+    """Full-bleed Ken Burns image + the static overlay (title/list/white caption)
+    + timed neon per-word highlights (karaoke). word_overlays = [(png, start, end)].
 
     Smooth zoom: input fed AT the output fps, and the zoom accumulates one small
     step per frame (d=1 with pzoom) so it never resets/judders."""
     frames = max(int(dur * FPS), 1)
     incr = round(0.12 / frames, 5)                  # ease from 1.0 -> ~1.12 over the clip
-    vf = (f"[0:v]scale=2400:4267:force_original_aspect_ratio=increase,"
-          f"crop=2400:4267,zoompan=z='min(max(pzoom,1.0)+{incr},1.13)':d=1:"
-          f"x='iw/2-(iw/zoom/2)':y='ih/2-(ih/zoom/2)':s={W}x{H}:fps={FPS}[bg];"
-          f"[bg][1:v]overlay=0:0,format=yuv420p[v]")
-    subprocess.run([_ffmpeg(), "-y",
-                    "-framerate", str(FPS), "-loop", "1", "-t", str(dur), "-i", str(image_path),
-                    "-loop", "1", "-t", str(dur), "-i", str(overlay_png),
-                    "-filter_complex", vf, "-map", "[v]",
-                    "-c:v", "libx264", "-preset", "veryfast", "-pix_fmt", "yuv420p",
-                    "-r", str(FPS), "-t", str(dur), str(out_path)], check=True, capture_output=True)
+    inputs = ["-framerate", str(FPS), "-loop", "1", "-t", str(dur), "-i", str(image_path),
+              "-loop", "1", "-t", str(dur), "-i", str(overlay_png)]
+    filt = [f"[0:v]scale=2400:4267:force_original_aspect_ratio=increase,"
+            f"crop=2400:4267,zoompan=z='min(max(pzoom,1.0)+{incr},1.13)':d=1:"
+            f"x='iw/2-(iw/zoom/2)':y='ih/2-(ih/zoom/2)':s={W}x{H}:fps={FPS}[bg]",
+            "[bg][1:v]overlay=0:0[v0]"]
+    prev = "[v0]"
+    for k, (png, st, en) in enumerate(word_overlays):
+        inputs += ["-loop", "1", "-t", str(dur), "-i", str(png)]
+        lbl = f"[v{k + 1}]"
+        filt.append(f"{prev}[{k + 2}:v]overlay=0:0:"
+                    f"enable='between(t,{round(st, 3)},{round(en, 3)})'{lbl}")
+        prev = lbl
+    filt.append(f"{prev}format=yuv420p[v]")
+    subprocess.run([_ffmpeg(), "-y", *inputs, "-filter_complex", ";".join(filt),
+                    "-map", "[v]", "-c:v", "libx264", "-preset", "veryfast",
+                    "-pix_fmt", "yuv420p", "-r", str(FPS), "-t", str(dur),
+                    str(out_path)], check=True, capture_output=True)
 
 
 def render_ranking_video(post_id, payload, config=None) -> Path:
@@ -266,9 +324,25 @@ def render_ranking_video(post_id, payload, config=None) -> Path:
             dur = round((float(res["duration"]) if res else 2.5)
                         + (0.3 if cur is not None else 0.5), 2)
             ov = tmpd / f"ov{i}.png"
-            _overlay(title, by_rank, rev, cur, cap).save(ov)
+            base_img, cap_words = _overlay(title, by_rank, rev, cur, cap)
+            base_img.save(ov)
+            # Karaoke: a neon-green copy of each spoken word, timed to the voice.
+            word_ovs = []
+            if res and cap_words:
+                try:
+                    vo_words = json.load(open(res["words"]))
+                except Exception:
+                    vo_words = []
+                delay = 0.1 if i == 0 else 0.2          # matches the audio adelay
+                for k, ((w, cx, cy), tm) in enumerate(
+                        zip(cap_words, _align_words(cap_words, vo_words))):
+                    if not tm or tm[1] <= tm[0]:
+                        continue
+                    wp = tmpd / f"w{i}_{k}.png"
+                    _word_png(w, cx, cy).save(wp)
+                    word_ovs.append((wp, tm[0] + delay, tm[1] + delay))
             seg = tmpd / f"seg{i}.mp4"
-            _segment(img, ov, dur, seg)
+            _segment(img, ov, word_ovs, dur, seg)
             seg_files.append(seg); durs.append(dur); starts.append(t)
             vo_files.append(res["audio"] if res else None); t += dur
         total = t
