@@ -284,7 +284,7 @@ def render_ranking_video(post_id, payload, config=None) -> Path:
             filt.append(f"[{idx}:a]volume=1.6,adelay={ms}|{ms}[a{idx}]")
             labels.append(f"[a{idx}]"); idx += 1
         filt.append("".join(labels) +
-                    f"amix=inputs={len(labels)}:normalize=0:duration=first[a]")
+                    f"amix=inputs={len(labels)}:normalize=0:duration=longest[a]")
         out_path = OUTPUT_DIR / f"{post_id}.mp4"
         log.info("[ranking] %d VO clips (no music) -> %s", idx - 1, out_path.name)
         subprocess.run([ff, "-y", *inputs, "-filter_complex", ";".join(filt),
