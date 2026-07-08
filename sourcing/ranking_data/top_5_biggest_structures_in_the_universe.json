@@ -1,0 +1,37 @@
+{
+  "title": "Top 5 BIGGEST Structures In The Universe",
+  "hook": "Number one is so vast it breaks our theory of the cosmos.",
+  "category": "cosmic structures",
+  "items": [
+    {
+      "rank": 5,
+      "name": "Sloan Great Wall",
+      "stat": "A wall of galaxies stretching roughly 1.4 billion light-years across.",
+      "query": "Hubble galaxy cluster deep field"
+    },
+    {
+      "rank": 4,
+      "name": "Boötes Void",
+      "stat": "An empty bubble about 330 million light-years wide with almost no galaxies.",
+      "query": "Hubble cosmic void deep field"
+    },
+    {
+      "rank": 3,
+      "name": "Huge-LQG (Large Quasar Group)",
+      "stat": "A cluster of 73 quasars spanning about 4 billion light-years.",
+      "query": "Hubble quasar"
+    },
+    {
+      "rank": 2,
+      "name": "Hercules-Corona Borealis Great Wall",
+      "stat": "A filament of galaxies estimated at up to 10 billion light-years long.",
+      "query": "Hubble galaxy filament large scale structure"
+    },
+    {
+      "rank": 1,
+      "name": "The Cosmic Web",
+      "stat": "A universe-spanning network of filaments linking all galaxies across billions of light-years.",
+      "query": "cosmic web large scale structure simulation"
+    }
+  ]
+}

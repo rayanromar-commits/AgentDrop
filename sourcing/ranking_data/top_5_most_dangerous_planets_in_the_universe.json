@@ -1,0 +1,37 @@
+{
+  "title": "Top 5 Most DANGEROUS Planets In The Universe",
+  "hook": "Number one rains molten glass sideways at 5,400 mph.",
+  "category": "planets",
+  "items": [
+    {
+      "rank": 5,
+      "name": "Venus",
+      "stat": "Surface heat of 465°C and clouds of sulfuric acid crush and melt everything.",
+      "query": "Venus Mariner 10"
+    },
+    {
+      "rank": 4,
+      "name": "Mars",
+      "stat": "Planet-wide dust storms can rage for months and blanket the entire globe.",
+      "query": "Mars Viking"
+    },
+    {
+      "rank": 3,
+      "name": "Jupiter",
+      "stat": "Its radiation belts blast 25 million volts and would kill a human in hours.",
+      "query": "Jupiter Cassini"
+    },
+    {
+      "rank": 2,
+      "name": "WASP-12b",
+      "stat": "This doomed gas giant is being devoured by its star at 2,600°C.",
+      "query": "WASP-12b exoplanet"
+    },
+    {
+      "rank": 1,
+      "name": "HD 189733b",
+      "stat": "Winds of 5,400 mph hurl molten glass rain sideways across the sky.",
+      "query": "HD 189733b exoplanet artist concept"
+    }
+  ]
+}

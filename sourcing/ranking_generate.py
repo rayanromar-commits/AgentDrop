@@ -31,11 +31,29 @@ DATA_DIR = PROJECT_ROOT / "sourcing" / "ranking_data"
 MODEL = "claude-opus-4-8"
 
 TOPICS = [
-    "most dangerous planets", "biggest black holes", "strangest moons",
-    "largest galaxies", "most beautiful nebulae", "biggest stars",
-    "hottest planets", "coldest places in the universe",
-    "most mysterious objects in space", "deadliest cosmic events",
-    "strangest exoplanets ever found", "most extreme places in the solar system",
+    # Planets & solar system
+    "most dangerous planets", "hottest planets", "strangest exoplanets ever found",
+    "most extreme places in the solar system", "planets where it rains something bizarre",
+    "biggest planets ever discovered", "most Earth-like exoplanets",
+    "windiest planets", "planets with the wildest storms",
+    # Moons
+    "strangest moons", "moons that could hold alien life", "most volcanic moons",
+    # Stars
+    "biggest stars in the universe", "most powerful explosions in space",
+    "strangest types of stars", "closest stars that could go supernova",
+    # Galaxies & deep space
+    "largest galaxies", "most beautiful nebulae", "biggest black holes",
+    "most mysterious objects in space", "strangest signals from space",
+    "coldest places in the universe", "brightest objects in the universe",
+    "biggest structures in the universe",
+    # Phenomena & events
+    "deadliest cosmic events", "things that could end all life on Earth from space",
+    "most terrifying facts about black holes", "fastest things in the universe",
+    # Space history & people (NASA / public-domain imagery)
+    "most important space missions in history",
+    "people who changed how we see the universe",
+    "greatest astronomers of all time", "most famous astronauts in history",
+    "most iconic photos NASA ever took",
 ]
 
 SYSTEM = """You write viral "Top 5" space-ranking YouTube Shorts. Return ONE JSON \

@@ -1,0 +1,37 @@
+{
+  "title": "Top 5 STRANGEST Signals From Space",
+  "hook": "Number one, we still can't explain 47 years later.",
+  "category": "signals",
+  "items": [
+    {
+      "rank": 5,
+      "name": "Fast Radio Burst FRB 121102",
+      "stat": "Repeating millisecond bursts releasing more energy than the Sun does in a whole day.",
+      "query": "Hubble FRB 121102 host galaxy"
+    },
+    {
+      "rank": 4,
+      "name": "Pulsar PSR B1919+21",
+      "stat": "Ticks every 1.337 seconds so precisely it was first nicknamed LGM-1 for 'Little Green Men'.",
+      "query": "Chandra pulsar"
+    },
+    {
+      "rank": 3,
+      "name": "Tabby's Star (KIC 8462852)",
+      "stat": "Dips in brightness up to 22% baffled scientists and sparked alien megastructure theories.",
+      "query": "Tabby's Star KIC 8462852 artist concept"
+    },
+    {
+      "rank": 2,
+      "name": "The Cosmic Microwave Background",
+      "stat": "The oldest signal in existence, a faint 2.7 Kelvin glow left over from 380,000 years after the Big Bang.",
+      "query": "cosmic microwave background WMAP map"
+    },
+    {
+      "rank": 1,
+      "name": "The Wow! Signal",
+      "stat": "A 72-second radio blast detected in 1977 that has never been heard again.",
+      "query": "Big Ear radio telescope Wow signal"
+    }
+  ]
+}

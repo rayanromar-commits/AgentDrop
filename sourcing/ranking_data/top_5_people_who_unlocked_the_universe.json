@@ -1,0 +1,37 @@
+{
+  "title": "Top 5 People Who UNLOCKED The Universe",
+  "hook": "Number one basically invented modern space itself.",
+  "category": "scientists",
+  "items": [
+    {
+      "rank": 5,
+      "name": "Galileo Galilei",
+      "stat": "In 1610 his homemade telescope revealed Jupiter's four largest moons, proving not everything orbits Earth.",
+      "query": "Jupiter Cassini"
+    },
+    {
+      "rank": 4,
+      "name": "Edwin Hubble",
+      "stat": "In 1929 he proved the universe is expanding, with distant galaxies fleeing faster the farther they are.",
+      "query": "Hubble Andromeda galaxy"
+    },
+    {
+      "rank": 3,
+      "name": "Johannes Kepler",
+      "stat": "His three laws showed planets orbit in ellipses, not perfect circles, decoding the entire solar system.",
+      "query": "Kepler supernova remnant Chandra"
+    },
+    {
+      "rank": 2,
+      "name": "Isaac Newton",
+      "stat": "His law of universal gravitation explained why planets orbit and apples fall with a single equation.",
+      "query": "Saturn Cassini"
+    },
+    {
+      "rank": 1,
+      "name": "Albert Einstein",
+      "stat": "His 1915 general relativity predicted black holes and gravitational waves, confirmed a century later.",
+      "query": "black hole accretion disk"
+    }
+  ]
+}

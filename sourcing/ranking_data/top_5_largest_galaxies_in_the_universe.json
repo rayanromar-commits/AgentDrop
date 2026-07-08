@@ -1,0 +1,37 @@
+{
+  "title": "Top 5 LARGEST Galaxies In The Universe",
+  "hook": "Number one could swallow millions of Milky Ways.",
+  "category": "galaxies",
+  "items": [
+    {
+      "rank": 5,
+      "name": "Andromeda Galaxy",
+      "stat": "About 220,000 light-years wide, over twice the size of our Milky Way.",
+      "query": "Hubble Andromeda galaxy"
+    },
+    {
+      "rank": 4,
+      "name": "Comet Galaxy",
+      "stat": "Its star-forming tail stretches roughly 600,000 light-years behind it.",
+      "query": "Hubble Comet galaxy"
+    },
+    {
+      "rank": 3,
+      "name": "Malin 1",
+      "stat": "This giant low-surface-brightness spiral spans about 650,000 light-years across.",
+      "query": "Malin 1 galaxy"
+    },
+    {
+      "rank": 2,
+      "name": "ESO 383-76",
+      "stat": "This colossal elliptical galaxy measures roughly 1.7 million light-years wide.",
+      "query": "ESO 383-76 galaxy"
+    },
+    {
+      "rank": 1,
+      "name": "IC 1101",
+      "stat": "One of the largest known galaxies at up to 4 million light-years across.",
+      "query": "Hubble IC 1101 galaxy"
+    }
+  ]
+}

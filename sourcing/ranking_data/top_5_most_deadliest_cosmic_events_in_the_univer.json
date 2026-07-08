@@ -1,0 +1,37 @@
+{
+  "title": "Top 5 Most DEADLIEST Cosmic Events In The Universe",
+  "hook": "Number one could sterilize entire galaxies in seconds.",
+  "category": "cosmic events",
+  "items": [
+    {
+      "rank": 5,
+      "name": "Solar Flare",
+      "stat": "A single X-class flare releases energy equal to billions of hydrogen bombs in minutes.",
+      "query": "solar flare SDO"
+    },
+    {
+      "rank": 4,
+      "name": "Coronal Mass Ejection",
+      "stat": "The 1859 Carrington Event hurled billions of tons of plasma at Earth, sparking fires in telegraph stations.",
+      "query": "coronal mass ejection SOHO"
+    },
+    {
+      "rank": 3,
+      "name": "Supernova",
+      "stat": "A dying star briefly outshines its entire galaxy, blasting matter outward at 30,000 km per second.",
+      "query": "Hubble supernova remnant"
+    },
+    {
+      "rank": 2,
+      "name": "Kilonova (Neutron Star Merger)",
+      "stat": "Colliding neutron stars forge gold and platinum while rippling spacetime with gravitational waves.",
+      "query": "neutron star merger artist concept"
+    },
+    {
+      "rank": 1,
+      "name": "Gamma-Ray Burst",
+      "stat": "The most powerful explosions known—one can release more energy in seconds than the Sun will in 10 billion years.",
+      "query": "gamma ray burst artist concept"
+    }
+  ]
+}
