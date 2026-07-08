@@ -246,7 +246,7 @@ def render_ranking_video(post_id, payload, config=None) -> Path:
         revealed = revealed | {it["rank"]}
         img = fetch_image(it["query"], prefer=it["name"]) or nebula
         cap = f"{it['name']}. {it['stat']}."
-        plan.append((img, set(revealed), it["rank"], cap, f"Number {it['rank']}. {cap}"))
+        plan.append((img, set(revealed), it["rank"], cap, cap))
     plan.append((nebula, set(range(1, 6)), None, "Follow for more cosmic countdowns.",
                  "Follow for more cosmic countdowns."))
 
