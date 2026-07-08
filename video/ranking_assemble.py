@@ -106,23 +106,18 @@ def _overlay(title, by_rank, revealed_ranks, cur_rank, caption) -> Image.Image:
         _text(d, (W // 2, y), ln, ts, anchor="mm", stroke=7)
         y += ts + 14
 
-    # Compact tier list behind a soft panel (left).
-    panel = Image.new("RGBA", (W, H), (0, 0, 0, 0))
-    ImageDraw.Draw(panel).rounded_rectangle([LIST_X - 26, LIST_YS[0] - 70,
-                                             LIST_X + 470, LIST_YS[-1] + 70],
-                                            radius=28, fill=(10, 12, 20, 130))
-    img.alpha_composite(panel)
+    # Compact tier list (left) — text sits directly on the image (no panel).
     for rank in range(1, 6):
         yy = LIST_YS[rank - 1]
         cur = rank == cur_rank
         _text(d, (LIST_X, yy), str(rank), 66 if cur else 58,
-              fill=YELLOW if rank in revealed_ranks else DIM)
+              fill=YELLOW if rank in revealed_ranks else DIM, stroke=8)
         it = by_rank.get(rank)
         if rank in revealed_ranks and it:
             nm = it["name"].upper()
-            _text(d, (LIST_X + 92, yy), nm, _fit(d, nm, 380, 50 if cur else 44))
+            _text(d, (LIST_X + 92, yy), nm, _fit(d, nm, 380, 50 if cur else 44), stroke=8)
         else:
-            _text(d, (LIST_X + 92, yy), "—", 44, fill=DIM)
+            _text(d, (LIST_X + 92, yy), "—", 44, fill=DIM, stroke=8)
 
     # Caption (bottom band).
     if caption:
@@ -248,10 +243,8 @@ def render_ranking_video(post_id, payload, config=None) -> Path:
     for it in order:
         revealed = revealed | {it["rank"]}
         img = fetch_image(it["query"], prefer=it["name"]) or nebula
-        plan.append((img, set(revealed), it["rank"],
-                     f"Number {it['rank']}. {it['name']}. {it['stat']}."))
-    plan.append((nebula, set(range(1, 6)), None,
-                 "Which one shocked you the most? Follow for more cosmic countdowns."))
+        plan.append((img, set(revealed), it["rank"], f"{it['name']}. {it['stat']}."))
+    plan.append((nebula, set(range(1, 6)), None, "Follow for more cosmic countdowns."))
 
     with tempfile.TemporaryDirectory() as tmp:
         tmpd = Path(tmp)
@@ -259,8 +252,8 @@ def render_ranking_video(post_id, payload, config=None) -> Path:
         t = 0.0
         for i, (img, rev, cur, cap) in enumerate(plan):
             res = vo(cap, f"vo{i}")
-            dur = round((float(res["duration"]) if res else 3.0)
-                        + (0.6 if cur is not None else 0.9), 2)
+            dur = round((float(res["duration"]) if res else 2.5)
+                        + (0.3 if cur is not None else 0.5), 2)
             ov = tmpd / f"ov{i}.png"
             _overlay(title, by_rank, rev, cur, cap).save(ov)
             seg = tmpd / f"seg{i}.mp4"
@@ -275,24 +268,21 @@ def render_ranking_video(post_id, payload, config=None) -> Path:
         subprocess.run([ff, "-y", "-f", "concat", "-safe", "0", "-i", str(lst),
                         "-c", "copy", str(silent)], check=True, capture_output=True)
 
-        bed = tmpd / "bed.wav"
-        _synth_bed(total, starts[1:-1], starts, _mood(title), bed)
-
-        inputs = ["-i", str(silent), "-i", str(bed)]
-        filt = ["[1:a]volume=1.4[bed]"]              # bed clearly audible, still a bed
-        labels, idx = ["[bed]"], 2
+        # Voiceover only — music bed removed per feedback (a real track can be
+        # mixed back later via config ranking.music).
+        inputs = ["-i", str(silent)]
+        filt, labels, idx = [], [], 1
         for i, vp in enumerate(vo_files):
             if not vp:
                 continue
             inputs += ["-i", str(vp)]
-            ms = int((starts[i] + (0.15 if i == 0 else 0.25)) * 1000)
-            filt.append(f"[{idx}:a]volume=1.9,adelay={ms}|{ms}[a{idx}]")
+            ms = int((starts[i] + (0.1 if i == 0 else 0.2)) * 1000)
+            filt.append(f"[{idx}:a]volume=1.6,adelay={ms}|{ms}[a{idx}]")
             labels.append(f"[a{idx}]"); idx += 1
         filt.append("".join(labels) +
                     f"amix=inputs={len(labels)}:normalize=0:duration=first[a]")
         out_path = OUTPUT_DIR / f"{post_id}.mp4"
-        log.info("[ranking] %s bed + %d VO clips -> %s", _mood(title), idx - 2,
-                 out_path.name)
+        log.info("[ranking] %d VO clips (no music) -> %s", idx - 1, out_path.name)
         subprocess.run([ff, "-y", *inputs, "-filter_complex", ";".join(filt),
                         "-map", "0:v", "-map", "[a]", "-c:v", "copy",
                         "-c:a", "aac", "-b:a", "160k", "-shortest", str(out_path)],
