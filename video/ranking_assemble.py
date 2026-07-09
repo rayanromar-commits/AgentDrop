@@ -107,21 +107,82 @@ def _scrim(img, top_h=300, bot_h=600):
     img.alpha_composite(ov)
 
 
-def _caption_layout(d, caption, cs, max_w, cy):
-    """Wrap the caption and return each word's centre position (for karaoke)."""
-    lines = _wrap(d, caption, max_w, cs)[:3]
-    font = _font(cs)
-    space = d.textlength(" ", font=font)
-    words = []
-    yy = cy - (len(lines) - 1) * (cs + 10) // 2
-    for ln in lines:
-        x = (W - d.textlength(ln, font=font)) / 2          # centred line
-        for w in ln.split():
-            ww = d.textlength(w, font=font)
-            words.append((w, x + ww / 2, yy))
-            x += ww + space
-        yy += cs + 12
-    return words
+PAGE_LINES = 2                       # caption shows <=2 lines at a time, then pages
+
+
+def _fill_times(times, seg_dur):
+    """Replace any missing word timings with an even spread across the segment,
+    so captions still page sensibly if the voiceover word data is absent."""
+    n = len(times)
+    if n == 0:
+        return times
+    span = max(seg_dur - 0.4, 0.4)
+    even = [(0.2 + span * k / n, 0.2 + span * (k + 1) / n) for k in range(n)]
+    return [t if (t and t[1] > t[0]) else even[k] for k, t in enumerate(times)]
+
+
+def _paginate(d, words, size, max_w):
+    """Group (word,start,end) tokens into pages of <=PAGE_LINES wrapped lines.
+    Returns [[line, line], ...] where each line is a list of tokens."""
+    space = d.textlength(" ", font=_font(size))
+    lines, cur, cur_w = [], [], 0.0
+    for tok in words:
+        ww = d.textlength(tok[0], font=_font(size))
+        if cur and cur_w + space + ww > max_w:
+            lines.append(cur); cur, cur_w = [], 0.0
+        cur.append(tok); cur_w += (space if cur_w else 0) + ww
+    if cur:
+        lines.append(cur)
+    return [lines[i:i + PAGE_LINES] for i in range(0, len(lines), PAGE_LINES)]
+
+
+def _caption_overlays(tmpd, prefix, caption, word_times, seg_dur, delay):
+    """Build timed caption overlays that PAGE through long narration instead of
+    truncating: for each page a white base (all its words) plus a neon highlight
+    per word timed to the voice. Returns [(png_path, start, end), ...]."""
+    words = caption.split()
+    if not words:
+        return []
+    times = _fill_times(list(word_times)[:len(words)] +
+                        [None] * (len(words) - len(word_times)), seg_dur)
+    tokens = [(w, t[0], t[1]) for w, t in zip(words, times)]
+
+    scratch = ImageDraw.Draw(Image.new("RGBA", (W, H)))
+    pages = _paginate(scratch, tokens, CAP_SIZE, W - ML - MR)
+    # Page display windows: each page stays up until the next page begins.
+    starts = [pg[0][0][1] for pg in pages]             # first word start of page
+    out = []
+    for pi, pg in enumerate(pages):
+        p_start = starts[pi]
+        p_end = starts[pi + 1] if pi + 1 < len(pages) else seg_dur
+        flat = [tok for ln in pg for tok in ln]
+        yy = CAP_CY - (len(pg) - 1) * (CAP_SIZE + 12) // 2
+        placed = []                                    # (word, cx, cy, start, end)
+        for ln in pg:
+            text = " ".join(t[0] for t in ln)
+            x = (W - scratch.textlength(text, font=_font(CAP_SIZE))) / 2
+            space = scratch.textlength(" ", font=_font(CAP_SIZE))
+            for (w, ws, we) in ln:
+                ww = scratch.textlength(w, font=_font(CAP_SIZE))
+                placed.append((w, x + ww / 2, yy, ws, we))
+                x += ww + space
+            yy += CAP_SIZE + 12
+        # White base for the whole page.
+        base = Image.new("RGBA", (W, H), (0, 0, 0, 0))
+        bd = ImageDraw.Draw(base)
+        for (w, cx, cy, _ws, _we) in placed:
+            _text(bd, (cx, cy), w, CAP_SIZE, fill=WHITE, anchor="mm", stroke=8)
+        bp = tmpd / f"{prefix}_base{pi}.png"
+        base.save(bp)
+        out.append((bp, max(p_start + delay, 0.0), p_end + delay))
+        # Neon highlight per word, timed to the voice.
+        for wi, (w, cx, cy, ws, we) in enumerate(placed):
+            if we <= ws:
+                continue
+            wp = tmpd / f"{prefix}_w{pi}_{wi}.png"
+            _word_png(w, cx, cy, CAP_SIZE).save(wp)
+            out.append((wp, ws + delay, we + delay))
+    return out
 
 
 def _word_png(word, cx, cy, size=CAP_SIZE) -> Image.Image:
@@ -133,14 +194,15 @@ def _word_png(word, cx, cy, size=CAP_SIZE) -> Image.Image:
     return img
 
 
-def _align_words(cap_words, vo_words):
-    """Map each displayed caption word to a (start,end) from the ElevenLabs word
-    timestamps (matches by alphanumeric content, so punctuation lines up)."""
+def _align_words(words, vo_words):
+    """Map each displayed word (a plain string) to a (start,end) from the
+    ElevenLabs word timestamps (matches by alphanumeric content, so punctuation
+    lines up). Returns a list the same length as `words` (None where unknown)."""
     def key(s):
         return re.sub(r"[^a-z0-9]", "", s.lower())
     out, vi = [], 0
-    for item in cap_words:
-        k = key(item[0])
+    for w in words:
+        k = key(w)
         if not k or vi >= len(vo_words):
             out.append(None)
             continue
@@ -154,9 +216,9 @@ def _align_words(cap_words, vo_words):
     return out
 
 
-def _overlay(title, by_rank, revealed_ranks, cur_rank, caption):
-    """Returns (overlay_image, caption_word_positions). Caption base is WHITE;
-    the neon per-word highlights are composited later, timed to the voice."""
+def _overlay(title, by_rank, revealed_ranks, cur_rank):
+    """Returns (overlay_image, title_word_positions). Title + tier list + scrim
+    only — the bottom caption is drawn separately as timed, paginated overlays."""
     img = Image.new("RGBA", (W, H), (0, 0, 0, 0))
     _scrim(img)
     d = ImageDraw.Draw(img)
@@ -193,14 +255,7 @@ def _overlay(title, by_rank, revealed_ranks, cur_rank, caption):
         else:
             _text(d, (LIST_X + 92, yy), "—", 44, fill=DIM, stroke=8)
 
-    # Caption (bottom band): big WHITE base. The neon per-word highlight is
-    # composited later (timed to the voiceover).
-    cap_words = []
-    if caption:
-        cap_words = _caption_layout(d, caption, CAP_SIZE, W - ML - MR, CAP_CY)
-        for (w, cx, cy) in cap_words:
-            _text(d, (cx, cy), w, CAP_SIZE, fill=WHITE, anchor="mm", stroke=8)
-    return img, cap_words, title_words
+    return img, title_words
 
 
 def _mood(title: str) -> str:
@@ -353,31 +408,37 @@ def render_ranking_video(post_id, payload, config=None) -> Path:
             dur = round((float(res["duration"]) if res else 2.5)
                         + (0.3 if cur is not None else 0.5), 2)
             ov = tmpd / f"ov{i}.png"
-            base_img, cap_words, title_words = _overlay(title, by_rank, rev, cur, cap)
+            base_img, title_words = _overlay(title, by_rank, rev, cur)
             base_img.save(ov)
-            # Karaoke: a neon-green copy of each spoken word, timed to the voice.
-            # Intro (i==0): the voice reads the TITLE first, so highlight the title
-            # words up top, THEN the hook caption at the bottom.
-            if i == 0:
-                kara = title_words + [(w, cx, cy, CAP_SIZE) for (w, cx, cy) in cap_words]
-            else:
-                kara = [(w, cx, cy, CAP_SIZE) for (w, cx, cy) in cap_words]
-            word_ovs = []
-            if res and kara:
+
+            vo_words = []
+            if res:
                 try:
                     vo_words = json.load(open(res["words"]))
                 except Exception:
                     vo_words = []
-                delay = 0.1 if i == 0 else 0.2          # matches the audio adelay
+            delay = 0.1 if i == 0 else 0.2              # matches the audio adelay
+            timed = []                                  # (png, start, end) overlays
+
+            # Bottom caption PAGES through the narration (never truncates); the
+            # intro also karaokes the TITLE up top while it's being read.
+            if i == 0:
+                tw = [w for (w, _cx, _cy, _s) in title_words]
+                all_times = _align_words(tw + cap.split(), vo_words)
                 for k, ((w, cx, cy, size), tm) in enumerate(
-                        zip(kara, _align_words(kara, vo_words))):
-                    if not tm or tm[1] <= tm[0]:
-                        continue
-                    wp = tmpd / f"w{i}_{k}.png"
-                    _word_png(w, cx, cy, size).save(wp)
-                    word_ovs.append((wp, tm[0] + delay, tm[1] + delay))
+                        zip(title_words, all_times[:len(tw)])):
+                    if tm and tm[1] > tm[0]:
+                        wp = tmpd / f"tw{i}_{k}.png"
+                        _word_png(w, cx, cy, size).save(wp)
+                        timed.append((wp, tm[0] + delay, tm[1] + delay))
+                timed += _caption_overlays(tmpd, f"c{i}", cap,
+                                           all_times[len(tw):], dur, delay)
+            else:
+                cap_times = _align_words(cap.split(), vo_words)
+                timed += _caption_overlays(tmpd, f"c{i}", cap, cap_times, dur, delay)
+
             seg = tmpd / f"seg{i}.mp4"
-            _segment(img, ov, word_ovs, dur, seg)
+            _segment(img, ov, timed, dur, seg)
             seg_files.append(seg); durs.append(dur); starts.append(t)
             vo_files.append(res["audio"] if res else None); t += dur
         total = t
@@ -413,13 +474,29 @@ def render_ranking_video(post_id, payload, config=None) -> Path:
         subprocess.run([ff, "-y", "-f", "concat", "-safe", "0", "-i", str(alst),
                         "-c", "copy", str(full_audio)], check=True, capture_output=True)
 
+        # Tighten to ~target seconds by speeding up the EDIT (tempo up, pitch
+        # preserved via atempo) — NOT by making the narrator re-speak faster.
+        # Captions/karaoke are already baked into the frames, so a uniform
+        # speed-up keeps everything in sync.
+        target = float((config or {}).get("ranking", {}).get("target_seconds", 40) or 0)
+        speed = min(total / target, 2.0) if target and total > target + 0.5 else 1.0
+
         out_path = OUTPUT_DIR / f"{post_id}.mp4"
-        log.info("[ranking] %d VO clips (per-segment sync) -> %s",
-                 sum(1 for v in vo_files if v), out_path.name)
-        subprocess.run([ff, "-y", "-i", str(silent), "-i", str(full_audio),
-                        "-map", "0:v", "-map", "1:a", "-c:v", "copy",
-                        "-c:a", "aac", "-b:a", "160k", "-shortest", str(out_path)],
-                       check=True, capture_output=True)
+        log.info("[ranking] %d VO clips -> %s (%.1fs -> ~%.1fs, speed x%.2f)",
+                 sum(1 for v in vo_files if v), out_path.name, total, total / speed, speed)
+        if speed > 1.005:
+            subprocess.run([ff, "-y", "-i", str(silent), "-i", str(full_audio),
+                            "-filter_complex",
+                            f"[0:v]setpts=PTS/{speed:.5f}[v];[1:a]atempo={speed:.5f}[a]",
+                            "-map", "[v]", "-map", "[a]",
+                            "-c:v", "libx264", "-preset", "veryfast", "-pix_fmt",
+                            "yuv420p", "-r", str(FPS), "-c:a", "aac", "-b:a", "160k",
+                            "-shortest", str(out_path)], check=True, capture_output=True)
+        else:
+            subprocess.run([ff, "-y", "-i", str(silent), "-i", str(full_audio),
+                            "-map", "0:v", "-map", "1:a", "-c:v", "copy",
+                            "-c:a", "aac", "-b:a", "160k", "-shortest", str(out_path)],
+                           check=True, capture_output=True)
     return out_path
 
 
