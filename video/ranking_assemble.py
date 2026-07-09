@@ -47,6 +47,18 @@ DIM = (180, 184, 200)
 CAP_SIZE = 74                   # caption font size — big, attention-grabbing
 NARRATOR = {"id": "pNInz6obpgDQGcFmaJgB", "name": "Adam"}
 
+# Intro/outro + fallback background. Picked PER VIDEO (seeded by post_id) so the
+# backdrop is NOT the same starry image every upload — variety without leaving
+# the space theme. All are famous, reliably-available NASA/Hubble targets.
+BACKGROUNDS = [
+    ("Carina Nebula", "nebula"), ("Orion Nebula", "nebula"),
+    ("Eagle Nebula pillars of creation", "nebula"), ("Helix Nebula", "nebula"),
+    ("Lagoon Nebula", "nebula"), ("Tarantula Nebula", "nebula"),
+    ("Veil Nebula", "nebula"), ("colorful nebula", "nebula"),
+    ("Hubble Ultra Deep Field galaxies", "galaxies"), ("Andromeda galaxy", "galaxy"),
+    ("Milky Way star field", "stars"), ("Cosmic Cliffs Carina", "nebula"),
+]
+
 # Safe-zone layout.
 ML, MR = 60, 120                     # left / right margins
 TITLE_CY = 205                       # title center (below the Dynamic Island)
@@ -313,17 +325,23 @@ def render_ranking_video(post_id, payload, config=None) -> Path:
 
     # plan entries: (image, revealed_ranks, cur_rank, caption, voiceover_text).
     # Caption stays clean (name + fact); the voiceover adds "Number N" for clarity.
-    nebula = fetch_image("colorful nebula", prefer="nebula")
+    # Per-video background (varied, seeded by post_id) — NOT the same nebula every
+    # upload. Used for the intro/outro and as the last-resort item fallback.
+    bg_q, bg_p = random.Random(f"{post_id}:bg").choice(BACKGROUNDS)
+    background = (fetch_image(bg_q, prefer=bg_p)
+                  or fetch_image("colorful nebula", prefer="nebula"))
     # Intro: the voice reads the TITLE first, then the hook. The title karaokes
     # up top (it's already on screen); the hook is the bottom caption after it.
-    plan = [(nebula, set(), None, hook, f"{title}. {hook}")]
+    plan = [(background, set(), None, hook, f"{title}. {hook}")]
     revealed = set()
     for it in order:
         revealed = revealed | {it["rank"]}
-        img = fetch_image(it["query"], prefer=it["name"]) or nebula
+        # Real picture of THIS object: NASA first, then an accurate Wikipedia
+        # image (fetch_image handles the web fallback) so items are never blank.
+        img = fetch_image(it["query"], prefer=it["name"]) or background
         cap = f"{it['name']}. {it['stat']}."
         plan.append((img, set(revealed), it["rank"], cap, cap))
-    plan.append((nebula, set(range(1, 6)), None, "Follow for more cosmic countdowns.",
+    plan.append((background, set(range(1, 6)), None, "Follow for more cosmic countdowns.",
                  "Follow for more cosmic countdowns."))
 
     with tempfile.TemporaryDirectory() as tmp:
