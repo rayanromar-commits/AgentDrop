@@ -30,7 +30,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 from PIL import Image, ImageDraw, ImageFont
 
 from agentdrop_common import setup_logging
-from media.clip_source import fetch_image
+from media.clip_source import fetch_image, fetch_item_visual
 
 log = setup_logging()
 
@@ -331,20 +331,36 @@ def _ffmpeg():
         return "ffmpeg"
 
 
-def _segment(image_path, overlay_png, word_overlays, dur, out_path):
-    """Full-bleed Ken Burns image + the static overlay (title/list/white caption)
-    + timed neon per-word highlights (karaoke). word_overlays = [(png, start, end)].
+def _segment(image_path, overlay_png, word_overlays, dur, out_path, framing="cover"):
+    """Ken Burns image + the static overlay (title/list) + timed neon per-word
+    caption highlights (karaoke). word_overlays = [(png, start, end)].
 
-    Smooth zoom: input fed AT the output fps, and the zoom accumulates one small
-    step per frame (d=1 with pzoom) so it never resets/judders."""
+    framing='cover' fills the frame (may crop edges — fine when the image already
+    bleeds to the edges). framing='fit' scales the object to the WIDTH so its
+    edges are never cut, filling the top/bottom with a blurred extension of the
+    image (reads better than hard black bars on space shots); the Ken Burns zoom
+    is gentler in this mode so the object stays fully visible.
+
+    Smooth zoom: input fed AT the output fps, zoom accumulates one small step per
+    frame (d=1 with pzoom) so it never resets/judders."""
     frames = max(int(dur * FPS), 1)
-    incr = round(0.12 / frames, 5)                  # ease from 1.0 -> ~1.12 over the clip
     inputs = ["-framerate", str(FPS), "-loop", "1", "-t", str(dur), "-i", str(image_path),
               "-loop", "1", "-t", str(dur), "-i", str(overlay_png)]
-    filt = [f"[0:v]scale=2400:4267:force_original_aspect_ratio=increase,"
-            f"crop=2400:4267,zoompan=z='min(max(pzoom,1.0)+{incr},1.13)':d=1:"
-            f"x='iw/2-(iw/zoom/2)':y='ih/2-(ih/zoom/2)':s={W}x{H}:fps={FPS}[bg]",
-            "[bg][1:v]overlay=0:0[v0]"]
+    if framing == "fit":
+        incr = round(0.06 / frames, 5)              # gentle zoom so edges stay in
+        bg = (f"[0:v]split=2[fb][fs];"
+              f"[fb]scale=2400:4267:force_original_aspect_ratio=increase,"
+              f"crop=2400:4267,boxblur=34:1[fbb];"
+              f"[fs]scale=2400:4267:force_original_aspect_ratio=decrease[fss];"
+              f"[fbb][fss]overlay=(W-w)/2:(H-h)/2[fc];"
+              f"[fc]zoompan=z='min(max(pzoom,1.0)+{incr},1.06)':d=1:"
+              f"x='iw/2-(iw/zoom/2)':y='ih/2-(ih/zoom/2)':s={W}x{H}:fps={FPS}[bg]")
+    else:
+        incr = round(0.12 / frames, 5)              # ease 1.0 -> ~1.12 over the clip
+        bg = (f"[0:v]scale=2400:4267:force_original_aspect_ratio=increase,"
+              f"crop=2400:4267,zoompan=z='min(max(pzoom,1.0)+{incr},1.13)':d=1:"
+              f"x='iw/2-(iw/zoom/2)':y='ih/2-(ih/zoom/2)':s={W}x{H}:fps={FPS}[bg]")
+    filt = [bg, "[bg][1:v]overlay=0:0[v0]"]
     prev = "[v0]"
     for k, (png, st, en) in enumerate(word_overlays):
         inputs += ["-loop", "1", "-t", str(dur), "-i", str(png)]
@@ -385,25 +401,29 @@ def render_ranking_video(post_id, payload, config=None) -> Path:
     bg_q, bg_p = random.Random(f"{post_id}:bg").choice(BACKGROUNDS)
     background = (fetch_image(bg_q, prefer=bg_p)
                   or fetch_image("colorful nebula", prefer="nebula"))
+    # plan entries: (image, framing, revealed_ranks, cur_rank, caption, votext).
     # Intro: the voice reads the TITLE first, then the hook. The title karaokes
     # up top (it's already on screen); the hook is the bottom caption after it.
-    plan = [(background, set(), None, hook, f"{title}. {hook}")]
+    plan = [(background, "cover", set(), None, hook, f"{title}. {hook}")]
     revealed = set()
     for it in order:
         revealed = revealed | {it["rank"]}
-        # Real picture of THIS object: NASA first, then an accurate Wikipedia
-        # image (fetch_image handles the web fallback) so items are never blank.
-        img = fetch_image(it["query"], prefer=it["name"]) or background
+        # Best CLEAN photo of THIS object + a per-image framing hint, chosen by the
+        # vision judge (rejects watermarks/diagrams). Falls back to the background.
+        img, framing = fetch_item_visual(it["query"], prefer=it["name"])
+        if not img:
+            img, framing = background, "cover"
         cap = f"{it['name']}. {it['stat']}."
-        plan.append((img, set(revealed), it["rank"], cap, cap))
-    plan.append((background, set(range(1, 6)), None, "Follow for more cosmic countdowns.",
+        plan.append((img, framing, set(revealed), it["rank"], cap, cap))
+    plan.append((background, "cover", set(range(1, 6)), None,
+                 "Follow for more cosmic countdowns.",
                  "Follow for more cosmic countdowns."))
 
     with tempfile.TemporaryDirectory() as tmp:
         tmpd = Path(tmp)
         seg_files, durs, vo_files, starts = [], [], [], []
         t = 0.0
-        for i, (img, rev, cur, cap, votext) in enumerate(plan):
+        for i, (img, framing, rev, cur, cap, votext) in enumerate(plan):
             res = vo(votext, f"vo{i}")
             dur = round((float(res["duration"]) if res else 2.5)
                         + (0.3 if cur is not None else 0.5), 2)
@@ -438,7 +458,7 @@ def render_ranking_video(post_id, payload, config=None) -> Path:
                 timed += _caption_overlays(tmpd, f"c{i}", cap, cap_times, dur, delay)
 
             seg = tmpd / f"seg{i}.mp4"
-            _segment(img, ov, timed, dur, seg)
+            _segment(img, ov, timed, dur, seg, framing)
             seg_files.append(seg); durs.append(dur); starts.append(t)
             vo_files.append(res["audio"] if res else None); t += dur
         total = t

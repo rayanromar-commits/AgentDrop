@@ -10,9 +10,13 @@ non-space topics.
 Test:  python3 -m media.clip_source "Jupiter planet" "black hole"
 """
 
+import base64
 import hashlib
+import io
 import json
+import os
 import re
+import shutil
 import ssl
 import sys
 import time
@@ -22,11 +26,14 @@ from urllib.parse import urlencode
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
+from dotenv import load_dotenv
 from PIL import Image
 
 from agentdrop_common import setup_logging
 
 log = setup_logging()
+
+JUDGE_MODEL = "claude-sonnet-5"       # vision model that picks the best clean image
 
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 CACHE_DIR = PROJECT_ROOT / "media" / "clip_cache"     # gitignored; cloud re-fetches
@@ -239,6 +246,144 @@ def fetch_image(query: str, prefer: str | None = None,
         return out
     log.warning("[img] no usable image for %r (prefer=%r)", query, prefer)
     return None
+
+
+def _nasa_urls(query: str, prefer: str | None, n: int = 3) -> list[str]:
+    """Top NASA candidate image URLs (subject-scored, launch/crew filtered)."""
+    items = _search(query)
+    if not items:
+        return []
+    toks = [t for t in re.split(r"\W+", (prefer or query).lower()) if len(t) > 2]
+    scored = []
+    for it in items[:20]:
+        title = _title(it).lower()
+        if any(b in title for b in _BAD_TITLE):
+            continue
+        href = (it.get("links") or [{}])[0].get("href")
+        if href:
+            scored.append((sum(2 for t in toks if t in title), href))
+    scored.sort(key=lambda x: -x[0])
+    return [re.sub(r"~(thumb|small|medium|large|orig)\.jpg$", "~large.jpg", h)
+            for _, h in scored[:n]]
+
+
+def _gather_candidates(query: str, prefer: str | None, key: str,
+                       limit: int = 5) -> list[tuple[str, Path]]:
+    """Download several candidate images (NASA first, then Wikimedia, then the
+    Wikipedia article image) for the judge to choose between."""
+    srcs = [("NASA", u) for u in _nasa_urls(query, prefer, 3)]
+    srcs += [("Wikimedia", u) for u in _commons_photos(prefer or query, 6)[:3]]
+    wp = _wiki_pageimage(prefer or query)
+    if wp:
+        srcs.append(("Wikipedia", wp))
+    seen, cand = set(), []
+    for lbl, u in srcs:
+        if u in seen:
+            continue
+        seen.add(u)
+        p = CACHE_DIR / f"{key}_c{len(cand)}.jpg"
+        if _download_valid([u], p):
+            cand.append((lbl, p))
+        if len(cand) >= limit:
+            break
+    return cand
+
+
+def _b64(path: Path, max_side: int = 768) -> str:
+    im = Image.open(path).convert("RGB")
+    if max(im.size) > max_side:
+        im.thumbnail((max_side, max_side), Image.LANCZOS)
+    buf = io.BytesIO()
+    im.save(buf, format="JPEG", quality=85)
+    return base64.b64encode(buf.getvalue()).decode()
+
+
+_JUDGE_PROMPT = """You are curating the background image for a cinematic "Top 5" \
+space video. The object shown must be: **{name}**.
+
+Choose the SINGLE best candidate image below. A good image is:
+- a realistic, clear depiction of {name} (a real photo, or a faithful telescope/\
+artist rendering if no real photo exists),
+- CLEAN: absolutely NO watermark, logo, channel name, URL, social handle, or \
+overlaid text/labels of any kind,
+- not a star-chart, locator map, graph, or diagram,
+- high quality (sharp, not a tiny grainy thumbnail).
+Prefer NASA/public-domain when quality is comparable, but the best clean image wins.
+If EVERY candidate is watermarked, wrong-subject, or low quality, return best -1.
+
+Also decide framing for the winner in a tall 9:16 phone frame:
+- "fit"  = the object is roughly round/centred with empty space around it, so \
+cropping it to full-bleed would slice its edges — fit it to the WIDTH instead.
+- "cover" = the image already fills the frame edge-to-edge (surface texture, a \
+nebula/field, or the object bleeds off-frame), so full-bleed is fine.
+
+Return ONLY JSON: {{"best": <index or -1>, "framing": "fit"|"cover", "reason": "..."}}"""
+
+
+def _judge(name: str, cand: list[tuple[str, Path]]) -> tuple[int, str]:
+    """Claude-vision pick: (best_index or -1, framing). Any failure -> (0,'cover')
+    so the pipeline degrades gracefully to the first candidate, never breaks."""
+    load_dotenv()
+    if not os.getenv("ANTHROPIC_API_KEY"):
+        return 0, "cover"
+    try:
+        import anthropic
+    except ImportError:
+        return 0, "cover"
+    content = [{"type": "text", "text": _JUDGE_PROMPT.format(name=name)}]
+    for i, (lbl, p) in enumerate(cand):
+        content.append({"type": "text", "text": f"Candidate {i} (source: {lbl}):"})
+        content.append({"type": "image", "source": {
+            "type": "base64", "media_type": "image/jpeg", "data": _b64(p)}})
+    try:
+        resp = anthropic.Anthropic().messages.create(
+            model=JUDGE_MODEL, max_tokens=400,
+            messages=[{"role": "user", "content": content}])
+        txt = "".join(b.text for b in resp.content if b.type == "text")
+        data = json.loads(re.search(r"\{.*\}", txt, re.S).group(0))
+    except Exception as e:
+        log.warning("[judge] failed (%s); using first candidate.", e)
+        return 0, "cover"
+    best = data.get("best", 0)
+    framing = "fit" if data.get("framing") == "fit" else "cover"
+    log.info("[judge] %s -> best=%s framing=%s (%s)", name, best, framing,
+             str(data.get("reason", ""))[:80])
+    if best is None or not isinstance(best, int) or best < 0 or best >= len(cand):
+        return -1, framing
+    return best, framing
+
+
+def fetch_item_visual(query: str, prefer: str | None = None) -> tuple[Path | None, str]:
+    """Best CLEAN image of a ranked object + its framing hint ('fit'|'cover').
+
+    Gathers candidates (NASA -> Wikimedia -> Wikipedia) and has Claude vision pick
+    the best watermark-free depiction and decide framing. Returns (None,'cover')
+    if nothing clean is found, so the renderer can fall back to the background.
+    Cached per (query,prefer): image at <key>.jpg, framing at <key>.framing.
+    """
+    name = prefer or query
+    key = hashlib.sha1(f"item|{query}|{prefer or ''}".encode()).hexdigest()[:12]
+    out = CACHE_DIR / f"{key}.jpg"
+    fr = CACHE_DIR / f"{key}.framing"
+    if out.exists() and fr.exists():
+        return out, fr.read_text(encoding="utf-8").strip() or "cover"
+    CACHE_DIR.mkdir(parents=True, exist_ok=True)
+
+    cand = _gather_candidates(query, prefer, key)
+    if not cand:
+        log.warning("[item] no candidates for %r", name)
+        return None, "cover"
+    best, framing = _judge(name, cand)
+    if best < 0:
+        log.warning("[item] judge rejected all %d candidate(s) for %r", len(cand), name)
+        for _lbl, p in cand:
+            p.unlink(missing_ok=True)
+        return None, "cover"
+    shutil.copy(cand[best][1], out)
+    fr.write_text(framing, encoding="utf-8")
+    for _lbl, p in cand:                                  # tidy the rejected temps
+        p.unlink(missing_ok=True)
+    return out, framing
 
 
 def cover_image(path: Path, w: int = 1080, h: int = 1920) -> Image.Image:
