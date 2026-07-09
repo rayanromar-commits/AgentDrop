@@ -61,7 +61,7 @@ BACKGROUNDS = [
 
 # Safe-zone layout.
 ML, MR = 60, 120                     # left / right margins
-TITLE_CY = 205                       # title center (below the Dynamic Island)
+TITLE_CY = 275                       # title center (lowered below the Dynamic Island)
 LIST_X = 70
 LIST_YS = [560, 690, 820, 950, 1080]  # compact 1..5 rows, upper-left
 CAP_CY = 1480                        # caption center — raised into the eye-line
@@ -96,7 +96,7 @@ def _wrap(d, text, max_w, size):
     return lines
 
 
-def _scrim(img, top_h=300, bot_h=600):
+def _scrim(img, top_h=380, bot_h=600):
     """Darken the top and bottom bands so title + captions stay legible."""
     ov = Image.new("RGBA", (W, H), (0, 0, 0, 0))
     d = ImageDraw.Draw(ov)
