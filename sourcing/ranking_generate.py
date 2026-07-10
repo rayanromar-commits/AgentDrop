@@ -106,7 +106,11 @@ for the channel — repetitive titles get a channel suppressed. Vary EVERYTHING:
 some a question, some a bold claim, some a curiosity gap, some first-person, some \
 number-led; vary length; most with NO emoji (at most one has an emoji). NEVER just \
 reword "Top 5 X" five times. Make each one a title a different creator might write.
-- hook: one punchy line teasing #1 (curiosity gap), spoken in the intro.
+- hook: one punchy line teasing the ACTUAL #1 item (curiosity gap), spoken in the \
+intro. It MUST be factually accurate and specifically about YOUR #1 (its name + \
+stat) — a real, verifiable detail of THAT object. NEVER borrow a fact from a \
+different object or invent one (e.g. do not say "rains molten glass" unless #1 \
+truly does). Don't name #1 — tease it. Write the hook AFTER you've chosen #1.
 - stat: ONE vivid, FACTUALLY ACCURATE line for that object (a real number/detail).
 - query: a NASA image-library search term that reliably returns a clear image of \
 THAT object. Use mission-specific terms:
