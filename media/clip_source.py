@@ -268,14 +268,23 @@ def _nasa_urls(query: str, prefer: str | None, n: int = 3) -> list[str]:
 
 
 def _gather_candidates(query: str, prefer: str | None, key: str,
-                       limit: int = 5) -> list[tuple[str, Path]]:
+                       limit: int = 6) -> list[tuple[str, Path]]:
     """Download several candidate images (NASA first, then Wikimedia, then the
-    Wikipedia article image) for the judge to choose between."""
+    Wikipedia article image) for the judge to choose between.
+
+    Commons/Wikipedia are searched with BOTH the bare name AND the mission-context
+    query, so a generic name (e.g. "Io" -> an Io-moth butterfly) is disambiguated
+    by the richer query (e.g. "Io Galileo"). The judge then rejects any strays."""
+    terms = list(dict.fromkeys(t for t in (prefer, query) if t))
     srcs = [("NASA", u) for u in _nasa_urls(query, prefer, 3)]
-    srcs += [("Wikimedia", u) for u in _commons_photos(prefer or query, 6)[:3]]
-    wp = _wiki_pageimage(prefer or query)
-    if wp:
-        srcs.append(("Wikipedia", wp))
+    com = []
+    for term in terms:
+        com += _commons_photos(term, 4)
+    srcs += [("Wikimedia", u) for u in dict.fromkeys(com)]
+    for term in terms:
+        wp = _wiki_pageimage(term)
+        if wp:
+            srcs.append(("Wikipedia", wp))
     seen, cand = set(), []
     for lbl, u in srcs:
         if u in seen:
