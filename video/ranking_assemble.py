@@ -139,7 +139,9 @@ def _paginate(d, words, size, max_w):
 def _caption_overlays(tmpd, prefix, caption, word_times, seg_dur, delay):
     """Build timed caption overlays that PAGE through long narration instead of
     truncating: for each page a white base (all its words) plus a neon highlight
-    per word timed to the voice. Returns [(png_path, start, end), ...]."""
+    per word timed to the voice. Returns [(png_path, x, y, start, end), ...] — each
+    PNG is CROPPED to its text and placed at (x,y) so ffmpeg holds a tiny input,
+    not a full 1080x1920 frame per overlay (that OOM-killed the render on Railway)."""
     words = caption.split()
     if not words:
         return []
@@ -167,21 +169,21 @@ def _caption_overlays(tmpd, prefix, caption, word_times, seg_dur, delay):
                 placed.append((w, x + ww / 2, yy, ws, we))
                 x += ww + space
             yy += CAP_SIZE + 12
-        # White base for the whole page.
+        # White base for the whole page (cropped to its text).
         base = Image.new("RGBA", (W, H), (0, 0, 0, 0))
         bd = ImageDraw.Draw(base)
         for (w, cx, cy, _ws, _we) in placed:
             _text(bd, (cx, cy), w, CAP_SIZE, fill=WHITE, anchor="mm", stroke=8)
         bp = tmpd / f"{prefix}_base{pi}.png"
-        base.save(bp)
-        out.append((bp, max(p_start + delay, 0.0), p_end + delay))
+        bx, by = _save_cropped(base, bp)
+        out.append((bp, bx, by, max(p_start + delay, 0.0), p_end + delay))
         # Neon highlight per word, timed to the voice.
         for wi, (w, cx, cy, ws, we) in enumerate(placed):
             if we <= ws:
                 continue
             wp = tmpd / f"{prefix}_w{pi}_{wi}.png"
-            _word_png(w, cx, cy, CAP_SIZE).save(wp)
-            out.append((wp, ws + delay, we + delay))
+            wx, wy = _save_cropped(_word_png(w, cx, cy, CAP_SIZE), wp)
+            out.append((wp, wx, wy, ws + delay, we + delay))
     return out
 
 
@@ -192,6 +194,18 @@ def _word_png(word, cx, cy, size=CAP_SIZE) -> Image.Image:
     _text(ImageDraw.Draw(img), (cx, cy), word, size, fill=NEON,
           anchor="mm", stroke=stroke)
     return img
+
+
+def _save_cropped(full: Image.Image, path) -> tuple[int, int]:
+    """Crop a full-frame overlay to its non-empty bbox and save it, returning the
+    top-left (x, y) it should be placed at. Keeps ffmpeg overlay inputs tiny
+    (a word/caption box) instead of a full 1080x1920 frame each -> avoids OOM."""
+    bbox = full.getbbox()
+    if bbox is None:
+        full.save(path)
+        return 0, 0
+    full.crop(bbox).save(path)
+    return int(bbox[0]), int(bbox[1])
 
 
 def _align_words(words, vo_words):
@@ -346,33 +360,35 @@ def _segment(image_path, overlay_png, word_overlays, dur, out_path, framing="cov
     frames = max(int(dur * FPS), 1)
     inputs = ["-framerate", str(FPS), "-loop", "1", "-t", str(dur), "-i", str(image_path),
               "-loop", "1", "-t", str(dur), "-i", str(overlay_png)]
+    ss = "1620:2880"                                # supersample for a crisp zoom
     if framing == "fit":
         incr = round(0.06 / frames, 5)              # gentle zoom so edges stay in
         bg = (f"[0:v]split=2[fb][fs];"
-              f"[fb]scale=2400:4267:force_original_aspect_ratio=increase,"
-              f"crop=2400:4267,boxblur=34:1[fbb];"
-              f"[fs]scale=2400:4267:force_original_aspect_ratio=decrease[fss];"
+              f"[fb]scale={ss}:force_original_aspect_ratio=increase,"
+              f"crop={ss},boxblur=26:1[fbb];"
+              f"[fs]scale={ss}:force_original_aspect_ratio=decrease[fss];"
               f"[fbb][fss]overlay=(W-w)/2:(H-h)/2[fc];"
               f"[fc]zoompan=z='min(max(pzoom,1.0)+{incr},1.06)':d=1:"
               f"x='iw/2-(iw/zoom/2)':y='ih/2-(ih/zoom/2)':s={W}x{H}:fps={FPS}[bg]")
     else:
         incr = round(0.12 / frames, 5)              # ease 1.0 -> ~1.12 over the clip
-        bg = (f"[0:v]scale=2400:4267:force_original_aspect_ratio=increase,"
-              f"crop=2400:4267,zoompan=z='min(max(pzoom,1.0)+{incr},1.13)':d=1:"
+        bg = (f"[0:v]scale={ss}:force_original_aspect_ratio=increase,"
+              f"crop={ss},zoompan=z='min(max(pzoom,1.0)+{incr},1.13)':d=1:"
               f"x='iw/2-(iw/zoom/2)':y='ih/2-(ih/zoom/2)':s={W}x{H}:fps={FPS}[bg]")
     filt = [bg, "[bg][1:v]overlay=0:0[v0]"]
     prev = "[v0]"
-    for k, (png, st, en) in enumerate(word_overlays):
+    # Each overlay is a small CROPPED png placed at (ox,oy) — tiny ffmpeg inputs.
+    for k, (png, ox, oy, st, en) in enumerate(word_overlays):
         inputs += ["-loop", "1", "-t", str(dur), "-i", str(png)]
         lbl = f"[v{k + 1}]"
-        filt.append(f"{prev}[{k + 2}:v]overlay=0:0:"
+        filt.append(f"{prev}[{k + 2}:v]overlay={int(ox)}:{int(oy)}:"
                     f"enable='between(t,{round(st, 3)},{round(en, 3)})'{lbl}")
         prev = lbl
     filt.append(f"{prev}format=yuv420p[v]")
     subprocess.run([_ffmpeg(), "-y", *inputs, "-filter_complex", ";".join(filt),
                     "-map", "[v]", "-c:v", "libx264", "-preset", "veryfast",
                     "-pix_fmt", "yuv420p", "-r", str(FPS), "-t", str(dur),
-                    str(out_path)], check=True, capture_output=True)
+                    "-threads", "2", str(out_path)], check=True, capture_output=True)
 
 
 def render_ranking_video(post_id, payload, config=None) -> Path:
@@ -438,7 +454,7 @@ def render_ranking_video(post_id, payload, config=None) -> Path:
                 except Exception:
                     vo_words = []
             delay = 0.1 if i == 0 else 0.2              # matches the audio adelay
-            timed = []                                  # (png, start, end) overlays
+            timed = []                                  # (png, x, y, start, end)
 
             # Bottom caption PAGES through the narration (never truncates); the
             # intro also karaokes the TITLE up top while it's being read.
@@ -449,8 +465,8 @@ def render_ranking_video(post_id, payload, config=None) -> Path:
                         zip(title_words, all_times[:len(tw)])):
                     if tm and tm[1] > tm[0]:
                         wp = tmpd / f"tw{i}_{k}.png"
-                        _word_png(w, cx, cy, size).save(wp)
-                        timed.append((wp, tm[0] + delay, tm[1] + delay))
+                        wx, wy = _save_cropped(_word_png(w, cx, cy, size), wp)
+                        timed.append((wp, wx, wy, tm[0] + delay, tm[1] + delay))
                 timed += _caption_overlays(tmpd, f"c{i}", cap,
                                            all_times[len(tw):], dur, delay)
             else:
@@ -458,7 +474,15 @@ def render_ranking_video(post_id, payload, config=None) -> Path:
                 timed += _caption_overlays(tmpd, f"c{i}", cap, cap_times, dur, delay)
 
             seg = tmpd / f"seg{i}.mp4"
-            _segment(img, ov, timed, dur, seg, framing)
+            try:
+                _segment(img, ov, timed, dur, seg, framing)
+            except Exception as e:
+                # Never let one overlay-heavy segment crash the whole video —
+                # retry with just the image + static overlay (no karaoke) so the
+                # daily upload still happens.
+                log.warning("[ranking] segment %d failed (%s); retrying without "
+                            "karaoke overlays.", i, e)
+                _segment(img, ov, [], dur, seg, framing)
             seg_files.append(seg); durs.append(dur); starts.append(t)
             vo_files.append(res["audio"] if res else None); t += dur
         total = t
