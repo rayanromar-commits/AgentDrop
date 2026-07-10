@@ -363,6 +363,18 @@ def start_scheduler(config: dict) -> None:
     # TikTok backlog-skip), before any scheduled upload fires.
     db.init_db()
 
+    # PAUSE SWITCH: `paused: true` in config stops ALL production + uploads so the
+    # service spends nothing (no TTS, no API, no posts). StoryDropper was paused
+    # 2026-07-10 — consistently low views, not worth the spend. The process idles
+    # (instead of exiting) so the container doesn't crash-loop on Railway. To fully
+    # stop compute too, pause the Railway service. Set paused:false to resume.
+    if config.get("paused"):
+        import time as _time
+        log.warning("[scheduler] PAUSED via config — no production, no uploads, "
+                    "no spend. Idling. Set paused:false (+ redeploy) to resume.")
+        while True:
+            _time.sleep(3600)
+
     tz_name = config.get("timezone", "America/New_York")
     tz = ZoneInfo(tz_name)
     # Diagnostic: confirm in the logs which timezone is actually active.

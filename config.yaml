@@ -5,6 +5,13 @@
 # Keep the indentation (spaces) exactly as shown — YAML cares about it.
 # ===================================================================
 
+# --- PAUSE SWITCH ---------------------------------------------------
+# true  = the scheduler idles: NO production, NO uploads, NO spend.
+# false = normal operation.
+# Paused 2026-07-10: StoryDropper consistently low views — not worth the
+# TTS/API spend. (To also stop compute, pause the Railway service.)
+paused: true
+
 # --- STORY SOURCING -------------------------------------------------
 # Where stories come from:
 #   manual  = read .txt files you drop into sourcing/manual_stories/
