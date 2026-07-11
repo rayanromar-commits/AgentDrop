@@ -18,6 +18,7 @@ import json
 import math
 import random
 import re
+import shutil
 import struct
 import subprocess
 import sys
@@ -136,12 +137,12 @@ def _paginate(d, words, size, max_w):
     return [lines[i:i + PAGE_LINES] for i in range(0, len(lines), PAGE_LINES)]
 
 
-def _caption_overlays(tmpd, prefix, caption, word_times, seg_dur, delay):
+def _caption_overlays(caption, word_times, seg_dur, delay):
     """Build timed caption overlays that PAGE through long narration instead of
     truncating: for each page a white base (all its words) plus a neon highlight
-    per word timed to the voice. Returns [(png_path, x, y, start, end), ...] — each
-    PNG is CROPPED to its text and placed at (x,y) so ffmpeg holds a tiny input,
-    not a full 1080x1920 frame per overlay (that OOM-killed the render on Railway)."""
+    per word timed to the voice. Returns [(pil_img, x, y, start, end), ...] — each
+    image is CROPPED to its text; they're composited into the segment's overlay
+    track (one ffmpeg input total)."""
     words = caption.split()
     if not words:
         return []
@@ -174,16 +175,14 @@ def _caption_overlays(tmpd, prefix, caption, word_times, seg_dur, delay):
         bd = ImageDraw.Draw(base)
         for (w, cx, cy, _ws, _we) in placed:
             _text(bd, (cx, cy), w, CAP_SIZE, fill=WHITE, anchor="mm", stroke=8)
-        bp = tmpd / f"{prefix}_base{pi}.png"
-        bx, by = _save_cropped(base, bp)
-        out.append((bp, bx, by, max(p_start + delay, 0.0), p_end + delay))
+        bimg, bx, by = _crop(base)
+        out.append((bimg, bx, by, max(p_start + delay, 0.0), p_end + delay))
         # Neon highlight per word, timed to the voice.
-        for wi, (w, cx, cy, ws, we) in enumerate(placed):
+        for (w, cx, cy, ws, we) in placed:
             if we <= ws:
                 continue
-            wp = tmpd / f"{prefix}_w{pi}_{wi}.png"
-            wx, wy = _save_cropped(_word_png(w, cx, cy, CAP_SIZE), wp)
-            out.append((wp, wx, wy, ws + delay, we + delay))
+            wimg, wx, wy = _crop(_word_png(w, cx, cy, CAP_SIZE))
+            out.append((wimg, wx, wy, ws + delay, we + delay))
     return out
 
 
@@ -196,16 +195,13 @@ def _word_png(word, cx, cy, size=CAP_SIZE) -> Image.Image:
     return img
 
 
-def _save_cropped(full: Image.Image, path) -> tuple[int, int]:
-    """Crop a full-frame overlay to its non-empty bbox and save it, returning the
-    top-left (x, y) it should be placed at. Keeps ffmpeg overlay inputs tiny
-    (a word/caption box) instead of a full 1080x1920 frame each -> avoids OOM."""
+def _crop(full: Image.Image) -> tuple[Image.Image, int, int]:
+    """Crop a full-frame overlay to its non-empty bbox; return (image, x, y) so it
+    can be alpha-composited back at that offset when building the overlay track."""
     bbox = full.getbbox()
     if bbox is None:
-        full.save(path)
-        return 0, 0
-    full.crop(bbox).save(path)
-    return int(bbox[0]), int(bbox[1])
+        return full, 0, 0
+    return full.crop(bbox), int(bbox[0]), int(bbox[1])
 
 
 def _align_words(words, vo_words):
@@ -345,21 +341,45 @@ def _ffmpeg():
         return "ffmpeg"
 
 
-def _segment(image_path, overlay_png, word_overlays, dur, out_path, framing="cover"):
-    """Ken Burns image + the static overlay (title/list) + timed neon per-word
-    caption highlights (karaoke). word_overlays = [(png, start, end)].
+def _overlay_track(tmpd, idx, base_img, overlays, dur):
+    """Pre-render the WHOLE overlay layer (static title/list/scrim + all timed
+    karaoke/caption pieces) as a per-frame PNG sequence, so the segment ffmpeg
+    needs exactly ONE overlay input — not one input per word. Feeding ffmpeg
+    dozens of per-word inputs OOM-failed on Railway for long hooks; this is flat
+    at 2 inputs regardless of word count. `overlays` = [(pil_img, x, y, s, e)].
+    Returns the printf-style frame pattern. Identical consecutive frames are
+    hard-copied (cheap) so only real caption changes cost a composite."""
+    n = max(int(dur * FPS), 1)
+    d = tmpd / f"ovseq{idx}"
+    d.mkdir(parents=True, exist_ok=True)
+    prev_sig, prev_path = None, None
+    for f in range(n):
+        t = f / FPS
+        active = [(im, x, y) for (im, x, y, s, e) in overlays if s <= t < e]
+        sig = tuple(id(im) for (im, _x, _y) in active)
+        path = d / f"f{f:05d}.png"
+        if sig == prev_sig and prev_path is not None:
+            shutil.copyfile(prev_path, path)
+        else:
+            frame = base_img.copy()
+            for (im, x, y) in active:
+                frame.alpha_composite(im, (int(x), int(y)))
+            frame.save(path)
+            prev_sig, prev_path = sig, path
+    return d / "f%05d.png"
+
+
+def _segment(image_path, overlay_pattern, dur, out_path, framing="cover"):
+    """Ken Burns image + a single pre-composited overlay frame-sequence (title/
+    list + timed karaoke/captions). Exactly TWO inputs — memory-flat on Railway.
 
     framing='cover' fills the frame (may crop edges — fine when the image already
     bleeds to the edges). framing='fit' scales the object to the WIDTH so its
     edges are never cut, filling the top/bottom with a blurred extension of the
-    image (reads better than hard black bars on space shots); the Ken Burns zoom
-    is gentler in this mode so the object stays fully visible.
-
-    Smooth zoom: input fed AT the output fps, zoom accumulates one small step per
-    frame (d=1 with pzoom) so it never resets/judders."""
+    image; the Ken Burns zoom is gentler so the object stays fully visible."""
     frames = max(int(dur * FPS), 1)
     inputs = ["-framerate", str(FPS), "-loop", "1", "-t", str(dur), "-i", str(image_path),
-              "-loop", "1", "-t", str(dur), "-i", str(overlay_png)]
+              "-framerate", str(FPS), "-i", str(overlay_pattern)]
     ss = "1620:2880"                                # supersample for a crisp zoom
     if framing == "fit":
         incr = round(0.06 / frames, 5)              # gentle zoom so edges stay in
@@ -375,16 +395,7 @@ def _segment(image_path, overlay_png, word_overlays, dur, out_path, framing="cov
         bg = (f"[0:v]scale={ss}:force_original_aspect_ratio=increase,"
               f"crop={ss},zoompan=z='min(max(pzoom,1.0)+{incr},1.13)':d=1:"
               f"x='iw/2-(iw/zoom/2)':y='ih/2-(ih/zoom/2)':s={W}x{H}:fps={FPS}[bg]")
-    filt = [bg, "[bg][1:v]overlay=0:0[v0]"]
-    prev = "[v0]"
-    # Each overlay is a small CROPPED png placed at (ox,oy) — tiny ffmpeg inputs.
-    for k, (png, ox, oy, st, en) in enumerate(word_overlays):
-        inputs += ["-loop", "1", "-t", str(dur), "-i", str(png)]
-        lbl = f"[v{k + 1}]"
-        filt.append(f"{prev}[{k + 2}:v]overlay={int(ox)}:{int(oy)}:"
-                    f"enable='between(t,{round(st, 3)},{round(en, 3)})'{lbl}")
-        prev = lbl
-    filt.append(f"{prev}format=yuv420p[v]")
+    filt = [bg, "[bg][1:v]overlay=0:0[vv]", "[vv]format=yuv420p[v]"]
     subprocess.run([_ffmpeg(), "-y", *inputs, "-filter_complex", ";".join(filt),
                     "-map", "[v]", "-c:v", "libx264", "-preset", "veryfast",
                     "-pix_fmt", "yuv420p", "-r", str(FPS), "-t", str(dur),
@@ -443,9 +454,7 @@ def render_ranking_video(post_id, payload, config=None) -> Path:
             res = vo(votext, f"vo{i}")
             dur = round((float(res["duration"]) if res else 2.5)
                         + (0.3 if cur is not None else 0.5), 2)
-            ov = tmpd / f"ov{i}.png"
             base_img, title_words = _overlay(title, by_rank, rev, cur)
-            base_img.save(ov)
 
             vo_words = []
             if res:
@@ -454,35 +463,33 @@ def render_ranking_video(post_id, payload, config=None) -> Path:
                 except Exception:
                     vo_words = []
             delay = 0.1 if i == 0 else 0.2              # matches the audio adelay
-            timed = []                                  # (png, x, y, start, end)
+            timed = []                                  # (pil_img, x, y, start, end)
 
             # Bottom caption PAGES through the narration (never truncates); the
             # intro also karaokes the TITLE up top while it's being read.
             if i == 0:
                 tw = [w for (w, _cx, _cy, _s) in title_words]
                 all_times = _align_words(tw + cap.split(), vo_words)
-                for k, ((w, cx, cy, size), tm) in enumerate(
-                        zip(title_words, all_times[:len(tw)])):
+                for (w, cx, cy, size), tm in zip(title_words, all_times[:len(tw)]):
                     if tm and tm[1] > tm[0]:
-                        wp = tmpd / f"tw{i}_{k}.png"
-                        wx, wy = _save_cropped(_word_png(w, cx, cy, size), wp)
-                        timed.append((wp, wx, wy, tm[0] + delay, tm[1] + delay))
-                timed += _caption_overlays(tmpd, f"c{i}", cap,
-                                           all_times[len(tw):], dur, delay)
+                        wimg, wx, wy = _crop(_word_png(w, cx, cy, size))
+                        timed.append((wimg, wx, wy, tm[0] + delay, tm[1] + delay))
+                timed += _caption_overlays(cap, all_times[len(tw):], dur, delay)
             else:
                 cap_times = _align_words(cap.split(), vo_words)
-                timed += _caption_overlays(tmpd, f"c{i}", cap, cap_times, dur, delay)
+                timed += _caption_overlays(cap, cap_times, dur, delay)
 
             seg = tmpd / f"seg{i}.mp4"
             try:
-                _segment(img, ov, timed, dur, seg, framing)
+                pattern = _overlay_track(tmpd, i, base_img, timed, dur)
+                _segment(img, pattern, dur, seg, framing)
             except Exception as e:
-                # Never let one overlay-heavy segment crash the whole video —
-                # retry with just the image + static overlay (no karaoke) so the
-                # daily upload still happens.
-                log.warning("[ranking] segment %d failed (%s); retrying without "
-                            "karaoke overlays.", i, e)
-                _segment(img, ov, [], dur, seg, framing)
+                # Never let one segment crash the whole video — retry with just the
+                # image + static overlay (no karaoke) so the daily upload happens.
+                log.warning("[ranking] segment %d failed (%s); retrying static-only.",
+                            i, e)
+                pattern = _overlay_track(tmpd, f"{i}s", base_img, [], dur)
+                _segment(img, pattern, dur, seg, framing)
             seg_files.append(seg); durs.append(dur); starts.append(t)
             vo_files.append(res["audio"] if res else None); t += dur
         total = t
