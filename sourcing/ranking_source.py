@@ -30,6 +30,13 @@ log = setup_logging()
 
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 DEFAULT_DIR = "sourcing/ranking_data"
+# DURABLE, committed "already posted" ledger. The runtime DB (db.post_already_seen)
+# has proven unreliable for this channel — manual uploads bypassed it and the
+# Railway DB can reset — which let an already-posted dataset (e.g. "Windiest
+# Planets") get re-selected and re-rendered as duplicate content. This in-repo
+# ledger ships with every deploy and is checked ALONGSIDE the DB, so a dataset is
+# never posted twice regardless of DB state.
+POSTED_LEDGER = PROJECT_ROOT / "sourcing" / "ranking_posted.json"
 
 
 def _dataset_dir(config: dict) -> Path:
@@ -39,6 +46,40 @@ def _dataset_dir(config: dict) -> Path:
 
 def _post_id(title: str) -> str:
     return "rank_" + hashlib.sha1(title.encode("utf-8")).hexdigest()[:10]
+
+
+def _load_posted() -> dict:
+    """Read the committed posted-ledger. Returns {} if missing/unreadable."""
+    try:
+        return json.loads(POSTED_LEDGER.read_text(encoding="utf-8"))
+    except Exception:
+        return {"posted": []}
+
+
+def posted_ids() -> set[str]:
+    """post_ids of every dataset the ledger records as already uploaded."""
+    return {e["post_id"] for e in _load_posted().get("posted", [])
+            if isinstance(e, dict) and e.get("post_id")}
+
+
+def mark_posted(title: str, youtube_id: str = "", date: str = "",
+                note: str = "") -> None:
+    """Append a dataset to the durable posted-ledger (idempotent by post_id) so it
+    is never selected again — the reliable anti-duplicate record. Called on every
+    automated production; call by hand for manual uploads."""
+    pid = _post_id(title)
+    data = _load_posted()
+    entries = data.setdefault("posted", [])
+    if any(isinstance(e, dict) and e.get("post_id") == pid for e in entries):
+        return
+    entries.append({"post_id": pid, "title": title, "youtube_id": youtube_id,
+                    "date": date, "note": note})
+    try:
+        POSTED_LEDGER.write_text(json.dumps(data, indent=2, ensure_ascii=False),
+                                 encoding="utf-8")
+        log.info("[ranking] marked posted in ledger: %s (%s)", title, pid)
+    except Exception as e:
+        log.warning("[ranking] could not write posted-ledger: %s", e)
 
 
 # Varied YouTube (metadata) titles so the channel isn't every-day "Top 5 Most X
@@ -87,6 +128,8 @@ def fetch_stories(config: dict, skip_seen: bool = True) -> list[dict]:
 
     files = sorted(ddir.glob("*.json"))
     random.shuffle(files)                       # vary which topic goes next
+    already_posted = posted_ids() if skip_seen else set()
+    seen_titles: set[str] = set()               # guard identical-title dup files
     stories: list[dict] = []
     for path in files:
         try:
@@ -97,8 +140,14 @@ def fetch_stories(config: dict, skip_seen: bool = True) -> list[dict]:
         if not data.get("items") or not data.get("title"):
             continue
         post_id = _post_id(data["title"])
-        if skip_seen and db.post_already_seen(post_id):
+        # Skip anything already posted per EITHER the durable ledger or the DB,
+        # and never surface two datasets with the same title in one run.
+        if skip_seen and (post_id in already_posted or db.post_already_seen(post_id)):
             continue
+        if post_id in seen_titles:
+            log.warning("[ranking] duplicate-title dataset skipped: %s", path.name)
+            continue
+        seen_titles.add(post_id)
         stories.append({
             "post_id": post_id,
             "subreddit": data.get("category", "ranking"),   # category tag
@@ -115,6 +164,15 @@ def fetch_stories(config: dict, skip_seen: bool = True) -> list[dict]:
 
 
 if __name__ == "__main__":
+    # `python -m sourcing.ranking_source mark "Top 5 ..." [youtube_id]` records a
+    # (manual) upload into the durable posted-ledger so it's never posted again.
+    if len(sys.argv) > 2 and sys.argv[1] == "mark":
+        import datetime
+        mark_posted(sys.argv[2], sys.argv[3] if len(sys.argv) > 3 else "",
+                    datetime.date.today().isoformat(), "manual")
+        print(f"marked posted: {sys.argv[2]}")
+        sys.exit(0)
+
     from agentdrop_common import load_config
     db.init_db()
     cfg = load_config()

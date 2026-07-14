@@ -1,36 +1,36 @@
 {
   "title": "Top 5 STRANGEST Signals From Space",
-  "hook": "Number one, for 72 seconds in 1977 something screamed across the radio spectrum, then vanished forever.",
+  "hook": "Number one screamed across the radio for 72 seconds, then vanished.",
   "category": "signals",
   "items": [
     {
       "rank": 5,
       "name": "Fast Radio Burst FRB 121102",
-      "stat": "Repeating millisecond bursts releasing more energy than the Sun does in a whole day.",
+      "stat": "Repeating bursts brighter than the Sun's entire day",
       "query": "Hubble FRB 121102 host galaxy"
     },
     {
       "rank": 4,
       "name": "Pulsar PSR B1919+21",
-      "stat": "Ticks every 1.337 seconds so precisely it was first nicknamed LGM-1 for 'Little Green Men'.",
+      "stat": "Ticks so precisely it was first nicknamed 'Little Green Men'",
       "query": "Chandra pulsar"
     },
     {
       "rank": 3,
       "name": "Tabby's Star (KIC 8462852)",
-      "stat": "Dips in brightness up to 22% baffled scientists and sparked alien megastructure theories.",
+      "stat": "22% dimming sparked wild alien megastructure theories",
       "query": "Tabby's Star KIC 8462852 artist concept"
     },
     {
       "rank": 2,
       "name": "The Cosmic Microwave Background",
-      "stat": "The oldest signal in existence, a faint 2.7 Kelvin glow left over from 380,000 years after the Big Bang.",
+      "stat": "The oldest signal — from 380,000 years after the Big Bang",
       "query": "cosmic microwave background WMAP map"
     },
     {
       "rank": 1,
       "name": "The Wow! Signal",
-      "stat": "A 72-second radio blast detected in 1977 that has never been heard again.",
+      "stat": "A 72-second radio blast in 1977, never heard again",
       "query": "Big Ear radio telescope Wow signal"
     }
   ],

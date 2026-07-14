@@ -1,36 +1,36 @@
 {
   "title": "Top 5 STRANGEST Stars In The Universe",
-  "hook": "Number one spins so violently its surface tears through space at a quarter the speed of light.",
+  "hook": "Number one spins so fast its surface hits a quarter light-speed.",
   "category": "stars",
   "items": [
     {
       "rank": 5,
       "name": "Red Giant Betelgeuse",
-      "stat": "So huge it would swallow Mars if placed at our Sun's center, about 700 times wider than the Sun.",
+      "stat": "700 times the Sun — would swallow Mars's whole orbit",
       "query": "Hubble Betelgeuse"
     },
     {
       "rank": 4,
       "name": "White Dwarf Sirius B",
-      "stat": "A dying star crushed to Earth's size, where a teaspoon of it weighs about 5 tons.",
+      "stat": "Earth-sized, yet a single teaspoon weighs 5 tons",
       "query": "Hubble Sirius B white dwarf"
     },
     {
       "rank": 3,
       "name": "Magnetar",
-      "stat": "Its magnetic field is a thousand trillion times stronger than Earth's, enough to erase a credit card from 100,000 miles away.",
+      "stat": "A magnetic field a thousand trillion times stronger than Earth's",
       "query": "magnetar neutron star artist concept"
     },
     {
       "rank": 2,
       "name": "Hypergiant UY Scuti",
-      "stat": "One of the largest known stars, roughly 1,700 times the Sun's radius.",
+      "stat": "One of the largest stars — 1,700 times the Sun's radius",
       "query": "UY Scuti hypergiant star"
     },
     {
       "rank": 1,
       "name": "Millisecond Pulsar",
-      "stat": "This neutron star spins over 700 times per second, its surface racing at a quarter the speed of light.",
+      "stat": "Spins over 700 times a second, surface near light-speed",
       "query": "pulsar neutron star Chandra"
     }
   ],

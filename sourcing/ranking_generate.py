@@ -97,6 +97,14 @@ object (and nothing else) with this exact shape:
   ]
 }
 
+LENGTH MATTERS. The whole script is read aloud, then the edit is sped up a LITTLE \
+(never more than 1.35x, pitch preserved) to land the Short at ~30-33 seconds. So \
+write TIGHT but not bare: include the one vivid fact/number for each item, cut \
+filler and wind-up, and NEVER repeat the same detail in two places (the hook and \
+#1 must not restate the same fact). Aim for one clean, information-dense line per \
+item — enough to be interesting, short enough that a gentle speed-up keeps it \
+comfortably under ~33 seconds.
+
 Rules:
 - title: the ON-SCREEN title. SHORT, dramatic, superlative, ONE word in ALL CAPS \
 (DANGEROUS, LARGEST, STRANGEST). Format "Top 5 ... ".
@@ -106,12 +114,18 @@ for the channel — repetitive titles get a channel suppressed. Vary EVERYTHING:
 some a question, some a bold claim, some a curiosity gap, some first-person, some \
 number-led; vary length; most with NO emoji (at most one has an emoji). NEVER just \
 reword "Top 5 X" five times. Make each one a title a different creator might write.
-- hook: one punchy line teasing the ACTUAL #1 item (curiosity gap), spoken in the \
-intro. It MUST be factually accurate and specifically about YOUR #1 (its name + \
-stat) — a real, verifiable detail of THAT object. NEVER borrow a fact from a \
-different object or invent one (e.g. do not say "rains molten glass" unless #1 \
-truly does). Don't name #1 — tease it. Write the hook AFTER you've chosen #1.
-- stat: ONE vivid, FACTUALLY ACCURATE line for that object (a real number/detail).
+- hook: ONE short line (AT MOST 12 words) teasing the ACTUAL #1 (curiosity gap), \
+spoken in the intro. It MUST be factually accurate and specifically about YOUR #1 \
+— a real, verifiable detail of THAT object. NEVER borrow a fact from a different \
+object or invent one (e.g. do not say "rains molten glass" unless #1 truly does). \
+Don't name #1 — tease it. Do NOT reuse #1's exact stat here; tease a DIFFERENT \
+angle so the payoff isn't spoiled. Write the hook AFTER you've chosen #1.
+- stat: ONE punchy line, ABOUT 8-11 words (never more than ~12). Lead with the \
+number or the vivid detail; cut articles and connective filler ("that", "which", \
+"making it", "into a region"). Keep it factually ACCURATE (the real number/detail). \
+Examples of the right length: "462°C — hot enough to melt lead in seconds", \
+"4.3 million Suns crammed inside Mercury's tiny orbit", \
+"Rains molten glass, blown sideways at 5,400 mph".
 - query: a NASA image-library search term that reliably returns a clear image of \
 THAT object. Use mission-specific terms:
     * Solar-system planets/moons: "Jupiter Cassini", "Venus Mariner 10", \

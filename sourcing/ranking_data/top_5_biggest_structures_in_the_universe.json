@@ -1,36 +1,36 @@
 {
   "title": "Top 5 BIGGEST Structures In The Universe",
-  "hook": "Number one isn't a single object at all—it's a single connected structure that threads through the entire universe, linking every galaxy across billions of light-years.",
+  "hook": "Number one isn't an object — it links every galaxy in existence.",
   "category": "cosmic structures",
   "items": [
     {
       "rank": 5,
       "name": "Sloan Great Wall",
-      "stat": "A wall of galaxies stretching roughly 1.4 billion light-years across.",
+      "stat": "A wall of galaxies 1.4 billion light-years across",
       "query": "Hubble galaxy cluster deep field"
     },
     {
       "rank": 4,
       "name": "Boötes Void",
-      "stat": "An empty bubble about 330 million light-years wide with almost no galaxies.",
+      "stat": "An empty bubble 330 million light-years wide, almost starless",
       "query": "Hubble cosmic void deep field"
     },
     {
       "rank": 3,
       "name": "Huge-LQG (Large Quasar Group)",
-      "stat": "A cluster of 73 quasars spanning about 4 billion light-years.",
+      "stat": "A cluster of 73 quasars spanning 4 billion light-years",
       "query": "Hubble quasar"
     },
     {
       "rank": 2,
       "name": "Hercules-Corona Borealis Great Wall",
-      "stat": "A filament of galaxies estimated at up to 10 billion light-years long.",
+      "stat": "A galaxy filament up to 10 billion light-years long",
       "query": "Hubble galaxy filament large scale structure"
     },
     {
       "rank": 1,
       "name": "The Cosmic Web",
-      "stat": "A universe-spanning network of filaments linking all galaxies across billions of light-years.",
+      "stat": "A universe-spanning network of filaments linking all galaxies",
       "query": "cosmic web large scale structure simulation"
     }
   ],

@@ -1,36 +1,36 @@
 {
   "title": "Top 5 FASTEST Things In The Universe",
-  "hook": "Number one is the cosmic speed limit itself—nearly 300 million meters every single second, and physics forbids anything from ever beating it.",
+  "hook": "Number one is the cosmic speed limit — nothing can ever beat it.",
   "category": "phenomena",
   "items": [
     {
       "rank": 5,
       "name": "Voyager 1 Spacecraft",
-      "stat": "Travels at about 61,000 km/h relative to the Sun, the fastest human-made object leaving the solar system.",
+      "stat": "61,000 km/h — fastest craft ever to leave our solar system",
       "query": "Voyager 1 spacecraft"
     },
     {
       "rank": 4,
       "name": "Parker Solar Probe",
-      "stat": "Hit about 692,000 km/h near the Sun, the fastest human-made object ever built.",
+      "stat": "692,000 km/h — the fastest object humans have ever built",
       "query": "Parker Solar Probe artist concept"
     },
     {
       "rank": 3,
       "name": "Pulsar PSR J0952-0607",
-      "stat": "Spins 707 times every single second, its surface whipping around at a fraction of light speed.",
+      "stat": "Spins 707 times every single second",
       "query": "pulsar neutron star artist concept"
     },
     {
       "rank": 2,
       "name": "Blazar Relativistic Jets",
-      "stat": "Blast plasma outward at over 99.9% the speed of light across thousands of light-years.",
+      "stat": "Plasma jets blasting at over 99.9% the speed of light",
       "query": "Hubble blazar jet"
     },
     {
       "rank": 1,
       "name": "Light (Photons)",
-      "stat": "Travels at exactly 299,792,458 meters per second, the ultimate cosmic speed limit nothing can beat.",
+      "stat": "299,792,458 meters per second — nothing can beat it",
       "query": "Hubble deep field light"
     }
   ],

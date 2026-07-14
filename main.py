@@ -32,6 +32,58 @@ def show_config(config: dict) -> None:
     log.info("Upload privacy : %s", config["upload"]["privacy_status"])
 
 
+def _apply_ranking_performance_weight(candidates: list[dict], config: dict) -> None:
+    """Reorder ranking candidates in place, favoring high-performing categories.
+
+    Mirrors the story pipeline's bias (see produce_one_video): each category's
+    age-normalized composite score (views/day + engagement + completion) is
+    shrunk toward the global mean by sample size, so one lucky video can't
+    dominate while data is thin. Every candidate then gets a random exploration
+    base PLUS a bounded, category-scaled boost — the random base stands in for
+    the crowd-upvote signal ranking lists don't have, keeping newer/unseen
+    categories in play. No-op when there's no performance data yet, so the
+    shuffled order from the source survives cold-start.
+
+    Ranking items carry their category in the ``subreddit`` field, which is
+    exactly what db.subreddit_performance() groups by — so the same aggregation
+    the story channel learns from applies here unchanged.
+    """
+    import random
+
+    perf = db.subreddit_performance()
+    if not perf:
+        return
+
+    pcfg = config.get("performance", {})
+    max_boost = pcfg.get("boost", 3.0)      # max points the category signal adds
+    prior = pcfg.get("prior_weight", 1.5)   # pseudo-count for shrinkage
+
+    scores = [d["score"] for d in perf.values()]
+    global_mean = sum(scores) / len(scores)
+    # Bayesian-style shrink toward the mean by sample size (small n -> trust
+    # the mean more), matching produce_one_video.
+    adj = {
+        cat: (d["n"] * d["score"] + prior * global_mean) / (d["n"] + prior)
+        for cat, d in perf.items()
+    }
+    max_s = max(adj.values()) or 1.0
+
+    rng = random.Random()
+
+    def _sel(c):
+        # Unseen categories get the (shrunk) global mean, so they're explored
+        # rather than starved. Random base = exploration; category term =
+        # exploitation, both capped by the same `boost` knob.
+        cat_score = adj.get(c["subreddit"], global_mean)
+        return rng.random() * max_boost + (cat_score / max_s) * max_boost
+
+    candidates.sort(key=_sel, reverse=True)
+
+    top = candidates[0]
+    log.info("[ranking] performance-weighted pick: category=%s (adj score %.2f) — %s",
+             top["subreddit"], adj.get(top["subreddit"], global_mean), top["title"])
+
+
 def _produce_ranking(config: dict):
     """Produce ONE cinematic 'Top 5' ranking Short (content_type=ranking).
 
@@ -39,7 +91,8 @@ def _produce_ranking(config: dict):
     voiceover renderer over NASA images, and queues it. Single video, no split.
     """
     import json as _json
-    from sourcing.ranking_source import fetch_stories as rank_fetch, youtube_title
+    from sourcing.ranking_source import (fetch_stories as rank_fetch,
+                                          youtube_title, mark_posted)
     from video.ranking_assemble import render_ranking_video
     from review.queue import submit_video
 
@@ -56,6 +109,11 @@ def _produce_ranking(config: dict):
         log.warning("No fresh ranking lists available (dataset exhausted?).")
         return None
 
+    # Close the learning loop: bias the pick toward categories the channel's
+    # own view/retention/share data says are winning. Off -> shuffled order.
+    if config.get("use_performance_weighting"):
+        _apply_ranking_performance_weight(candidates, config)
+
     item = candidates[0]
     payload = _json.loads(item["body"])   # on-screen title stays payload["title"]
     log.info("Producing ranking Short %s: %s", item["post_id"], item["title"])
@@ -68,6 +126,10 @@ def _produce_ranking(config: dict):
     db.save_post(post_id=item["post_id"], subreddit=item["subreddit"],
                  title=item["title"], body=item["body"], score=0,
                  word_count=item.get("word_count", 0), status="used")
+    # Also record in the durable committed ledger — the reliable anti-duplicate
+    # store that survives DB resets/redeploys (keyed on the on-screen title).
+    mark_posted(payload["title"], date=__import__("datetime").date.today().isoformat(),
+                note="auto")
     log.info("Produced ranking -> %s (%s)", result["path"], result["status"])
     return [result]
 

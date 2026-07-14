@@ -528,9 +528,14 @@ def render_ranking_video(post_id, payload, config=None) -> Path:
         # Tighten to ~target seconds by speeding up the EDIT (tempo up, pitch
         # preserved via atempo) — NOT by making the narrator re-speak faster.
         # Captions/karaoke are already baked into the frames, so a uniform
-        # speed-up keeps everything in sync.
-        target = float((config or {}).get("ranking", {}).get("target_seconds", 40) or 0)
-        speed = min(total / target, 2.0) if target and total > target + 0.5 else 1.0
+        # speed-up keeps everything in sync. A GENTLE speed-up is desirable — it
+        # gives the "this'll be quick" feel — so the cap is 1.45x (still clearly
+        # followable; number-heavy scripts read slow, so they need this much to
+        # reach target). Scripts are written a touch long so this compression
+        # lands them at ~30-33s.
+        MAX_SPEED = 1.45
+        target = float((config or {}).get("ranking", {}).get("target_seconds", 32) or 0)
+        speed = min(total / target, MAX_SPEED) if target and total > target + 0.5 else 1.0
 
         out_path = OUTPUT_DIR / f"{post_id}.mp4"
         log.info("[ranking] %d VO clips -> %s (%.1fs -> ~%.1fs, speed x%.2f)",

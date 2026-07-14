@@ -1,36 +1,36 @@
 {
   "title": "Top 5 Most DEADLIEST Cosmic Events In The Universe",
-  "hook": "Number one unleashes more energy in a few seconds than our Sun will radiate across its entire 10-billion-year lifetime.",
+  "hook": "Number one is the most violent explosion in the universe.",
   "category": "cosmic events",
   "items": [
     {
       "rank": 5,
       "name": "Solar Flare",
-      "stat": "A single X-class flare releases energy equal to billions of hydrogen bombs in minutes.",
+      "stat": "Energy of billions of hydrogen bombs released in minutes",
       "query": "solar flare SDO"
     },
     {
       "rank": 4,
       "name": "Coronal Mass Ejection",
-      "stat": "The 1859 Carrington Event hurled billions of tons of plasma at Earth, sparking fires in telegraph stations.",
+      "stat": "Billions of tons of plasma hurled straight at Earth",
       "query": "coronal mass ejection SOHO"
     },
     {
       "rank": 3,
       "name": "Supernova",
-      "stat": "A dying star briefly outshines its entire galaxy, blasting matter outward at 30,000 km per second.",
+      "stat": "Outshines a whole galaxy, flinging matter at 30,000 km/s",
       "query": "Hubble supernova remnant"
     },
     {
       "rank": 2,
       "name": "Kilonova (Neutron Star Merger)",
-      "stat": "Colliding neutron stars forge gold and platinum while rippling spacetime with gravitational waves.",
+      "stat": "Colliding neutron stars forge gold and ripple spacetime",
       "query": "neutron star merger artist concept"
     },
     {
       "rank": 1,
       "name": "Gamma-Ray Burst",
-      "stat": "The most powerful explosions known—one can release more energy in seconds than the Sun will in 10 billion years.",
+      "stat": "More energy in seconds than the Sun's entire lifetime",
       "query": "gamma ray burst artist concept"
     }
   ],

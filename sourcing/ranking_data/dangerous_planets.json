@@ -1,36 +1,36 @@
 {
   "title": "Top 5 Most DANGEROUS Planets In The Universe",
-  "hook": "Number one is so hot it's melting into pieces, blazing at 4,300°C—hotter than most stars in the sky.",
+  "hook": "Number one is literally hotter than most stars in the sky.",
   "category": "planets",
   "items": [
     {
       "rank": 5,
       "name": "Venus",
-      "stat": "462°C surface — hot enough to melt lead",
+      "stat": "462°C surface — hot enough to melt lead in seconds",
       "query": "Venus computer simulated global view"
     },
     {
       "rank": 4,
       "name": "Jupiter",
-      "stat": "Radiation that would kill you in seconds",
+      "stat": "Radiation belts intense enough to kill you in seconds",
       "query": "Jupiter Cassini"
     },
     {
       "rank": 3,
       "name": "HD 189733 b",
-      "stat": "Rains molten glass — sideways at 5,400 mph",
+      "stat": "Rains molten glass, blown sideways at 5,400 mph",
       "query": "HD 189733b exoplanet"
     },
     {
       "rank": 2,
       "name": "55 Cancri e",
-      "stat": "An ocean of lava on a diamond world",
+      "stat": "An ocean of lava on a scorching diamond world",
       "query": "55 Cancri e exoplanet"
     },
     {
       "rank": 1,
       "name": "KELT-9b",
-      "stat": "4,300°C — hotter than most stars",
+      "stat": "Blazing at 4,300°C — hotter than most stars",
       "query": "KELT-9b exoplanet"
     }
   ],

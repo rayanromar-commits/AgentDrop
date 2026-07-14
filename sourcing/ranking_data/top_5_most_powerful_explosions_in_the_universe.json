@@ -1,36 +1,36 @@
 {
   "title": "Top 5 Most POWERFUL Explosions In The Universe",
-  "hook": "Number one unleashed more energy in a few seconds than our Sun will radiate across its entire 10-billion-year lifetime — the brightest explosion ever recorded.",
+  "hook": "Number one is the single brightest explosion ever recorded.",
   "category": "cosmic explosions",
   "items": [
     {
       "rank": 5,
       "name": "Nova Explosion",
-      "stat": "A white dwarf steals gas from a companion star, igniting a thermonuclear blast that brightens it up to 100,000 times in days.",
+      "stat": "A white dwarf detonates, brightening up to 100,000 times",
       "query": "Hubble nova explosion"
     },
     {
       "rank": 4,
       "name": "Kilonova",
-      "stat": "Two neutron stars collide and forge gold and platinum, releasing 1,000 times the energy of a normal nova.",
+      "stat": "Two neutron stars collide, forging gold and platinum",
       "query": "kilonova neutron star merger artist concept"
     },
     {
       "rank": 3,
       "name": "Supernova (SN 1994D)",
-      "stat": "A dying star's explosion can briefly outshine its entire host galaxy of billions of stars.",
+      "stat": "A dying star briefly outshines its entire host galaxy",
       "query": "Hubble supernova SN 1994D"
     },
     {
       "rank": 2,
       "name": "Hypernova / Eta Carinae",
-      "stat": "This unstable star is 100 times the Sun's mass and could detonate with 10 times a normal supernova's power.",
+      "stat": "10 times a supernova — 100 solar masses primed to blow",
       "query": "Hubble Eta Carinae"
     },
     {
       "rank": 1,
       "name": "Gamma-Ray Burst (GRB 080319B)",
-      "stat": "In seconds it emits more energy than the Sun will in 10 billion years — the brightest explosion ever recorded.",
+      "stat": "More energy in seconds than the Sun's whole lifetime",
       "query": "gamma ray burst artist concept"
     }
   ],

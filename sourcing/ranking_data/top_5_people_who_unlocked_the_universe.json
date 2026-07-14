@@ -1,36 +1,36 @@
 {
   "title": "Top 5 People Who UNLOCKED The Universe",
-  "hook": "Number one wrote equations in 1915 that predicted black holes and gravitational waves a full century before we ever detected them.",
+  "hook": "Number one predicted black holes a century before we found them.",
   "category": "scientists",
   "items": [
     {
       "rank": 5,
       "name": "Galileo Galilei",
-      "stat": "In 1610 his homemade telescope revealed Jupiter's four largest moons, proving not everything orbits Earth.",
+      "stat": "1610 — his telescope revealed Jupiter's four largest moons",
       "query": "Jupiter Cassini"
     },
     {
       "rank": 4,
       "name": "Edwin Hubble",
-      "stat": "In 1929 he proved the universe is expanding, with distant galaxies fleeing faster the farther they are.",
+      "stat": "1929 — proved the entire universe is expanding",
       "query": "Hubble Andromeda galaxy"
     },
     {
       "rank": 3,
       "name": "Johannes Kepler",
-      "stat": "His three laws showed planets orbit in ellipses, not perfect circles, decoding the entire solar system.",
+      "stat": "Showed planets orbit in ellipses, not perfect circles",
       "query": "Kepler supernova remnant Chandra"
     },
     {
       "rank": 2,
       "name": "Isaac Newton",
-      "stat": "His law of universal gravitation explained why planets orbit and apples fall with a single equation.",
+      "stat": "One equation explained gravity across the whole universe",
       "query": "Saturn Cassini"
     },
     {
       "rank": 1,
       "name": "Albert Einstein",
-      "stat": "His 1915 general relativity predicted black holes and gravitational waves, confirmed a century later.",
+      "stat": "1915 relativity predicted black holes and gravitational waves",
       "query": "black hole accretion disk"
     }
   ],

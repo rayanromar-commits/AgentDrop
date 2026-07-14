@@ -1,0 +1,9 @@
+{
+  "_comment": "DURABLE source of truth for which ranking datasets have ALREADY been uploaded to the channel. Committed to the repo so it survives Railway redeploys and DB resets (the runtime DB has proven unreliable — manual uploads bypassed it). fetch_stories() skips any post_id listed here IN ADDITION to the DB check, so a dataset is never rendered/posted twice. _produce_ranking appends here on every automated run; add manual uploads by hand (or via `python -m sourcing.ranking_source mark <title>`). Keyed by post_id = 'rank_' + sha1(dataset title)[:10].",
+  "posted": [
+    {"post_id": "rank_1eefa292ae", "title": "Top 5 Most DANGEROUS Planets In The Universe", "youtube_id": "", "date": "2026-07-08", "note": "first upload"},
+    {"post_id": "rank_4821a75f60", "title": "Top 5 BIGGEST Stars In The Universe", "youtube_id": "jvjySI_EwmM", "date": "2026-07-09", "note": "manual replacement"},
+    {"post_id": "rank_92674feda8", "title": "Top 5 Most EXTREME Places In The Solar System", "youtube_id": "V83lezj6iBY", "date": "2026-07-10", "note": "manual (covered missed day)"},
+    {"post_id": "rank_0593b1a8e7", "title": "Top 5 WINDIEST Planets In The Universe", "youtube_id": "E9nhZAu6wi8", "date": "2026-07-11", "note": "manual replacement"}
+  ]
+}
