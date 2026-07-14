@@ -4,7 +4,7 @@
     {
       "post_id": "rank_1eefa292ae",
       "title": "Top 5 Most DANGEROUS Planets In The Universe",
-      "youtube_id": "",
+      "youtube_id": "2cbEINS8nwE",
       "date": "2026-07-08",
       "note": "first upload"
     },
@@ -32,9 +32,30 @@
     {
       "post_id": "rank_fcaa3aaf02",
       "title": "Top 5 Most ICONIC Photos NASA Ever Took",
-      "youtube_id": "",
+      "youtube_id": "QSIjJt842Hs",
       "date": "2026-07-14",
       "note": "today 4pm (produced after dup deletion)"
+    },
+    {
+      "post_id": "rank_d5bfcea58b",
+      "title": "Top 5 Most POWERFUL Explosions In The Universe",
+      "youtube_id": "Y7_m5F5PHKE",
+      "date": "2026-07-12",
+      "note": "auto upload (reconciled from channel)"
+    },
+    {
+      "post_id": "rank_3d76f373db",
+      "title": "Top 5 Most MASSIVE Black Holes In The Universe",
+      "youtube_id": "d35Bv9BaVCM",
+      "date": "2026-07-13",
+      "note": "auto upload (reconciled); dataset since deleted as dup-topic"
+    },
+    {
+      "post_id": "rank_fe0e328f58",
+      "title": "Top 5 BIGGEST Black Holes In The Universe",
+      "youtube_id": "",
+      "date": "",
+      "note": "EXCLUDED: near-duplicate of Most Massive Black Holes (d35Bv9BaVCM, 4/5 same objects) — never post"
     }
   ]
 }
