@@ -31,7 +31,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 from PIL import Image, ImageDraw, ImageFont
 
 from agentdrop_common import setup_logging
-from media.clip_source import fetch_image, fetch_item_visual
+from media.clip_source import fetch_image, fetch_item_visual, image_hash
 
 log = setup_logging()
 
@@ -421,13 +421,28 @@ def render_ranking_video(post_id, payload, config=None) -> Path:
     order = list(payload["items"])
     random.Random(post_id).shuffle(order)
 
-    # plan entries: (image, revealed_ranks, cur_rank, caption, voiceover_text).
     # Caption stays clean (name + fact); the voiceover adds "Number N" for clarity.
-    # Per-video background (varied, seeded by post_id) — NOT the same nebula every
-    # upload. Used for the intro/outro and as the last-resort item fallback.
-    bg_q, bg_p = random.Random(f"{post_id}:bg").choice(BACKGROUNDS)
-    background = (fetch_image(bg_q, prefer=bg_p)
+    # Per-video backgrounds (varied, seeded by post_id) — NOT the same nebula every
+    # upload. bgs[0] backs the intro; the rest are spares. EVERY segment must show
+    # a different image: a backdrop that doesn't change while the voice moves on to
+    # the next rank reads as broken, and repeated stills risk suppression.
+    bgs = list(BACKGROUNDS)
+    random.Random(f"{post_id}:bg").shuffle(bgs)
+    spare = list(bgs[1:])
+    background = (fetch_image(bgs[0][0], prefer=bgs[0][1])
                   or fetch_image("colorful nebula", prefer="nebula"))
+    used = {image_hash(background)} if background else set()
+
+    def _spare_image():
+        """A general space backdrop no other segment is using — the fallback when
+        an item has no clean photo of its own."""
+        while spare:
+            q, p = spare.pop(0)
+            img = fetch_image(q, prefer=p)
+            if img and image_hash(img) not in used:
+                return img
+        return background                          # 12 backdrops deep — never hit
+
     # plan entries: (image, framing, revealed_ranks, cur_rank, caption, votext).
     # Intro: the voice reads the TITLE first, then the hook. The title karaokes
     # up top (it's already on screen); the hook is the bottom caption after it.
@@ -436,13 +451,19 @@ def render_ranking_video(post_id, payload, config=None) -> Path:
     for it in order:
         revealed = revealed | {it["rank"]}
         # Best CLEAN photo of THIS object + a per-image framing hint, chosen by the
-        # vision judge (rejects watermarks/diagrams). Falls back to the background.
-        img, framing = fetch_item_visual(it["query"], prefer=it["name"])
+        # vision judge (rejects watermarks/diagrams). `used` keeps it off any image
+        # an earlier segment already showed; a spare backdrop covers a miss.
+        img, framing = fetch_item_visual(it["query"], prefer=it["name"], exclude=used)
         if not img:
-            img, framing = background, "cover"
+            log.warning("[ranking] no clean photo for %r — using a spare backdrop.",
+                        it["name"])
+            img, framing = _spare_image(), "cover"
+        if img:
+            used.add(image_hash(img))
         cap = f"{it['name']}. {it['stat']}."
         plan.append((img, framing, set(revealed), it["rank"], cap, cap))
-    plan.append((background, "cover", set(range(1, 6)), None,
+    outro = _spare_image() or background
+    plan.append((outro, "cover", set(range(1, 6)), None,
                  "Follow for more cosmic countdowns.",
                  "Follow for more cosmic countdowns."))
 

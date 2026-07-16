@@ -20,6 +20,8 @@ import shutil
 import ssl
 import sys
 import time
+import urllib.error
+import urllib.parse
 import urllib.request
 from pathlib import Path
 from urllib.parse import urlencode
@@ -53,16 +55,55 @@ except Exception:
 # A descriptive UA — Wikipedia's API rejects/limits generic agents.
 _UA = "AgentDrop/1.0 (educational space ranking video generator)"
 
+# Wikimedia hard-rate-limits (429) requests for ORIGINAL files on
+# upload.wikimedia.org and 400s any thumbnail width outside its standard list —
+# so ask the API for a standard width and use the /thumb/ URL it hands back.
+# 1280 is standard and comfortably over the 1080-wide frame.
+THUMB_W = 1280
 
-def _get(url: str, timeout: int = 25, retries: int = 2) -> bytes:
-    """GET with a couple of retries — several image fetches fire per video in
-    quick succession, and a transient blip must not drop an item to a fallback."""
+
+def _thumb(info: dict) -> str | None:
+    """The /thumb/ URL from an imageinfo blob. MediaWiki returns the ORIGINAL as
+    `thumburl` when it won't render the requested width; that URL gets 429'd, so
+    only a real thumb counts."""
+    url = info.get("thumburl")
+    return url if url and "/thumb/" in url else None
+
+
+_LAST_HIT: dict[str, float] = {}      # host -> when we last hit it
+_MIN_GAP = 0.5                        # min seconds between hits on one host
+
+
+def _get(url: str, timeout: int = 25, retries: int = 3) -> bytes:
+    """GET with retries — several image fetches fire per video in quick
+    succession, and a transient blip must not drop an item to a fallback.
+
+    Wikimedia 429s a burst of requests from one client, which silently cost us
+    whole items, so hits on a host are spaced out and a 429 backs off (honouring
+    Retry-After) rather than burning its retries at full speed."""
+    host = urllib.parse.urlparse(url).netloc
     req = urllib.request.Request(url, headers={"User-Agent": _UA})
     last = None
     for attempt in range(retries + 1):
+        gap = _MIN_GAP - (time.monotonic() - _LAST_HIT.get(host, 0.0))
+        if gap > 0:
+            time.sleep(gap)
+        _LAST_HIT[host] = time.monotonic()
         try:
             with urllib.request.urlopen(req, context=_SSL_CTX, timeout=timeout) as r:
                 return r.read()
+        except urllib.error.HTTPError as e:
+            last = e
+            if attempt >= retries:
+                break
+            if e.code == 429:
+                try:
+                    wait = float(e.headers.get("Retry-After") or 0)
+                except ValueError:
+                    wait = 0.0
+                time.sleep(min(max(wait, 1.5 * (attempt + 1)), 10.0))
+            else:
+                time.sleep(0.6 * (attempt + 1))
         except Exception as e:
             last = e
             if attempt < retries:
@@ -163,7 +204,7 @@ def _commons_photos(query: str, limit: int = 15) -> list[str]:
         "action": "query", "format": "json", "formatversion": "2",
         "generator": "search", "gsrsearch": query, "gsrlimit": str(limit),
         "gsrnamespace": "6",                       # File: namespace
-        "prop": "imageinfo", "iiprop": "url|mime", "iiurlwidth": "2000",
+        "prop": "imageinfo", "iiprop": "url|mime", "iiurlwidth": str(THUMB_W),
     }
     try:
         data = json.loads(_get(f"{COMMONS_API}?" + urlencode(params)))
@@ -180,7 +221,7 @@ def _commons_photos(query: str, limit: int = 15) -> list[str]:
             continue
         if "image" not in (info.get("mime") or "image"):
             continue
-        url = info.get("thumburl") or info.get("url")
+        url = _thumb(info)
         if url:
             urls.append(url)
     return urls
@@ -193,7 +234,7 @@ def _wiki_pageimage(query: str) -> str | None:
         "action": "query", "format": "json", "formatversion": "2",
         "generator": "search", "gsrsearch": query, "gsrlimit": "3",
         "gsrnamespace": "0", "prop": "pageimages", "piprop": "thumbnail|name",
-        "pithumbsize": "2000",
+        "pithumbsize": str(THUMB_W),
     }
     try:
         data = json.loads(_get(f"{WIKI_API}?" + urlencode(params)))
@@ -362,16 +403,28 @@ def _judge(name: str, cand: list[tuple[str, Path]]) -> tuple[int, str]:
     return best, framing
 
 
-def fetch_item_visual(query: str, prefer: str | None = None) -> tuple[Path | None, str]:
+def image_hash(path: Path) -> str:
+    """Content hash of an image file — lets a caller tell two sources apart even
+    when they resolve to the same picture."""
+    return hashlib.sha1(Path(path).read_bytes()).hexdigest()
+
+
+def fetch_item_visual(query: str, prefer: str | None = None,
+                      exclude: set[str] | None = None) -> tuple[Path | None, str]:
     """Best CLEAN image of a ranked object + its framing hint ('fit'|'cover').
 
     Gathers candidates (NASA -> Wikimedia -> Wikipedia) and has Claude vision pick
     the best watermark-free depiction and decide framing. Returns (None,'cover')
     if nothing clean is found, so the renderer can fall back to the background.
-    Cached per (query,prefer): image at <key>.jpg, framing at <key>.framing.
+    `exclude` = image_hash()es already used by earlier items; those candidates are
+    dropped BEFORE judging, so neighbouring ranks whose best match is the same
+    picture (e.g. two large-scale-structure entries) each get their own.
+    Cached per (query,prefer,exclude): image at <key>.jpg, framing at <key>.framing.
     """
     name = prefer or query
-    key = hashlib.sha1(f"item|{query}|{prefer or ''}".encode()).hexdigest()[:12]
+    exclude = set(exclude or ())
+    ex = hashlib.sha1("|".join(sorted(exclude)).encode()).hexdigest()[:8] if exclude else ""
+    key = hashlib.sha1(f"item|{query}|{prefer or ''}|{ex}".encode()).hexdigest()[:12]
     out = CACHE_DIR / f"{key}.jpg"
     fr = CACHE_DIR / f"{key}.framing"
     if out.exists() and fr.exists():
@@ -379,6 +432,12 @@ def fetch_item_visual(query: str, prefer: str | None = None) -> tuple[Path | Non
     CACHE_DIR.mkdir(parents=True, exist_ok=True)
 
     cand = _gather_candidates(query, prefer, key)
+    if exclude:
+        keep = [(lbl, p) for lbl, p in cand if image_hash(p) not in exclude]
+        for lbl, p in cand:
+            if (lbl, p) not in keep:
+                p.unlink(missing_ok=True)
+        cand = keep
     if not cand:
         log.warning("[item] no candidates for %r", name)
         return None, "cover"
