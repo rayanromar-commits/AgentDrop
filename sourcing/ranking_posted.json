@@ -1,5 +1,5 @@
 {
-  "_comment": "DURABLE source of truth for which ranking datasets have ALREADY been uploaded to the channel. Committed to the repo so it survives Railway redeploys and DB resets (the runtime DB has proven unreliable — manual uploads bypassed it). fetch_stories() skips any post_id listed here IN ADDITION to the DB check, so a dataset is never rendered/posted twice. _produce_ranking appends here on every automated run; add manual uploads by hand (or via `python -m sourcing.ranking_source mark <title>`). Keyed by post_id = 'rank_' + sha1(dataset title)[:10].",
+  "_comment": "DURABLE source of truth for which ranking datasets have ALREADY been uploaded to the channel. Committed to the repo so it survives Railway redeploys and DB resets (the runtime DB has proven unreliable \u2014 manual uploads bypassed it). fetch_stories() skips any post_id listed here IN ADDITION to the DB check, so a dataset is never rendered/posted twice. _produce_ranking appends here on every automated run; add manual uploads by hand (or via `python -m sourcing.ranking_source mark <title>`). Keyed by post_id = 'rank_' + sha1(dataset title)[:10].",
   "posted": [
     {
       "post_id": "rank_1eefa292ae",
@@ -55,7 +55,7 @@
       "title": "Top 5 BIGGEST Black Holes In The Universe",
       "youtube_id": "",
       "date": "",
-      "note": "EXCLUDED: near-duplicate of Most Massive Black Holes (d35Bv9BaVCM, 4/5 same objects) — never post"
+      "note": "EXCLUDED: near-duplicate of Most Massive Black Holes (d35Bv9BaVCM, 4/5 same objects) \u2014 never post"
     },
     {
       "post_id": "rank_7786b974d4",
@@ -74,9 +74,9 @@
     {
       "post_id": "rank_a76dad5042",
       "title": "Top 5 STRANGEST Signals From Space",
-      "youtube_id": "ZF-HfkJDL6g",
+      "youtube_id": "Q3vZ0DIjhF8",
       "date": "2026-07-17",
-      "note": "re-render (image fix, FRB query)"
+      "note": "re-render 30s (image fix + speed 1.8)"
     }
   ]
 }

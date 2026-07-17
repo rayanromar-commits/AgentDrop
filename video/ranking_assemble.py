@@ -554,7 +554,7 @@ def render_ranking_video(post_id, payload, config=None) -> Path:
         # followable; number-heavy scripts read slow, so they need this much to
         # reach target). Scripts are written a touch long so this compression
         # lands them at ~30-33s.
-        MAX_SPEED = 1.45
+        MAX_SPEED = 1.85
         target = float((config or {}).get("ranking", {}).get("target_seconds", 32) or 0)
         speed = min(total / target, MAX_SPEED) if target and total > target + 0.5 else 1.0
 

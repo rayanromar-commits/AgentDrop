@@ -21,12 +21,12 @@ content_type: ranking
 ranking:
   dataset_dir: sourcing/ranking_data   # folder of "Top 5" list JSONs
   voiceover: intro                     # intro | full | off  (realistic TTS)
-  target_seconds: 32                   # aim ~30-33s. Scripts are written a touch
-                                       # long so a GENTLE speed-up (capped 1.35x,
-                                       # pitch preserved) compresses them to this
-                                       # — the mild speed-up gives a brisk "quick
-                                       # video" feel without getting hard to
-                                       # follow. Does NOT re-speak faster. 0 off.
+  target_seconds: 30                   # aim ~30s. Scripts are written a touch
+                                       # long so a speed-up (capped 1.85x in
+                                       # ranking_assemble.py, pitch preserved via
+                                       # atempo) compresses them to this — user
+                                       # wants ~30s and is OK speeding the voice
+                                       # to get there. Does NOT re-speak faster. 0 off.
   # Optional majestic music track (rights-cleared, e.g. YouTube Audio Library);
   # if unset, a synthesized cinematic bed is used. Example: assets/epic.mp3
   music:
