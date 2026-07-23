@@ -134,6 +134,50 @@ def _produce_ranking(config: dict):
     return [result]
 
 
+def restock_ranking_datasets(config: dict) -> int:
+    """Keep the ranking dataset buffer stocked so production never runs dry.
+
+    Counts how many FRESH (unposted) ranking lists remain; if that's below
+    ``ranking.autorefill.min_buffer`` it generates new datasets — biased toward
+    the topic groups the channel's own engagement data says are winning — up to
+    ``target``. Returns the number of new datasets written. A no-op when the
+    buffer is healthy, when disabled, or for the story channel; never raises
+    (a refill hiccup must not block the day's production).
+    """
+    if config.get("content_type", "story") != "ranking":
+        return 0
+    acfg = config.get("ranking", {}).get("autorefill", {})
+    if not acfg.get("enabled", True):
+        return 0
+    min_buffer = int(acfg.get("min_buffer", 4))
+    target = int(acfg.get("target", 12))
+
+    try:
+        from sourcing.ranking_source import fetch_stories as rank_fetch
+        from sourcing import ranking_generate as rgen
+
+        db.init_db()
+        fresh = len(rank_fetch(config, skip_seen=True))
+        if fresh >= min_buffer:
+            log.info("[restock] %d fresh ranking list(s) >= min_buffer %d; no refill.",
+                     fresh, min_buffer)
+            return 0
+        need = max(target - fresh, 0)
+        log.info("[restock] only %d fresh list(s) (< %d); generating %d "
+                 "performance-weighted dataset(s)...", fresh, min_buffer, need)
+        try:
+            perf = db.subreddit_performance()
+        except Exception:
+            perf = None
+        paths = rgen.generate_batch(need, perf=perf)
+        log.info("[restock] wrote %d new ranking dataset(s).", len(paths))
+        return len(paths)
+    except Exception as e:
+        log.error("[restock] dataset refill failed (%s); continuing with what "
+                  "exists.", e)
+        return 0
+
+
 def produce_one_video(config: dict):
     """Source -> screen -> rank -> narrate -> assemble -> queue.
 
@@ -503,6 +547,10 @@ def start_scheduler(config: dict) -> None:
             return
         log.info("[scheduler] Production run (target buffer: %d queued videos).",
                  n_per_day)
+        # Auto-refill the ranking dataset pool FIRST so a production run can
+        # never start empty (this is what silently killed the 2026-07-22 drop).
+        # No-op for the story channel and when the buffer is already healthy.
+        restock_ranking_datasets(config)
         # Pull the freshest performance data BEFORE ranking so story selection
         # always uses the most up-to-date completion / shares / views available
         # (not just whatever the last 6-hourly refresh happened to leave behind).
@@ -595,6 +643,8 @@ def main() -> None:
         show_config(config)
     elif cmd == "produce":
         produce_one_video(config)
+    elif cmd == "restock":
+        restock_ranking_datasets(config)
     elif cmd == "upload":
         upload_next_approved(config)
     elif cmd == "tiktok":
@@ -606,8 +656,8 @@ def main() -> None:
     elif cmd == "schedule":
         start_scheduler(config)
     else:
-        log.error("Unknown command '%s'. Use: show | produce | upload | tiktok | "
-                  "stats | digest | schedule", cmd)
+        log.error("Unknown command '%s'. Use: show | produce | restock | upload | "
+                  "tiktok | stats | digest | schedule", cmd)
 
 
 if __name__ == "__main__":

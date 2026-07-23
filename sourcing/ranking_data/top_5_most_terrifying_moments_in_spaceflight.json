@@ -1,0 +1,44 @@
+{
+  "title": "Top 5 Most TERRIFYING Moments In Spaceflight",
+  "yt_titles": [
+    "These 5 Seconds Almost Killed Every Astronaut",
+    "How Did Anyone Survive This?",
+    "The Most Dangerous Moments in Space History",
+    "I Can't Believe They Made It Back Alive",
+    "Ranking Spaceflight's Closest Calls Ever"
+  ],
+  "hook": "Number one left three men freezing with no way home.",
+  "category": "spaceflight events",
+  "items": [
+    {
+      "rank": 5,
+      "name": "Gemini 8 Spin",
+      "stat": "Capsule tumbled once per second, nearly blacking out Armstrong.",
+      "query": "Gemini 8 spacecraft"
+    },
+    {
+      "rank": 4,
+      "name": "Mercury-Atlas 6 Heat Shield",
+      "stat": "Ground feared Glenn's heat shield was loose during reentry.",
+      "query": "John Glenn Mercury Friendship 7"
+    },
+    {
+      "rank": 3,
+      "name": "Soyuz T-10-1 Pad Abort",
+      "stat": "Rocket exploded on the pad; crew yanked clear seconds before.",
+      "query": "Soyuz rocket launch pad"
+    },
+    {
+      "rank": 2,
+      "name": "STS-1 Columbia Launch",
+      "stat": "First shuttle flew with untested crew and shedding tiles.",
+      "query": "STS-1 Columbia launch"
+    },
+    {
+      "rank": 1,
+      "name": "Apollo 13 Explosion",
+      "stat": "Oxygen tank blew 200,000 miles from Earth, crippling the ship.",
+      "query": "Apollo 13 damaged service module"
+    }
+  ]
+}

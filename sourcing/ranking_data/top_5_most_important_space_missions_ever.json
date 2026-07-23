@@ -1,0 +1,44 @@
+{
+  "title": "Top 5 Most IMPORTANT Space Missions Ever",
+  "yt_titles": [
+    "The Mission That Changed Everything",
+    "Would We Even Be Here Without These 5 Missions?",
+    "Ranking Humanity's Greatest Space Missions",
+    "I Can't Believe #1 Actually Worked",
+    "5 Space Missions That Rewrote History"
+  ],
+  "hook": "Number one is still flying 24 billion km away.",
+  "category": "missions",
+  "items": [
+    {
+      "rank": 5,
+      "name": "Hubble Space Telescope",
+      "stat": "Launched 1990, still delivering images 1.5 billion light-years deep",
+      "query": "Hubble Space Telescope"
+    },
+    {
+      "rank": 4,
+      "name": "Sputnik 1",
+      "stat": "First satellite ever, 1957 — beeped and started the Space Age",
+      "query": "Sputnik 1"
+    },
+    {
+      "rank": 3,
+      "name": "Cassini-Huygens",
+      "stat": "13 years orbiting Saturn, landed a probe on Titan",
+      "query": "Saturn Cassini"
+    },
+    {
+      "rank": 2,
+      "name": "Apollo 11",
+      "stat": "1969 — first humans to walk on the Moon",
+      "query": "Apollo 11 Moon landing"
+    },
+    {
+      "rank": 1,
+      "name": "Voyager 1",
+      "stat": "Only spacecraft in interstellar space, launched 1977",
+      "query": "Voyager 1 spacecraft"
+    }
+  ]
+}

@@ -34,48 +34,96 @@ MODEL = "claude-opus-4-8"
 # stays in space — but the SUBJECT TYPES and ANGLES are deliberately spread as
 # wide as possible. Repetitive/samey topics + titles are what got the old story
 # channel suppressed, so breadth here is the product, not a nice-to-have. Keep
-# adding rows; the generator picks one at random per run.
-TOPICS = [
-    # --- Planets & solar system ---
-    "most dangerous planets", "hottest planets", "coldest planets",
-    "strangest exoplanets ever found", "most extreme places in the solar system",
-    "planets where it rains something bizarre", "biggest planets ever discovered",
-    "most Earth-like exoplanets", "windiest planets", "planets with the wildest storms",
-    "planets that shouldn't exist", "loneliest rogue planets drifting in the dark",
-    "planets with the longest and shortest days", "most toxic atmospheres in space",
-    # --- Moons ---
-    "strangest moons", "moons that could hold alien life", "most volcanic moons",
-    "moons with hidden underground oceans", "moons weirder than any planet",
-    # --- Stars ---
-    "biggest stars in the universe", "strangest types of stars",
-    "closest stars that could go supernova", "most powerful explosions in space",
-    "oldest stars in the universe", "stars that break the laws of physics",
-    "brightest stars you can actually see", "stars that are already dead",
-    # --- Galaxies & deep space ---
-    "largest galaxies", "most beautiful nebulae", "biggest black holes",
-    "most mysterious objects in space", "strangest signals from space",
-    "coldest places in the universe", "brightest objects in the universe",
-    "biggest structures in the universe", "emptiest places in the universe",
-    "most colorful things in space", "galaxies on a collision course",
-    # --- Phenomena, events & physics ---
-    "deadliest cosmic events", "things that could end all life on Earth from space",
-    "most terrifying facts about black holes", "fastest things in the universe",
-    "loudest events in the universe", "most powerful forces in the universe",
-    "weirdest things Einstein was right about", "cosmic events you could actually survive",
-    "slowest processes in the universe", "biggest numbers in astronomy",
-    # --- Human space history & missions (NASA / public-domain imagery) ---
-    "most important space missions in history", "people who changed how we see the universe",
-    "greatest astronomers of all time", "most famous astronauts in history",
-    "most iconic photos NASA ever took", "riskiest moments in spaceflight",
-    "most incredible things left on other worlds", "wildest spacecraft ever built",
-    "space missions that failed spectacularly", "longest space journeys ever made",
-    # --- Mysteries, records & "what if" framings (breaks the superlative monotony) ---
-    "unsolved mysteries of the universe", "cosmic coincidences that seem impossible",
-    "things scientists still can't explain about space",
-    "what the universe will look like in a trillion years",
-    "places in space that would kill you instantly", "most Earth-sized surprises in space",
-    "space facts that sound fake but are true", "smallest things in the universe",
-]
+# adding rows; the generator picks one per run (performance-weighted, see
+# pick_topics).
+#
+# Topics are grouped so the generator can LEARN which kinds of rankings pull
+# engagement: each group maps (via CATEGORY_TO_GROUP) to the per-`category`
+# performance the channel measures, and generation leans toward winning groups
+# while still exploring quiet ones. Add rows freely; a new topic just needs to
+# live under the group it belongs to.
+TOPIC_GROUPS: dict[str, list[str]] = {
+    "planets": [
+        "most dangerous planets", "hottest planets", "coldest planets",
+        "strangest exoplanets ever found", "most extreme places in the solar system",
+        "planets where it rains something bizarre", "biggest planets ever discovered",
+        "most Earth-like exoplanets", "windiest planets", "planets with the wildest storms",
+        "planets that shouldn't exist", "loneliest rogue planets drifting in the dark",
+        "planets with the longest and shortest days", "most toxic atmospheres in space",
+    ],
+    "moons": [
+        "strangest moons", "moons that could hold alien life", "most volcanic moons",
+        "moons with hidden underground oceans", "moons weirder than any planet",
+    ],
+    "stars": [
+        "biggest stars in the universe", "strangest types of stars",
+        "closest stars that could go supernova", "most powerful explosions in space",
+        "oldest stars in the universe", "stars that break the laws of physics",
+        "brightest stars you can actually see", "stars that are already dead",
+    ],
+    "galaxies": [
+        "largest galaxies", "most beautiful nebulae", "biggest black holes",
+        "most mysterious objects in space", "strangest signals from space",
+        "coldest places in the universe", "brightest objects in the universe",
+        "biggest structures in the universe", "emptiest places in the universe",
+        "most colorful things in space", "galaxies on a collision course",
+    ],
+    "phenomena": [
+        "deadliest cosmic events", "things that could end all life on Earth from space",
+        "most terrifying facts about black holes", "fastest things in the universe",
+        "loudest events in the universe", "most powerful forces in the universe",
+        "weirdest things Einstein was right about", "cosmic events you could actually survive",
+        "slowest processes in the universe", "biggest numbers in astronomy",
+    ],
+    "history": [
+        "most important space missions in history", "people who changed how we see the universe",
+        "greatest astronomers of all time", "most famous astronauts in history",
+        "most iconic photos NASA ever took", "riskiest moments in spaceflight",
+        "most incredible things left on other worlds", "wildest spacecraft ever built",
+        "space missions that failed spectacularly", "longest space journeys ever made",
+    ],
+    "mysteries": [
+        "unsolved mysteries of the universe", "cosmic coincidences that seem impossible",
+        "things scientists still can't explain about space",
+        "what the universe will look like in a trillion years",
+        "places in space that would kill you instantly", "most Earth-sized surprises in space",
+        "space facts that sound fake but are true", "smallest things in the universe",
+    ],
+}
+
+# Flattened view (back-compat for callers that just want a random topic).
+TOPICS = [t for group in TOPIC_GROUPS.values() for t in group]
+
+# The channel measures performance per dataset `category` (Claude's granular tag,
+# e.g. "cosmic voids", "spaceflight events"). Fold those into the coarse groups
+# above so a group inherits the engagement of every category it has produced.
+# Anything unmatched falls back to a keyword scan, then to "mysteries".
+CATEGORY_TO_GROUP: dict[str, str] = {
+    "planets": "planets", "solar system": "planets", "extreme places": "planets",
+    "exoplanets": "planets",
+    "moons": "moons",
+    "stars": "stars", "cosmic explosions": "stars",
+    "galaxies": "galaxies", "black holes": "galaxies", "nebulae": "galaxies",
+    "signals": "galaxies", "cosmic structures": "galaxies", "cosmic voids": "galaxies",
+    "photos": "history", "missions": "history", "scientists": "history",
+    "spacecraft": "history", "spaceflight events": "history", "astronauts": "history",
+    "cosmic events": "phenomena", "events": "phenomena", "phenomena": "phenomena",
+    "forces": "phenomena",
+}
+
+
+def _category_group(category: str) -> str:
+    """Map a measured dataset category onto one of TOPIC_GROUPS' coarse buckets."""
+    c = (category or "").strip().lower()
+    if c in CATEGORY_TO_GROUP:
+        return CATEGORY_TO_GROUP[c]
+    for key, group in CATEGORY_TO_GROUP.items():   # substring fallback
+        if key in c or c in key:
+            return group
+    for group in TOPIC_GROUPS:                      # group name literally present
+        if group in c:
+            return group
+    return "mysteries"
 
 SYSTEM = """You write viral "Top 5" space-ranking YouTube Shorts. Return ONE JSON \
 object (and nothing else) with this exact shape:
@@ -213,16 +261,133 @@ def save(data: dict) -> Path | None:
     return path
 
 
+def _group_weights(perf: dict | None) -> dict[str, float]:
+    """Per-group selection weight from measured per-category performance.
+
+    Mirrors main._apply_ranking_performance_weight: each group's score is the
+    mean composite score of the categories that map to it, shrunk toward the
+    global mean by sample size so a single lucky video can't dominate. Every
+    group keeps a floor weight (exploration) so quiet/unproven groups still get
+    generated rather than starved. Uniform weights when there's no data yet.
+    """
+    groups = list(TOPIC_GROUPS)
+    if not perf:
+        return {g: 1.0 for g in groups}
+
+    # Collect (score, n) per group from the measured categories.
+    agg: dict[str, list[tuple[float, int]]] = {g: [] for g in groups}
+    for cat, d in perf.items():
+        agg[_category_group(cat)].append((d.get("score", 0.0), d.get("n", 1)))
+
+    all_scores = [s for d in perf.values() for s in [d.get("score", 0.0)]]
+    global_mean = (sum(all_scores) / len(all_scores)) if all_scores else 0.0
+    prior = 1.5                              # pseudo-count for shrinkage
+
+    weights: dict[str, float] = {}
+    for g in groups:
+        rows = agg[g]
+        n = sum(r[1] for r in rows)
+        raw = sum(r[0] * r[1] for r in rows) / n if n else global_mean
+        # Shrink toward the global mean by sample size.
+        adj = (n * raw + prior * global_mean) / (n + prior)
+        weights[g] = adj
+    # Normalize to positives, then blend with an exploration floor so no group
+    # ever hits zero probability.
+    lo = min(weights.values())
+    span = (max(weights.values()) - lo) or 1.0
+    return {g: 0.35 + (w - lo) / span for g, w in weights.items()}   # floor 0.35
+
+
+def pick_topics(n: int, perf: dict | None = None,
+                exclude: set[str] | None = None,
+                seed: str | None = None) -> list[str]:
+    """Choose ``n`` distinct topics, biased toward high-performing groups.
+
+    Groups are sampled without replacement in proportion to `_group_weights`;
+    within a chosen group a random unused topic is taken. `exclude` holds topic
+    strings already built/queued so we don't re-roll them.
+    """
+    rng = random.Random(seed)
+    exclude = set(exclude or ())
+    weights = _group_weights(perf)
+    # Available (group, topic) pairs, minus anything excluded.
+    avail: dict[str, list[str]] = {
+        g: [t for t in ts if t not in exclude] for g, ts in TOPIC_GROUPS.items()
+    }
+    picked: list[str] = []
+    while len(picked) < n and any(avail.values()):
+        live = [g for g, ts in avail.items() if ts]
+        w = [weights.get(g, 0.35) for g in live]
+        g = rng.choices(live, weights=w, k=1)[0]
+        t = rng.choice(avail[g])
+        avail[g].remove(t)
+        picked.append(t)
+    return picked
+
+
+def generate_batch(n: int, perf: dict | None = None,
+                   seed: str | None = None) -> list[Path]:
+    """Generate up to ``n`` NEW datasets, performance-weighted, skipping dups.
+
+    Returns the paths actually written. Re-rolls fresh topics if a generated
+    title collides with one already on disk, so ``n`` reflects new files, not
+    attempts. Never raises on a single-topic failure — it logs and continues.
+    """
+    existing_slugs = {p.stem for p in DATA_DIR.glob("*.json")}
+    saved: list[Path] = []
+    # Seed the exclusion set from the coarse topic that produced each existing
+    # slug where we can tell, so we prefer genuinely new subjects.
+    tried: set[str] = set()
+    while len(saved) < n:
+        need = n - len(saved)
+        topics = pick_topics(need + 3, perf=perf, exclude=tried, seed=seed)
+        if not topics:
+            log.warning("[rank-gen] topic pool exhausted after %d new dataset(s).",
+                        len(saved))
+            break
+        progressed = False
+        for t in topics:
+            if len(saved) >= n:
+                break
+            tried.add(t)
+            d = generate_ranking(t)
+            if not d:
+                continue
+            if _slug(d["title"]) in existing_slugs:
+                log.info("[rank-gen] duplicate title skipped: %s", d["title"])
+                continue
+            p = save(d)
+            if p:
+                existing_slugs.add(p.stem)
+                saved.append(p)
+                progressed = True
+                log.info("[rank-gen] saved %s — %s", p.name, d["title"])
+        if not progressed and len(tried) >= len(TOPICS):
+            break
+    return saved
+
+
 if __name__ == "__main__":
     arg = sys.argv[1] if len(sys.argv) > 1 else None
     n = int(sys.argv[2]) if len(sys.argv) > 2 else 1
-    topic = None if (arg in (None, "auto")) else arg
-    for _ in range(n):
-        t = topic or random.choice(TOPICS)
-        d = generate_ranking(t)
-        if not d:
-            continue
-        p = save(d)
-        print(f"  {'saved ' + p.name if p else '(duplicate)':40} — {d['title']}")
-        for it in sorted(d["items"], key=lambda x: -x["rank"]):
-            print(f"       #{it['rank']} {it['name']:20} | {it['query']}")
+    if arg in (None, "auto"):
+        # Performance-weighted batch (uses the channel's own engagement data
+        # when the DB is reachable; falls back to uniform when it isn't).
+        perf = None
+        try:
+            from database import db
+            db.init_db()
+            perf = db.subreddit_performance()
+        except Exception as e:
+            log.info("[rank-gen] no performance data (%s); generating uniformly.", e)
+        paths = generate_batch(n, perf=perf)
+        print(f"generated {len(paths)} new dataset(s).")
+    else:
+        for _ in range(n):
+            d = generate_ranking(arg)
+            if not d:
+                continue
+            p = save(d)
+            print(f"  {'saved ' + p.name if p else '(duplicate)':40} — {d['title']}")
+            for it in sorted(d["items"], key=lambda x: -x["rank"]):
+                print(f"       #{it['rank']} {it['name']:20} | {it['query']}")

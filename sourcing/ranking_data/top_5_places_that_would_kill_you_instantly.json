@@ -1,0 +1,44 @@
+{
+  "title": "Top 5 Places That Would KILL You Instantly",
+  "yt_titles": [
+    "You'd Die in Under a Second at These 5 Places",
+    "What's the Deadliest Place in the Universe?",
+    "Space Is Trying to Kill You — Here's How",
+    "I Ranked the Universe's Most Lethal Spots",
+    "Don't Ever Visit Number 1 😳"
+  ],
+  "hook": "Number one spins so fast it would rip you apart.",
+  "category": "extreme places",
+  "items": [
+    {
+      "rank": 5,
+      "name": "Venus Surface",
+      "stat": "462°C and pressure that crushes you like the deep ocean",
+      "query": "Venus Magellan surface"
+    },
+    {
+      "rank": 4,
+      "name": "Io",
+      "stat": "Sulfur volcanoes and radiation that fries you in minutes",
+      "query": "Io Galileo volcano"
+    },
+    {
+      "rank": 3,
+      "name": "WASP-76b",
+      "stat": "2,400°C dayside where iron falls as rain",
+      "query": "WASP-76b hot jupiter exoplanet artist concept"
+    },
+    {
+      "rank": 2,
+      "name": "Sagittarius A*",
+      "stat": "4 million Suns of gravity shredding you into atoms",
+      "query": "black hole accretion disk"
+    },
+    {
+      "rank": 1,
+      "name": "PSR J1748-2446ad",
+      "stat": "Neutron star spinning 716 times per second",
+      "query": "neutron star pulsar artist concept"
+    }
+  ]
+}

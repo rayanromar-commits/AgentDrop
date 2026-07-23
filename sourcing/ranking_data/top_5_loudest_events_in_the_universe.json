@@ -1,0 +1,44 @@
+{
+  "title": "Top 5 LOUDEST Events In The Universe",
+  "yt_titles": [
+    "The Loudest Sound in the Universe Will Haunt You",
+    "What Does Space Actually Sound Like?",
+    "This Black Hole Has Been Humming for 2.5 Billion Years",
+    "I Ranked the Universe's Most Violent Explosions",
+    "5 Cosmic Events So Loud They Bend Reality"
+  ],
+  "hook": "Number one has been playing the same note since the dinosaurs.",
+  "category": "cosmic events",
+  "items": [
+    {
+      "rank": 5,
+      "name": "Volcanic Eruption on Io",
+      "stat": "Plumes blast 250 miles up, louder than any Earth volcano",
+      "query": "Io Galileo volcano"
+    },
+    {
+      "rank": 4,
+      "name": "Supernova Explosion",
+      "stat": "Releases more energy in seconds than the Sun's whole life",
+      "query": "supernova Hubble"
+    },
+    {
+      "rank": 3,
+      "name": "Gamma-Ray Burst",
+      "stat": "Brightest blast since the Big Bang, seen across the universe",
+      "query": "gamma ray burst artist concept"
+    },
+    {
+      "rank": 2,
+      "name": "Black Hole Merger (GW150914)",
+      "stat": "Warped spacetime with more power than all stars combined",
+      "query": "black hole merger gravitational waves"
+    },
+    {
+      "rank": 1,
+      "name": "Perseus Cluster Black Hole",
+      "stat": "A B-flat note 57 octaves below middle C",
+      "query": "Perseus cluster Chandra"
+    }
+  ]
+}

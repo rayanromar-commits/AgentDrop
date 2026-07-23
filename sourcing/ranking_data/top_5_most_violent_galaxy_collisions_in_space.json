@@ -1,0 +1,44 @@
+{
+  "title": "Top 5 Most VIOLENT Galaxy Collisions In Space",
+  "yt_titles": [
+    "What Happens When Two Galaxies Crash?",
+    "Our Galaxy Is On A Collision Course",
+    "5 Galactic Crashes Too Insane To Be Real",
+    "I Can't Believe This Is Actually Happening 😳",
+    "The Slowest Catastrophe In The Entire Universe"
+  ],
+  "hook": "Number one is coming straight for us right now.",
+  "category": "galaxies",
+  "items": [
+    {
+      "rank": 5,
+      "name": "The Mice Galaxies",
+      "stat": "Twin tails stretch 300,000 light-years from the wreckage",
+      "query": "Hubble Mice Galaxies"
+    },
+    {
+      "rank": 4,
+      "name": "The Whirlpool Galaxy",
+      "stat": "Small companion is being torn apart by its spiral arms",
+      "query": "Hubble Whirlpool Galaxy M51"
+    },
+    {
+      "rank": 3,
+      "name": "NGC 4676",
+      "stat": "Gravity flings stars into a bridge millions of miles long",
+      "query": "Hubble NGC 4676"
+    },
+    {
+      "rank": 2,
+      "name": "The Antennae Galaxies",
+      "stat": "Crash triggered billions of newborn stars in blue clusters",
+      "query": "Hubble Antennae Galaxies"
+    },
+    {
+      "rank": 1,
+      "name": "Andromeda Galaxy",
+      "stat": "Closing on the Milky Way at 250,000 mph",
+      "query": "Hubble Andromeda Galaxy M31"
+    }
+  ]
+}

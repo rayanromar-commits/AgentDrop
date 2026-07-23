@@ -1,0 +1,44 @@
+{
+  "title": "Top 5 Moons That Could Hold ALIEN Life",
+  "yt_titles": [
+    "Aliens Might Be Hiding On These 5 Moons",
+    "Why Scientists Think Life Is Out There Already",
+    "Ranking the Best Places to Find Alien Life",
+    "I Can't Believe Life Could Survive Here",
+    "The Moon NASA Is Sending a Submarine To"
+  ],
+  "hook": "One of these hides an ocean with a solid floor.",
+  "category": "moons",
+  "items": [
+    {
+      "rank": 5,
+      "name": "Callisto",
+      "stat": "Salty subsurface ocean beneath 60 miles of ancient ice",
+      "query": "Callisto Galileo"
+    },
+    {
+      "rank": 4,
+      "name": "Ganymede",
+      "stat": "Buried ocean holds more water than all Earth's",
+      "query": "Ganymede Galileo"
+    },
+    {
+      "rank": 3,
+      "name": "Titan",
+      "stat": "Rains liquid methane; a hidden water ocean below",
+      "query": "Titan Cassini"
+    },
+    {
+      "rank": 2,
+      "name": "Europa",
+      "stat": "Global ocean under ice, twice Earth's total water",
+      "query": "Europa Galileo"
+    },
+    {
+      "rank": 1,
+      "name": "Enceladus",
+      "stat": "Erupts water jets from an ocean touching hot rock",
+      "query": "Enceladus Cassini"
+    }
+  ]
+}

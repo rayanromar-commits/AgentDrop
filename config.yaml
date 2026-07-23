@@ -20,6 +20,15 @@ content_type: ranking
 # --- RANKING CHANNEL (only used when content_type: ranking) ---------
 ranking:
   dataset_dir: sourcing/ranking_data   # folder of "Top 5" list JSONs
+  # Auto-refill the dataset pool so production never runs dry (on 2026-07-22 the
+  # 4pm drop was missed because every list had been consumed). Each production
+  # cycle first tops the buffer back up to `target` whenever fewer than
+  # `min_buffer` fresh lists remain, generating NEW topics biased toward the
+  # groups the channel's own engagement data says perform best.
+  autorefill:
+    enabled: true
+    min_buffer: 4                      # refill when fewer than this remain unposted
+    target: 12                         # generate back up to this many fresh lists
   voiceover: intro                     # intro | full | off  (realistic TTS)
   target_seconds: 30                   # aim ~30s. Scripts are written a touch
                                        # long so a speed-up (capped 1.85x in

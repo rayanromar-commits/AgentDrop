@@ -1,0 +1,44 @@
+{
+  "title": "Top 5 LONGEST Space Journeys Ever Made",
+  "yt_titles": [
+    "This Spacecraft Has Been Flying for 47 Years",
+    "How Far Has Voyager 1 Actually Gone?",
+    "The Longest Journeys in Human History Aren't On Earth",
+    "I Traced the Farthest Objects We've Ever Launched",
+    "Ranking the Deepest Space Missions of All Time"
+  ],
+  "hook": "One of these left our solar system entirely.",
+  "category": "spacecraft",
+  "items": [
+    {
+      "rank": 5,
+      "name": "Juno",
+      "stat": "1.7 billion miles looping out to reach Jupiter",
+      "query": "Juno spacecraft Jupiter"
+    },
+    {
+      "rank": 4,
+      "name": "Cassini",
+      "stat": "2 billion miles over 20 years to Saturn",
+      "query": "Cassini Saturn"
+    },
+    {
+      "rank": 3,
+      "name": "New Horizons",
+      "stat": "5 billion miles, now past Pluto into deep space",
+      "query": "New Horizons Pluto"
+    },
+    {
+      "rank": 2,
+      "name": "Voyager 2",
+      "stat": "12 billion miles, only craft to visit all four giants",
+      "query": "Voyager 2 spacecraft"
+    },
+    {
+      "rank": 1,
+      "name": "Voyager 1",
+      "stat": "15 billion miles out — farthest human-made object ever",
+      "query": "Voyager 1 spacecraft"
+    }
+  ]
+}

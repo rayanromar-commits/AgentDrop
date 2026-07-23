@@ -1,0 +1,44 @@
+{
+  "title": "Top 5 EMPTIEST Places In The Universe",
+  "yt_titles": [
+    "The Loneliest Spot in the Entire Universe",
+    "What's Inside a Cosmic Void? Basically Nothing",
+    "This Region Has No Galaxies For 300 Million Light-Years",
+    "I Found the Most Empty Place That Exists",
+    "Why Is Space Missing So Much Stuff Here?"
+  ],
+  "hook": "One galaxy here has no neighbors for millions of light-years.",
+  "category": "cosmic voids",
+  "items": [
+    {
+      "rank": 5,
+      "name": "Local Void",
+      "stat": "Nearly starved region right next to our own galaxy",
+      "query": "Hubble galaxy void"
+    },
+    {
+      "rank": 4,
+      "name": "Giant Void in Canes Venatici",
+      "stat": "Empty bubble stretching over 1 billion light-years",
+      "query": "Hubble deep field galaxies"
+    },
+    {
+      "rank": 3,
+      "name": "Eridanus Supervoid",
+      "stat": "Cold spot spanning 1 billion light-years of near-nothing",
+      "query": "CMB cold spot"
+    },
+    {
+      "rank": 2,
+      "name": "Boötes Void",
+      "stat": "330 million light-years wide, almost no galaxies inside",
+      "query": "Bootes void galaxies"
+    },
+    {
+      "rank": 1,
+      "name": "KBC Void",
+      "stat": "2 billion light-years across — largest known emptiness",
+      "query": "Hubble large scale structure void"
+    }
+  ]
+}

@@ -1,0 +1,44 @@
+{
+  "title": "Top 5 STRANGEST Moons In The Solar System",
+  "yt_titles": [
+    "These Moons Are Weirder Than Any Planet",
+    "Why Does This Moon Look Like a Death Star?",
+    "5 Moons That Break the Rules of Physics",
+    "I Can't Believe These Are Real Moons",
+    "The Solar System's Most Bizarre Worlds Ranked"
+  ],
+  "hook": "One of these hides a global ocean under solid ice.",
+  "category": "moons",
+  "items": [
+    {
+      "rank": 5,
+      "name": "Mimas",
+      "stat": "Giant crater makes it look like the Death Star",
+      "query": "Mimas Cassini"
+    },
+    {
+      "rank": 4,
+      "name": "Iapetus",
+      "stat": "One side pitch black, the other bright white",
+      "query": "Iapetus Cassini"
+    },
+    {
+      "rank": 3,
+      "name": "Io",
+      "stat": "400 active volcanoes spewing lava 250 miles high",
+      "query": "Io Galileo"
+    },
+    {
+      "rank": 2,
+      "name": "Titan",
+      "stat": "Rivers and lakes of liquid methane, not water",
+      "query": "Titan Cassini"
+    },
+    {
+      "rank": 1,
+      "name": "Enceladus",
+      "stat": "Erupts ocean water 6,000 miles into space",
+      "query": "Enceladus Cassini"
+    }
+  ]
+}
