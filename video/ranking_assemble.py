@@ -417,9 +417,13 @@ def render_ranking_video(post_id, payload, config=None) -> Path:
             log.warning("[ranking] VO '%s' failed: %s", tag, e)
             return None
 
-    # RANDOM reveal order (deterministic per video); each drops into its slot.
-    order = list(payload["items"])
-    random.Random(post_id).shuffle(order)
+    # Reveal order: ranks 5-2 are shuffled (deterministic per video) so the list
+    # doesn't play out in the same predictable sequence every upload, but #1 is
+    # ALWAYS revealed last — it's the payoff the hook teases, and revealing it
+    # early kills the reason to watch to the end.
+    rest = [it for it in payload["items"] if it["rank"] != 1]
+    random.Random(post_id).shuffle(rest)
+    order = rest + [it for it in payload["items"] if it["rank"] == 1]
 
     # Caption stays clean (name + fact); the voiceover adds "Number N" for clarity.
     # Per-video backgrounds (varied, seeded by post_id) — NOT the same nebula every
@@ -547,24 +551,32 @@ def render_ranking_video(post_id, payload, config=None) -> Path:
                         "-c", "copy", str(full_audio)], check=True, capture_output=True)
 
         # Tighten to ~target seconds by speeding up the EDIT (tempo up, pitch
-        # preserved via atempo) — NOT by making the narrator re-speak faster.
-        # Captions/karaoke are already baked into the frames, so a uniform
-        # speed-up keeps everything in sync. A GENTLE speed-up is desirable — it
-        # gives the "this'll be quick" feel — so the cap is 1.45x (still clearly
-        # followable; number-heavy scripts read slow, so they need this much to
-        # reach target). Scripts are written a touch long so this compression
-        # lands them at ~30-33s.
-        MAX_SPEED = 1.85
-        target = float((config or {}).get("ranking", {}).get("target_seconds", 32) or 0)
+        # preserved via atempo) — NOT by making the narrator re-speak faster and
+        # NOT by cutting words. Captions/karaoke are already baked into the
+        # frames, so a uniform speed-up keeps everything in sync. The script is
+        # written full-length on purpose; the speed-up is what lands the Short at
+        # target (25s), which is the retention play — a video that visibly "goes
+        # by fast" gets watched to the end. MAX_SPEED is only a sanity ceiling
+        # for a pathologically long script; normal ones land well under it.
+        MAX_SPEED = 2.4
+        target = float((config or {}).get("ranking", {}).get("target_seconds", 25) or 0)
         speed = min(total / target, MAX_SPEED) if target and total > target + 0.5 else 1.0
+        if target and total / target > MAX_SPEED:
+            log.warning("[ranking] script is %.1fs — even at x%.2f it lands at "
+                        "%.1fs, over the %.0fs target.", total, MAX_SPEED,
+                        total / MAX_SPEED, target)
 
         out_path = OUTPUT_DIR / f"{post_id}.mp4"
         log.info("[ranking] %d VO clips -> %s (%.1fs -> ~%.1fs, speed x%.2f)",
                  sum(1 for v in vo_files if v), out_path.name, total, total / speed, speed)
         if speed > 1.005:
+            # Older ffmpeg builds cap a single atempo at 2.0, so split anything
+            # faster across two stages (2.4x -> 1.549 x 1.549).
+            atempo = (f"atempo={speed:.5f}" if speed <= 2.0 else
+                      f"atempo={speed ** 0.5:.5f},atempo={speed ** 0.5:.5f}")
             subprocess.run([ff, "-y", "-i", str(silent), "-i", str(full_audio),
                             "-filter_complex",
-                            f"[0:v]setpts=PTS/{speed:.5f}[v];[1:a]atempo={speed:.5f}[a]",
+                            f"[0:v]setpts=PTS/{speed:.5f}[v];[1:a]{atempo}[a]",
                             "-map", "[v]", "-map", "[a]",
                             "-c:v", "libx264", "-preset", "veryfast", "-pix_fmt",
                             "yuv420p", "-r", str(FPS), "-c:a", "aac", "-b:a", "160k",

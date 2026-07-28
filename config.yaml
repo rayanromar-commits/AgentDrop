@@ -30,12 +30,14 @@ ranking:
     min_buffer: 4                      # refill when fewer than this remain unposted
     target: 12                         # generate back up to this many fresh lists
   voiceover: intro                     # intro | full | off  (realistic TTS)
-  target_seconds: 30                   # aim ~30s. Scripts are written a touch
-                                       # long so a speed-up (capped 1.85x in
+  target_seconds: 25                   # max ~25s. Scripts keep their FULL word
+                                       # count — a speed-up (capped 2.4x in
                                        # ranking_assemble.py, pitch preserved via
-                                       # atempo) compresses them to this — user
-                                       # wants ~30s and is OK speeding the voice
-                                       # to get there. Does NOT re-speak faster. 0 off.
+                                       # atempo) compresses them to this. A short
+                                       # that visibly goes by fast is the retention
+                                       # play, so speeding the voice is wanted.
+                                       # Does NOT re-speak faster, does NOT cut
+                                       # words. 0 = off.
   # Optional majestic music track (rights-cleared, e.g. YouTube Audio Library);
   # if unset, a synthesized cinematic bed is used. Example: assets/epic.mp3
   music:

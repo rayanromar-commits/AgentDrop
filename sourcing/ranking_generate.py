@@ -145,13 +145,13 @@ object (and nothing else) with this exact shape:
   ]
 }
 
-LENGTH MATTERS. The whole script is read aloud, then the edit is sped up a LITTLE \
-(never more than 1.35x, pitch preserved) to land the Short at ~30-33 seconds. So \
-write TIGHT but not bare: include the one vivid fact/number for each item, cut \
-filler and wind-up, and NEVER repeat the same detail in two places (the hook and \
-#1 must not restate the same fact). Aim for one clean, information-dense line per \
-item — enough to be interesting, short enough that a gentle speed-up keeps it \
-comfortably under ~33 seconds.
+LENGTH. The whole script is read aloud (~40-45 seconds of raw narration), then \
+the EDIT is sped up, pitch preserved, so the finished Short lands at ~25 seconds. \
+Do NOT write shorter to hit 25 — the speed-up handles that. Write TIGHT but not \
+bare: include the one vivid fact/number for each item, cut filler and wind-up, and \
+NEVER repeat the same detail in two places (the hook and #1 must not restate the \
+same fact). Aim for one clean, information-dense line per item — enough to be \
+interesting, no padding.
 
 Rules:
 - title: the ON-SCREEN title. SHORT, dramatic, superlative, ONE word in ALL CAPS \
