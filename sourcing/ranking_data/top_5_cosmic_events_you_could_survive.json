@@ -14,31 +14,56 @@
       "rank": 5,
       "name": "Solar Flare",
       "stat": "Blinds satellites, but Earth's atmosphere shields your body completely",
-      "query": "solar flare SDO"
+      "query": "solar flare SDO",
+      "queries": [
+        "solar flare SDO",
+        "solar flare Solar Dynamics Observatory",
+        "sun coronal mass ejection close-up"
+      ]
     },
     {
       "rank": 4,
       "name": "Passing Comet",
       "stat": "Comet Hale-Bopp swept by 122 million miles away, harmless",
-      "query": "Comet Hale-Bopp"
+      "query": "Comet Hale-Bopp 1997",
+      "queries": [
+        "Comet Hale-Bopp 1997",
+        "comet Hale-Bopp two tails",
+        "comet NEOWISE night sky"
+      ]
     },
     {
       "rank": 3,
       "name": "Geomagnetic Storm",
       "stat": "Fried 1859 telegraph wires, yet skywatchers just saw auroras",
-      "query": "aurora geomagnetic storm ISS"
+      "query": "aurora borealis ISS",
+      "queries": [
+        "aurora borealis ISS",
+        "aurora from space station",
+        "northern lights green sky"
+      ]
     },
     {
       "rank": 2,
       "name": "Distant Supernova",
       "stat": "SN 1987A exploded 168,000 light-years off, totally survivable",
-      "query": "SN 1987A Hubble"
+      "query": "SN 1987A Hubble",
+      "queries": [
+        "SN 1987A Hubble",
+        "supernova 1987A remnant ring",
+        "Crab Nebula supernova remnant Hubble"
+      ]
     },
     {
       "rank": 1,
       "name": "Nearby Gamma-Ray Burst Echo",
       "stat": "774 AD burst irradiated Earth, humans lived on unaware",
-      "query": "gamma ray burst artist concept"
+      "query": "gamma-ray burst artist concept NASA",
+      "queries": [
+        "gamma-ray burst artist concept NASA",
+        "gamma ray burst jet illustration",
+        "Wolf-Rayet star nebula Hubble"
+      ]
     }
   ]
 }

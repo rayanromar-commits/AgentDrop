@@ -14,31 +14,56 @@
       "rank": 5,
       "name": "Local Void",
       "stat": "Nearly starved region right next to our own galaxy",
-      "query": "Hubble galaxy void"
+      "query": "Local Group galaxies Hubble",
+      "queries": [
+        "Local Group galaxies Hubble",
+        "Milky Way neighborhood galaxies",
+        "large scale structure cosmic web simulation"
+      ]
     },
     {
       "rank": 4,
       "name": "Giant Void in Canes Venatici",
       "stat": "Empty bubble stretching over 1 billion light-years",
-      "query": "Hubble deep field galaxies"
+      "query": "Whirlpool Galaxy M51 Hubble Canes Venatici",
+      "queries": [
+        "Whirlpool Galaxy M51 Hubble Canes Venatici",
+        "Sunflower Galaxy M63 Hubble",
+        "cosmic web dark matter simulation"
+      ]
     },
     {
       "rank": 3,
       "name": "Eridanus Supervoid",
       "stat": "Cold spot spanning 1 billion light-years of near-nothing",
-      "query": "CMB cold spot"
+      "query": "CMB cold spot Planck map",
+      "queries": [
+        "CMB cold spot Planck map",
+        "cosmic microwave background WMAP",
+        "Eridanus constellation galaxies Hubble"
+      ]
     },
     {
       "rank": 2,
       "name": "Boötes Void",
       "stat": "330 million light-years wide, almost no galaxies inside",
-      "query": "Bootes void galaxies"
+      "query": "Bootes constellation galaxies Hubble",
+      "queries": [
+        "Bootes constellation galaxies Hubble",
+        "galaxy cluster Abell deep field Hubble",
+        "large scale structure galaxy distribution map"
+      ]
     },
     {
       "rank": 1,
       "name": "KBC Void",
       "stat": "2 billion light-years across — largest known emptiness",
-      "query": "Hubble large scale structure void"
+      "query": "Hubble Ultra Deep Field",
+      "queries": [
+        "Hubble Ultra Deep Field",
+        "cosmic void large scale structure simulation",
+        "galaxy filaments cosmic web Millennium simulation"
+      ]
     }
   ]
 }

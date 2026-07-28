@@ -14,31 +14,56 @@
       "rank": 5,
       "name": "Venus Surface",
       "stat": "462°C and pressure that crushes you like the deep ocean",
-      "query": "Venus Magellan surface"
+      "query": "Venus surface Venera lander",
+      "queries": [
+        "Venus surface Venera lander",
+        "Venus surface Magellan radar",
+        "Venus planet full disk"
+      ]
     },
     {
       "rank": 4,
       "name": "Io",
       "stat": "Sulfur volcanoes and radiation that fries you in minutes",
-      "query": "Io Galileo volcano"
+      "query": "Io Galileo volcano",
+      "queries": [
+        "Io Galileo volcano",
+        "Io moon Jupiter surface",
+        "Io volcanic eruption plume"
+      ]
     },
     {
       "rank": 3,
       "name": "WASP-76b",
       "stat": "2,400°C dayside where iron falls as rain",
-      "query": "WASP-76b hot jupiter exoplanet artist concept"
+      "query": "WASP-76b exoplanet illustration",
+      "queries": [
+        "WASP-76b exoplanet illustration",
+        "hot Jupiter exoplanet iron rain",
+        "exoplanet lava dayside artist concept"
+      ]
     },
     {
       "rank": 2,
       "name": "Sagittarius A*",
       "stat": "4 million Suns of gravity shredding you into atoms",
-      "query": "black hole accretion disk"
+      "query": "Sagittarius A* Event Horizon Telescope",
+      "queries": [
+        "Sagittarius A* Event Horizon Telescope",
+        "Sagittarius A black hole Milky Way center",
+        "black hole accretion disk simulation"
+      ]
     },
     {
       "rank": 1,
       "name": "PSR J1748-2446ad",
       "stat": "Neutron star spinning 716 times per second",
-      "query": "neutron star pulsar artist concept"
+      "query": "pulsar neutron star illustration",
+      "queries": [
+        "pulsar neutron star illustration",
+        "spinning neutron star magnetic field",
+        "neutron star jets artist concept"
+      ]
     }
   ]
 }

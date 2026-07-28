@@ -14,31 +14,56 @@
       "rank": 5,
       "name": "Hubble Space Telescope",
       "stat": "Launched 1990, still delivering images 1.5 billion light-years deep",
-      "query": "Hubble Space Telescope"
+      "query": "Hubble Space Telescope in orbit",
+      "queries": [
+        "Hubble Space Telescope in orbit",
+        "Hubble telescope Earth backdrop",
+        "Hubble deep field galaxies"
+      ]
     },
     {
       "rank": 4,
       "name": "Sputnik 1",
       "stat": "First satellite ever, 1957 — beeped and started the Space Age",
-      "query": "Sputnik 1"
+      "query": "Sputnik 1 satellite",
+      "queries": [
+        "Sputnik 1 satellite",
+        "Sputnik replica NASA",
+        "Sputnik 1 spacecraft"
+      ]
     },
     {
       "rank": 3,
       "name": "Cassini-Huygens",
       "stat": "13 years orbiting Saturn, landed a probe on Titan",
-      "query": "Saturn Cassini"
+      "query": "Cassini Saturn spacecraft",
+      "queries": [
+        "Cassini Saturn spacecraft",
+        "Saturn Cassini rings",
+        "Titan Huygens surface"
+      ]
     },
     {
       "rank": 2,
       "name": "Apollo 11",
       "stat": "1969 — first humans to walk on the Moon",
-      "query": "Apollo 11 Moon landing"
+      "query": "Apollo 11 astronaut Moon surface",
+      "queries": [
+        "Apollo 11 astronaut Moon surface",
+        "Buzz Aldrin lunar bootprint",
+        "Apollo 11 Moon landing"
+      ]
     },
     {
       "rank": 1,
       "name": "Voyager 1",
       "stat": "Only spacecraft in interstellar space, launched 1977",
-      "query": "Voyager 1 spacecraft"
+      "query": "Voyager 1 spacecraft",
+      "queries": [
+        "Voyager 1 spacecraft",
+        "Voyager probe interstellar",
+        "Pale Blue Dot Voyager"
+      ]
     }
   ]
 }

@@ -14,31 +14,56 @@
       "rank": 5,
       "name": "Gemini 8 Spin",
       "stat": "Capsule tumbled once per second, nearly blacking out Armstrong.",
-      "query": "Gemini 8 spacecraft"
+      "query": "Gemini 8 spacecraft in orbit",
+      "queries": [
+        "Gemini 8 spacecraft in orbit",
+        "Gemini capsule Agena docking",
+        "Gemini spacecraft Earth orbit NASA"
+      ]
     },
     {
       "rank": 4,
       "name": "Mercury-Atlas 6 Heat Shield",
       "stat": "Ground feared Glenn's heat shield was loose during reentry.",
-      "query": "John Glenn Mercury Friendship 7"
+      "query": "Friendship 7 Mercury capsule",
+      "queries": [
+        "Friendship 7 Mercury capsule",
+        "John Glenn Mercury spacecraft",
+        "Mercury capsule reentry NASA"
+      ]
     },
     {
       "rank": 3,
       "name": "Soyuz T-10-1 Pad Abort",
       "stat": "Rocket exploded on the pad; crew yanked clear seconds before.",
-      "query": "Soyuz rocket launch pad"
+      "query": "Soyuz rocket launch pad Baikonur",
+      "queries": [
+        "Soyuz rocket launch pad Baikonur",
+        "Soyuz launch abort",
+        "Soyuz rocket explosion pad"
+      ]
     },
     {
       "rank": 2,
       "name": "STS-1 Columbia Launch",
       "stat": "First shuttle flew with untested crew and shedding tiles.",
-      "query": "STS-1 Columbia launch"
+      "query": "STS-1 Columbia launch 1981",
+      "queries": [
+        "STS-1 Columbia launch 1981",
+        "Space Shuttle Columbia liftoff",
+        "Space Shuttle launch NASA"
+      ]
     },
     {
       "rank": 1,
       "name": "Apollo 13 Explosion",
       "stat": "Oxygen tank blew 200,000 miles from Earth, crippling the ship.",
-      "query": "Apollo 13 damaged service module"
+      "query": "Apollo 13 damaged service module",
+      "queries": [
+        "Apollo 13 damaged service module",
+        "Apollo 13 spacecraft in space",
+        "Apollo command service module Moon NASA"
+      ]
     }
   ]
 }

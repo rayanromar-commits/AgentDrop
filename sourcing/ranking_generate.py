@@ -140,7 +140,8 @@ object (and nothing else) with this exact shape:
   "hook": "Number one shouldn't even exist.",
   "category": "planets",
   "items": [
-    {"rank": 5, "name": "...", "stat": "...", "query": "..."},
+    {"rank": 5, "name": "...", "stat": "...",
+     "queries": ["...", "...", "..."]},
     ... exactly 5 items, ranks 5 down to 1 (1 = the most extreme / best) ...
   ]
 }
@@ -174,14 +175,27 @@ number or the vivid detail; cut articles and connective filler ("that", "which",
 Examples of the right length: "462°C — hot enough to melt lead in seconds", \
 "4.3 million Suns crammed inside Mercury's tiny orbit", \
 "Rains molten glass, blown sideways at 5,400 mph".
-- query: a NASA image-library search term that reliably returns a clear image of \
-THAT object. Use mission-specific terms:
-    * Solar-system planets/moons: "Jupiter Cassini", "Venus Mariner 10", \
-"Saturn Cassini", "Neptune Voyager", "Europa Galileo", "Mars Viking".
-    * Exoplanets: "<name> exoplanet" or "hot jupiter exoplanet artist concept".
-    * Galaxies/nebulae/black holes: "Hubble <name>", "<name> nebula", \
-"black hole accretion disk".
-  Avoid generic terms that return rockets or crews.
+- queries: EXACTLY 3 image-search terms for this item, BEST FIRST. Each is \
+searched (NASA library, then Wikimedia/Wikipedia) and a vision model picks the \
+best clean result, so the job of this field is to guarantee that at least one \
+term returns a spectacular, real image. THE PICTURE IS THE PRODUCT — an item \
+whose terms all fail falls back to a generic nebula and the video looks cheap.
+    * Term 1 = the specific object WITH its imaging context: "Jupiter Cassini", \
+"Venus Mariner 10", "Saturn Cassini", "Neptune Voyager", "Europa Galileo", \
+"Mars Viking", "Hubble <galaxy name>", "<name> nebula Hubble".
+    * Term 2 = a DIFFERENT wording or instrument for the same object ("Webb \
+<name>", "<name> artist concept", "<name> ESO").
+    * Term 3 = a guaranteed-photogenic FALLBACK that still fits the caption.
+    * NEVER repeat the same term twice, and never give three near-identical ones.
+  IF THE SUBJECT CANNOT BE PHOTOGRAPHED (a void, empty space, a force, a speed, \
+a distance, a time span, a concept), do NOT write terms describing the absence \
+("galaxy void", "cold spot", "empty region") — those return nothing usable. \
+Name a REAL, heavily-imaged object or scene that legitimately illustrates it: a \
+named galaxy or cluster in/near that region, a Hubble/Webb deep field, a \
+large-scale-structure visualization, a relevant nebula. Example — for a cosmic \
+void, use ["Hubble Ultra Deep Field", "Webb deep field galaxies", \
+"galaxy cluster Abell 370 Hubble"], NOT ["galaxy void"].
+  Avoid generic terms that return rockets, crews, logos, charts or maps.
 - Everything must be real. Do not invent objects or fake facts.
 
 Output ONLY the JSON object — no prose, no code fences."""
@@ -191,8 +205,13 @@ def _slug(title: str) -> str:
     return re.sub(r"[^a-z0-9]+", "_", title.lower()).strip("_")[:48]
 
 
-def generate_ranking(topic: str | None = None) -> dict | None:
-    """Ask Claude for one ranking list. Returns a validated dict, or None."""
+def generate_ranking(topic: str | None = None,
+                     avoid: list[str] | None = None) -> dict | None:
+    """Ask Claude for one ranking list. Returns a validated dict, or None.
+
+    `avoid` = titles the channel already holds; they're shown to the model so it
+    doesn't re-cover a subject under new wording (the near-duplicate check in
+    generate_batch is the backstop, this is the cheap prevention)."""
     load_dotenv()
     if not os.getenv("ANTHROPIC_API_KEY"):
         log.warning("[rank-gen] ANTHROPIC_API_KEY not set.")
@@ -204,8 +223,13 @@ def generate_ranking(topic: str | None = None) -> dict | None:
         return None
 
     user = (f"Topic: {topic}." if topic else
-            "Invent a fresh, high-curiosity space Top-5 topic.") + \
-        " Write the JSON now."
+            "Invent a fresh, high-curiosity space Top-5 topic.")
+    if avoid:
+        user += ("\n\nThe channel has ALREADY published these lists — your list "
+                 "must cover a genuinely different subject, not a re-worded one, "
+                 "and must not repeat their headline objects:\n"
+                 + "\n".join(f"- {t}" for t in avoid[-40:]))
+    user += " Write the JSON now."
     try:
         client = anthropic.Anthropic()
         resp = client.messages.create(
@@ -234,9 +258,23 @@ def generate_ranking(topic: str | None = None) -> dict | None:
         log.warning("[rank-gen] invalid shape for %r.", data.get("title"))
         return None
     for it in items:
-        if not all(k in it for k in ("rank", "name", "stat", "query")):
+        if not all(k in it for k in ("rank", "name", "stat")):
             log.warning("[rank-gen] item missing fields.")
             return None
+        # Normalize the image terms: keep `queries` (the list the fetcher pools
+        # over) and `query` (first term) in sync so old and new datasets, and
+        # any code reading either field, all behave the same.
+        qs = it.get("queries")
+        if isinstance(qs, str):
+            qs = [qs]
+        qs = [q.strip() for q in (qs or []) if isinstance(q, str) and q.strip()]
+        if not qs and it.get("query"):
+            qs = [str(it["query"]).strip()]
+        if not qs:
+            log.warning("[rank-gen] item %r has no image query.", it.get("name"))
+            return None
+        it["queries"] = list(dict.fromkeys(qs))
+        it["query"] = it["queries"][0]
     # Normalize YouTube title variants: keep only distinct non-empty strings.
     variants = [t.strip() for t in data.get("yt_titles", [])
                 if isinstance(t, str) and t.strip()]
@@ -333,7 +371,20 @@ def generate_batch(n: int, perf: dict | None = None,
     title collides with one already on disk, so ``n`` reflects new files, not
     attempts. Never raises on a single-topic failure — it logs and continues.
     """
+    from sourcing.ranking_source import is_near_duplicate
+
     existing_slugs = {p.stem for p in DATA_DIR.glob("*.json")}
+    # Everything already in the pool, so a new list can't re-cover a subject we
+    # hold (or have posted) under different wording — an exact-slug check misses
+    # "BIGGEST Black Holes" vs "Most MASSIVE Black Holes".
+    existing: list[dict] = []
+    for p in DATA_DIR.glob("*.json"):
+        try:
+            d = json.loads(p.read_text(encoding="utf-8"))
+        except Exception:
+            continue
+        if d.get("title") and d.get("items"):
+            existing.append(d)
     saved: list[Path] = []
     # Seed the exclusion set from the coarse topic that produced each existing
     # slug where we can tell, so we prefer genuinely new subjects.
@@ -350,15 +401,20 @@ def generate_batch(n: int, perf: dict | None = None,
             if len(saved) >= n:
                 break
             tried.add(t)
-            d = generate_ranking(t)
+            d = generate_ranking(t, avoid=[e["title"] for e in existing])
             if not d:
                 continue
             if _slug(d["title"]) in existing_slugs:
                 log.info("[rank-gen] duplicate title skipped: %s", d["title"])
                 continue
+            why = is_near_duplicate(d, existing)
+            if why:
+                log.info("[rank-gen] near-duplicate skipped (%s): %s", why, d["title"])
+                continue
             p = save(d)
             if p:
                 existing_slugs.add(p.stem)
+                existing.append(d)
                 saved.append(p)
                 progressed = True
                 log.info("[rank-gen] saved %s — %s", p.name, d["title"])

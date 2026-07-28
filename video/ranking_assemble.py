@@ -455,9 +455,14 @@ def render_ranking_video(post_id, payload, config=None) -> Path:
     for it in order:
         revealed = revealed | {it["rank"]}
         # Best CLEAN photo of THIS object + a per-image framing hint, chosen by the
-        # vision judge (rejects watermarks/diagrams). `used` keeps it off any image
-        # an earlier segment already showed; a spare backdrop covers a miss.
-        img, framing = fetch_item_visual(it["query"], prefer=it["name"], exclude=used)
+        # vision judge (rejects watermarks/diagrams). Every search term the dataset
+        # offers is pooled, and the narration line goes along as context so an
+        # unphotographable subject (a void, a force) still gets an on-theme visual
+        # instead of a rejection. `used` keeps it off any image an earlier segment
+        # already showed; a spare backdrop covers a genuine miss.
+        img, framing = fetch_item_visual(
+            it.get("queries") or it["query"], prefer=it["name"], exclude=used,
+            context=f"{it['name']}. {it['stat']}.")
         if not img:
             log.warning("[ranking] no clean photo for %r — using a spare backdrop.",
                         it["name"])

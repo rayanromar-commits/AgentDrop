@@ -24,6 +24,7 @@ import urllib.error
 import urllib.parse
 import urllib.request
 from pathlib import Path
+from typing import Iterable
 from urllib.parse import urlencode
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
@@ -58,8 +59,16 @@ _UA = "AgentDrop/1.0 (educational space ranking video generator)"
 # Wikimedia hard-rate-limits (429) requests for ORIGINAL files on
 # upload.wikimedia.org and 400s any thumbnail width outside its standard list —
 # so ask the API for a standard width and use the /thumb/ URL it hands back.
-# 1280 is standard and comfortably over the 1080-wide frame.
-THUMB_W = 1280
+# The renderer supersamples to 1620x2880 and Ken Burns zooms a further 1.13x, so
+# a 1280-wide thumb arrives visibly soft; ask for 2560 (files smaller than that
+# come back as the original, which is what we want anyway).
+THUMB_W = 2560
+
+# Quality floor for a candidate image. Below MIN_LONG_SIDE the frame is a heavy
+# upscale and looks blurry on a phone; GOOD_LONG_SIDE is what we actually want,
+# and resolution breaks ties between otherwise-equal candidates.
+MIN_LONG_SIDE = 900
+GOOD_LONG_SIDE = 1800
 
 
 def _thumb(info: dict) -> str | None:
@@ -132,6 +141,18 @@ _BAD_TITLE = (
 )
 
 
+def _blocked(terms: Iterable[str]) -> tuple[str, ...]:
+    """_BAD_TITLE minus anything the caller is actually asking for.
+
+    The blanket list exists because a query like "Mercury" otherwise returns the
+    Mercury PROGRAM. But the channel also runs spaceflight-history lists where
+    the rocket, the crew or the spacecraft IS the subject — blocking those words
+    unconditionally left items like "Apollo 13" or "Soyuz T-10-1" with nothing to
+    show. So a term is only banned when the search isn't about it."""
+    want = " ".join(t.lower() for t in terms if t)
+    return tuple(b for b in _BAD_TITLE if b.strip() not in want)
+
+
 def _title(item: dict) -> str:
     try:
         return (item.get("data") or [{}])[0].get("title", "")
@@ -160,10 +181,11 @@ def _fetch_nasa(query: str, prefer: str | None, out: Path) -> bool:
         return False
     # Score candidates: drop bad titles, prefer subject-matching titles.
     toks = [t for t in re.split(r"\W+", (prefer or query).lower()) if len(t) > 2]
+    bad = _blocked((prefer, query))
     best, best_score = None, -1
     for it in items[:20]:
         title = _title(it).lower()
-        if any(b in title for b in _BAD_TITLE):
+        if any(b in title for b in bad):
             continue
         score = sum(2 for t in toks if t in title)
         if score > best_score:
@@ -186,25 +208,33 @@ _BAD_FILE = (
 )
 
 
-def _is_photo_name(name: str) -> bool:
+def _is_photo_name(name: str, query: str = "") -> bool:
     n = name.lower()
     if not any(n.endswith(e) for e in (".jpg", ".jpeg", ".png", ".tif", ".tiff", ".webp")):
         return False
     norm = re.sub(r"[_%\-]+", " ", n)                 # underscores/dashes -> spaces
     # Reject non-photos (maps/charts) AND the "named-after" trap: Antares the
-    # rocket, Mercury the mission, etc. share the object's name.
+    # rocket, Mercury the mission, etc. share the object's name — unless the
+    # search is FOR that thing (a spaceflight-history item wants the spacecraft).
     return not any(b in norm for b in _BAD_FILE) and \
-        not any(b in norm for b in _BAD_TITLE)
+        not any(b in norm for b in _blocked((query,)))
 
 
-def _commons_photos(query: str, limit: int = 15) -> list[str]:
-    """Wikimedia Commons file search -> raster-photo thumbnail URLs (maps/charts
-    filtered out), best-match first. Commons content is copyright-clean."""
+def _commons_photos(query: str, limit: int = 15,
+                    width: int = THUMB_W) -> list[str]:
+    """Wikimedia Commons file search -> raster-photo image URLs (maps/charts
+    filtered out), best-match first. Commons content is copyright-clean.
+
+    Asks for a big thumbnail (THUMB_W) rather than the 1280 this used to take —
+    1280 lands soft once the renderer supersamples and zooms. MediaWiki won't
+    render a thumb wider than the file itself and hands back the ORIGINAL
+    instead; that's fine to use when the original is already big enough, and
+    beats downscaling to a standard rung for no reason."""
     params = {
         "action": "query", "format": "json", "formatversion": "2",
         "generator": "search", "gsrsearch": query, "gsrlimit": str(limit),
         "gsrnamespace": "6",                       # File: namespace
-        "prop": "imageinfo", "iiprop": "url|mime", "iiurlwidth": str(THUMB_W),
+        "prop": "imageinfo", "iiprop": "url|mime|size", "iiurlwidth": str(width),
     }
     try:
         data = json.loads(_get(f"{COMMONS_API}?" + urlencode(params)))
@@ -213,16 +243,18 @@ def _commons_photos(query: str, limit: int = 15) -> list[str]:
         return []
     pages = sorted((data.get("query") or {}).get("pages") or [],
                    key=lambda p: p.get("index", 999))
-    urls = []
+    urls: list[str] = []
     for p in pages:
         title = p.get("title", "")               # e.g. "File:Betelgeuse ALMA.jpg"
         info = (p.get("imageinfo") or [{}])[0]
-        if not _is_photo_name(title):
+        if not _is_photo_name(title, query):
             continue
         if "image" not in (info.get("mime") or "image"):
             continue
         url = _thumb(info)
-        if url:
+        if not url and int(info.get("width") or 0) >= MIN_LONG_SIDE:
+            url = info.get("thumburl") or info.get("url")   # the original itself
+        if url and url not in urls:
             urls.append(url)
     return urls
 
@@ -245,7 +277,7 @@ def _wiki_pageimage(query: str) -> str | None:
     for p in pages:
         src = (p.get("thumbnail") or {}).get("source")
         name = p.get("pageimage", "") or (src or "")
-        if src and _is_photo_name(name):
+        if src and _is_photo_name(name, query):
             return src
     return None
 
@@ -290,35 +322,66 @@ def fetch_image(query: str, prefer: str | None = None,
 
 
 def _nasa_urls(query: str, prefer: str | None, n: int = 3) -> list[str]:
-    """Top NASA candidate image URLs (subject-scored, launch/crew filtered)."""
+    """Top NASA candidate image URLs (subject-scored, launch/crew filtered).
+
+    Asks for ~orig (NASA's full-resolution master). The ~large rung this used to
+    request 403s on a lot of assets, which silently dropped EVERY NASA candidate
+    for those items and left the judge choosing between one or two Commons
+    thumbs; ~orig serves fine and is typically well under 2MB."""
     items = _search(query)
     if not items:
         return []
     toks = [t for t in re.split(r"\W+", (prefer or query).lower()) if len(t) > 2]
+    bad = _blocked((prefer, query))
     scored = []
     for it in items[:20]:
         title = _title(it).lower()
-        if any(b in title for b in _BAD_TITLE):
+        if any(b in title for b in bad):
             continue
         href = (it.get("links") or [{}])[0].get("href")
         if href:
             scored.append((sum(2 for t in toks if t in title), href))
     scored.sort(key=lambda x: -x[0])
-    return [re.sub(r"~(thumb|small|medium|large|orig)\.jpg$", "~large.jpg", h)
+    return [re.sub(r"~(thumb|small|medium|large|orig)\.jpg$", "~orig.jpg", h)
             for _, h in scored[:n]]
 
 
-def _gather_candidates(query: str, prefer: str | None, key: str,
-                       limit: int = 6) -> list[tuple[str, Path]]:
-    """Download several candidate images (NASA first, then Wikimedia, then the
-    Wikipedia article image) for the judge to choose between.
+def _dims(path: Path) -> tuple[int, int]:
+    try:
+        with Image.open(path) as im:
+            return im.size
+    except Exception:
+        return (0, 0)
+
+
+def _queries(query) -> list[str]:
+    """Normalize a dataset item's search term(s) into an ordered query list."""
+    if isinstance(query, str):
+        return [query]
+    return [q for q in (query or []) if isinstance(q, str) and q.strip()]
+
+
+def _gather_candidates(queries: list[str], prefer: str | None, key: str,
+                       limit: int = 8) -> list[dict]:
+    """Download candidate images (NASA first, then Wikimedia, then the Wikipedia
+    article image) across EVERY query for the judge to choose between.
+
+    Datasets now carry several search terms per item, best-first, because one
+    term is a single point of failure: on 2026-07-28 three of five items came
+    back with 1-4 unusable candidates and shipped as generic nebula backdrops.
+    Every term is searched and the pooled candidates are judged together, so a
+    weak first term costs quality instead of costing the image entirely.
 
     Commons/Wikipedia are searched with BOTH the bare name AND the mission-context
     query, so a generic name (e.g. "Io" -> an Io-moth butterfly) is disambiguated
-    by the richer query (e.g. "Io Galileo"). The judge then rejects any strays."""
-    terms = list(dict.fromkeys(t for t in (prefer, query) if t))
-    srcs = [("NASA", u) for u in _nasa_urls(query, prefer, 3)]
-    com = []
+    by the richer query (e.g. "Io Galileo"). The judge then rejects any strays.
+    Anything under MIN_LONG_SIDE is dropped before judging — too small to fill
+    the frame without visible blur."""
+    terms = list(dict.fromkeys([t for t in ([prefer] + queries) if t]))
+    srcs: list[tuple[str, str]] = []
+    for q in queries:
+        srcs += [("NASA", u) for u in _nasa_urls(q, prefer, 3)]
+    com: list[str] = []
     for term in terms:
         com += _commons_photos(term, 4)
     srcs += [("Wikimedia", u) for u in dict.fromkeys(com)]
@@ -326,20 +389,50 @@ def _gather_candidates(query: str, prefer: str | None, key: str,
         wp = _wiki_pageimage(term)
         if wp:
             srcs.append(("Wikipedia", wp))
-    seen, cand = set(), []
+
+    seen, cand, small = set(), [], []
     for lbl, u in srcs:
         if u in seen:
             continue
         seen.add(u)
-        p = CACHE_DIR / f"{key}_c{len(cand)}.jpg"
-        if _download_valid([u], p):
-            cand.append((lbl, p))
+        # Index by DOWNLOAD, not by kept-count: two rejects sharing a filename
+        # would clobber each other.
+        p = CACHE_DIR / f"{key}_c{len(seen)}.jpg"
+        # NASA serves some assets at one size rung and 403s the others, so walk
+        # down the ladder rather than losing the candidate.
+        ladder = [u] if lbl != "NASA" else [
+            re.sub(r"~(thumb|small|medium|large|orig)\.jpg$", f"~{s}.jpg", u)
+            for s in ("orig", "large", "medium")]
+        if not _download_valid(ladder, p):
+            continue
+        w, h = _dims(p)
+        entry = {"src": lbl, "url": u, "path": p, "w": w, "h": h}
+        if max(w, h) < MIN_LONG_SIDE:
+            log.info("[img] set aside %s candidate (%dx%d, under the floor)",
+                     lbl, w, h)
+            small.append(entry)
+            continue
+        cand.append(entry)
         if len(cand) >= limit:
             break
+
+    if not cand and small:
+        # A soft image of the right subject still beats an unrelated backdrop —
+        # take the largest of the rejects rather than dropping the item.
+        small.sort(key=lambda c: -max(c["w"], c["h"]))
+        cand = small[:1]
+        log.info("[img] all candidates were under %dpx; keeping the largest "
+                 "(%dx%d).", MIN_LONG_SIDE, cand[0]["w"], cand[0]["h"])
+        small = small[1:]
+    for c in small:
+        c["path"].unlink(missing_ok=True)
+    # Sharpest first, so the judge's shortlist leads with frame-filling images
+    # and a tie between equally-good depictions resolves to the better one.
+    cand.sort(key=lambda c: -min(max(c["w"], c["h"]) / GOOD_LONG_SIDE, 1.0))
     return cand
 
 
-def _b64(path: Path, max_side: int = 768) -> str:
+def _b64(path: Path, max_side: int = 1024) -> str:
     im = Image.open(path).convert("RGB")
     if max(im.size) > max_side:
         im.thumbnail((max_side, max_side), Image.LANCZOS)
@@ -348,18 +441,32 @@ def _b64(path: Path, max_side: int = 768) -> str:
     return base64.b64encode(buf.getvalue()).decode()
 
 
-_JUDGE_PROMPT = """You are curating the background image for a cinematic "Top 5" \
-space video. The object shown must be: **{name}**.
+_JUDGE_PROMPT = """You are curating the full-screen background image for one item \
+in a cinematic "Top 5" space video. The item is: **{name}**.{context}
 
 Choose the SINGLE best candidate image below. A good image is:
-- a realistic, clear depiction of {name} (a real photo, or a faithful telescope/\
-artist rendering if no real photo exists),
+- a striking, clear visual for {name} — a real photo/telescope image, or a \
+faithful artist rendering when no photo exists,
 - CLEAN: absolutely NO watermark, logo, channel name, URL, social handle, or \
 overlaid text/labels of any kind,
 - not a star-chart, locator map, graph, or diagram,
-- high quality (sharp, not a tiny grainy thumbnail).
-Prefer NASA/public-domain when quality is comparable, but the best clean image wins.
-If EVERY candidate is watermarked, wrong-subject, or low quality, return best -1.
+- high quality (sharp and large, not a soft little thumbnail).
+
+IMPORTANT — abstract subjects. Many items CANNOT be photographed directly: cosmic \
+voids, regions of empty space, forces, distances, speeds, eras. For those, the \
+right answer is the best SCIENTIFICALLY APPROPRIATE illustration — a deep-field or \
+galaxy-survey image, a large-scale-structure visualization, a relevant galaxy or \
+nebula, an artist's impression of the phenomenon. Judge those on whether they'd \
+look right and cinematic on screen under that caption. Do NOT reject a candidate \
+merely because the literal object isn't identifiable in it; an evocative, on-theme \
+space image always beats returning nothing.
+
+Reject (best: -1) ONLY if every candidate is watermarked, has overlaid text, is a \
+chart/diagram, is a plainly WRONG subject (a rocket, a crowd, an unrelated animal \
+or object), or is too low-quality to fill a phone screen. Returning -1 drops this \
+item to a generic backdrop, so use it as a genuine last resort.
+Prefer NASA/public-domain when quality is comparable, and prefer the higher \
+resolution when two candidates are otherwise equal.
 
 Also decide framing for the winner in a tall 9:16 phone frame:
 - "fit"  = the object is roughly round/centred with empty space around it, so \
@@ -367,10 +474,11 @@ cropping it to full-bleed would slice its edges — fit it to the WIDTH instead.
 - "cover" = the image already fills the frame edge-to-edge (surface texture, a \
 nebula/field, or the object bleeds off-frame), so full-bleed is fine.
 
-Return ONLY JSON: {{"best": <index or -1>, "framing": "fit"|"cover", "reason": "..."}}"""
+Return ONLY JSON, with `reason` at most 15 words:
+{{"best": <index or -1>, "framing": "fit"|"cover", "reason": "..."}}"""
 
 
-def _judge(name: str, cand: list[tuple[str, Path]]) -> tuple[int, str]:
+def _judge(name: str, cand: list[dict], context: str = "") -> tuple[int, str]:
     """Claude-vision pick: (best_index or -1, framing). Any failure -> (0,'cover')
     so the pipeline degrades gracefully to the first candidate, never breaks."""
     load_dotenv()
@@ -380,17 +488,28 @@ def _judge(name: str, cand: list[tuple[str, Path]]) -> tuple[int, str]:
         import anthropic
     except ImportError:
         return 0, "cover"
-    content = [{"type": "text", "text": _JUDGE_PROMPT.format(name=name)}]
-    for i, (lbl, p) in enumerate(cand):
-        content.append({"type": "text", "text": f"Candidate {i} (source: {lbl}):"})
+    ctx = f"\nThe narration over this shot says: \"{context}\"" if context else ""
+    content = [{"type": "text",
+                "text": _JUDGE_PROMPT.format(name=name, context=ctx)}]
+    for i, c in enumerate(cand):
+        # Resolution is invisible in the downscaled thumbnail the judge sees, so
+        # state it — it's how "sharp enough to fill the frame" gets weighed.
+        content.append({"type": "text", "text":
+                        f"Candidate {i} (source: {c['src']}, {c['w']}x{c['h']}px):"})
         content.append({"type": "image", "source": {
-            "type": "base64", "media_type": "image/jpeg", "data": _b64(p)}})
+            "type": "base64", "media_type": "image/jpeg", "data": _b64(c["path"])}})
     try:
         resp = anthropic.Anthropic().messages.create(
-            model=JUDGE_MODEL, max_tokens=400,
+            # Roomy cap: at 400 a wordy verdict over 8 candidates truncated
+            # mid-JSON, which silently demoted the pick to candidate 0.
+            model=JUDGE_MODEL, max_tokens=800,
             messages=[{"role": "user", "content": content}])
         txt = "".join(b.text for b in resp.content if b.type == "text")
-        data = json.loads(re.search(r"\{.*\}", txt, re.S).group(0))
+        m = re.search(r"\{.*\}", txt, re.S)
+        if not m:                       # no JSON at all -> keep the best-res pick
+            log.warning("[judge] no JSON in reply for %r; using first candidate.", name)
+            return 0, "cover"
+        data = json.loads(m.group(0))
     except Exception as e:
         log.warning("[judge] failed (%s); using first candidate.", e)
         return 0, "cover"
@@ -409,48 +528,59 @@ def image_hash(path: Path) -> str:
     return hashlib.sha1(Path(path).read_bytes()).hexdigest()
 
 
-def fetch_item_visual(query: str, prefer: str | None = None,
-                      exclude: set[str] | None = None) -> tuple[Path | None, str]:
+def fetch_item_visual(query, prefer: str | None = None,
+                      exclude: set[str] | None = None,
+                      context: str = "") -> tuple[Path | None, str]:
     """Best CLEAN image of a ranked object + its framing hint ('fit'|'cover').
 
-    Gathers candidates (NASA -> Wikimedia -> Wikipedia) and has Claude vision pick
-    the best watermark-free depiction and decide framing. Returns (None,'cover')
-    if nothing clean is found, so the renderer can fall back to the background.
+    `query` is a search term or an ordered LIST of them (datasets carry several
+    per item so an unphotographable subject still gets a strong on-theme visual).
+    Candidates are pooled across every term (NASA -> Wikimedia -> Wikipedia),
+    filtered to a resolution that fills the frame without upscaling, and Claude
+    vision picks the best watermark-free depiction and decides framing.
+    `context` (the narration line) tells the judge what the shot has to convey.
+    Returns (None,'cover') only when nothing usable exists, so the renderer can
+    fall back to a backdrop.
     `exclude` = image_hash()es already used by earlier items; those candidates are
     dropped BEFORE judging, so neighbouring ranks whose best match is the same
     picture (e.g. two large-scale-structure entries) each get their own.
-    Cached per (query,prefer,exclude): image at <key>.jpg, framing at <key>.framing.
+    Cached per (queries,prefer,exclude): image at <key>.jpg, framing at <key>.framing.
     """
-    name = prefer or query
+    queries = _queries(query)
+    name = prefer or (queries[0] if queries else "")
     exclude = set(exclude or ())
     ex = hashlib.sha1("|".join(sorted(exclude)).encode()).hexdigest()[:8] if exclude else ""
-    key = hashlib.sha1(f"item|{query}|{prefer or ''}|{ex}".encode()).hexdigest()[:12]
+    key = hashlib.sha1(
+        f"item|{'|'.join(queries)}|{prefer or ''}|{ex}".encode()).hexdigest()[:12]
     out = CACHE_DIR / f"{key}.jpg"
     fr = CACHE_DIR / f"{key}.framing"
     if out.exists() and fr.exists():
         return out, fr.read_text(encoding="utf-8").strip() or "cover"
     CACHE_DIR.mkdir(parents=True, exist_ok=True)
 
-    cand = _gather_candidates(query, prefer, key)
+    cand = _gather_candidates(queries, prefer, key)
     if exclude:
-        keep = [(lbl, p) for lbl, p in cand if image_hash(p) not in exclude]
-        for lbl, p in cand:
-            if (lbl, p) not in keep:
-                p.unlink(missing_ok=True)
+        keep = [c for c in cand if image_hash(c["path"]) not in exclude]
+        for c in cand:
+            if c not in keep:
+                c["path"].unlink(missing_ok=True)
         cand = keep
     if not cand:
-        log.warning("[item] no candidates for %r", name)
+        log.warning("[item] no candidates for %r (queries=%s)", name, queries)
         return None, "cover"
-    best, framing = _judge(name, cand)
+    best, framing = _judge(name, cand, context)
     if best < 0:
         log.warning("[item] judge rejected all %d candidate(s) for %r", len(cand), name)
-        for _lbl, p in cand:
-            p.unlink(missing_ok=True)
+        for c in cand:
+            c["path"].unlink(missing_ok=True)
         return None, "cover"
-    shutil.copy(cand[best][1], out)
+    win = cand[best]
+    log.info("[item] %r -> %s %dx%d (%d candidate(s))", name, win["src"],
+             win["w"], win["h"], len(cand))
+    shutil.copy(win["path"], out)
     fr.write_text(framing, encoding="utf-8")
-    for _lbl, p in cand:                                  # tidy the rejected temps
-        p.unlink(missing_ok=True)
+    for c in cand:                                        # tidy the rejected temps
+        c["path"].unlink(missing_ok=True)
     return out, framing
 
 
