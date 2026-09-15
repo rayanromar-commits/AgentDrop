@@ -17,11 +17,15 @@
 #   ranking     = cinematic "Top 5 ___" space countdowns (the old format)
 #   clipranking = silent "Ranking ___ Moments" ranked stock-video clips
 #                 (the 2026-09-15 pivot — see the clipranking: block below)
-content_type: ranking
+content_type: clipranking
 
-# --- RANKING CHANNEL (only used when content_type: ranking) ---------
+# --- RANKING CHANNEL — RETIRED 2026-09-15 ---------------------------
+# The old space format. Kept only so the pivot is reversible; it runs ONLY if
+# content_type is set back to `ranking`, and costs nothing while it isn't.
+# See sourcing/_retired_space/README.md for why it was retired and how to
+# restore it.
 ranking:
-  dataset_dir: sourcing/ranking_data   # folder of "Top 5" list JSONs
+  dataset_dir: sourcing/_retired_space/ranking_data   # archived "Top 5" JSONs
   # Auto-refill the dataset pool so production never runs dry (on 2026-07-22 the
   # 4pm drop was missed because every list had been consumed). Each production
   # cycle first tops the buffer back up to `target` whenever fewer than

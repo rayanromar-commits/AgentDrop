@@ -39,7 +39,7 @@ DEFAULT_DIR = "sourcing/ranking_data"
 # 2026-07-28 n4zx3Z5fyOg, same dataset, same title). The AUTHORITATIVE record is
 # the live channel itself — see reconcile_with_channel(), which runs before every
 # selection and re-derives this ledger from the uploads playlist.
-POSTED_LEDGER = PROJECT_ROOT / "sourcing" / "ranking_posted.json"
+POSTED_LEDGER = PROJECT_ROOT / "sourcing" / "_retired_space" / "ranking_posted.json"
 
 
 def _dataset_dir(config: dict) -> Path:
