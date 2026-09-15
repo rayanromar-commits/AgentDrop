@@ -239,10 +239,26 @@ def _pick_music(cfg: dict, post_id: str, category: str) -> Path | None:
     if mdir:
         root = (PROJECT_ROOT / mdir)
         pool: list[Path] = []
-        sub = root / (category or "").strip().lower().replace(" ", "_")
-        if sub.is_dir():
-            pool = [f for f in sorted(sub.iterdir())
-                    if f.suffix.lower() in MUSIC_EXTS]
+        # Datasets carry a GRANULAR category ("sharks", "jellyfish"), while the
+        # music folders are named after the coarse groups ("ocean"), so try the
+        # exact tag first and then the group it maps to. Without the second step
+        # a folder would essentially never match.
+        names = []
+        cat = (category or "").strip().lower()
+        if cat:
+            names.append(cat.replace(" ", "_"))
+            try:
+                from sourcing.clip_ranking_generate import _category_group
+                names.append(_category_group(cat))
+            except Exception:
+                pass
+        for name in names:
+            sub = root / name
+            if sub.is_dir():
+                pool = [f for f in sorted(sub.iterdir())
+                        if f.suffix.lower() in MUSIC_EXTS]
+                if pool:
+                    break
         if not pool and root.is_dir():
             pool = [f for f in sorted(root.rglob("*"))
                     if f.suffix.lower() in MUSIC_EXTS]

@@ -59,7 +59,7 @@ clipranking:
     enabled: true
     min_buffer: 4
     target: 12
-  target_seconds: 25                 # finished length. Unlike `ranking` this is
+  target_seconds: 20                 # finished length. Unlike `ranking` this is
                                      # hit EXACTLY by choosing segment durations
                                      # up front (no narration to measure), so
                                      # there is no atempo speed-up pass — which
