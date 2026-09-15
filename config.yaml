@@ -64,12 +64,29 @@ clipranking:
                                      # up front (no narration to measure), so
                                      # there is no atempo speed-up pass — which
                                      # would also chew up the music bed.
-  # STRONGLY RECOMMENDED: a rights-cleared music track (e.g. YouTube Audio
-  # Library), relative to the project root — e.g. assets/upbeat.mp3. This format
-  # is silent apart from the clips' own audio, so without a bed it can feel
-  # thin. There is deliberately NO synthesised fallback: the space channel's
-  # synth bed was rejected by ear, and a bad bed is worse than none.
-  music:
+  # MUSIC — required in practice. There is no narration, so without a track the
+  # video carries only its clips' own audio and feels thin.
+  #
+  # Point music_dir at a folder of RIGHTS-CLEARED tracks (YouTube Audio Library
+  # and Pixabay Music are both free and allow commercial use). Drop files
+  # straight in, or group them in subfolders named after a category — "ocean",
+  # "wildlife", "extreme", "satisfying" — and a matching video takes its track
+  # from there, so a calm reef and a motocross crash don't get the same energy.
+  # The track is chosen deterministically per video, so consecutive uploads
+  # don't repeat one but a re-render keeps its music.
+  #
+  # Why not YouTube's TRENDING sounds, which would fit this genre better: the
+  # upload API cannot attach one at all (it's a mobile-app-only action), so it
+  # would break the automation entirely — and a Short carrying a licensed track
+  # sends about half its revenue to music licensing instead of the Creator Pool.
+  # Baked-in royalty-free audio costs neither.
+  #
+  # Nothing here is ever synthesised. An earlier build generated its own whoosh
+  # on each reveal and it sounded like suction, the same way the space channel's
+  # synth bed sounded fake. No real audio -> no audio.
+  music_dir: assets/music
+  music_volume: 0.55                 # 0-1, relative to the clips' own audio
+  music:                             # optional single-file fallback
 
 # The agent stays idle until this date, then produces + posts daily. Set so the
 # first automated video goes out 2026-07-09 (the manual July-8 post covers the 8th).

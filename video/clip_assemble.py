@@ -10,9 +10,10 @@ Layout:
 
 There is NO narration. 8 of the 10 reference channels in this genre have none,
 and the one that does is the worst performer per subscriber in the set — so this
-renderer has no TTS, no word timings and no karaoke sync at all. The audio track
-is the clips' own sound plus whoosh/impact SFX, with an optional real music bed
-from `clipranking.music`.
+renderer has no TTS, no word timings and no karaoke sync at all. The audio track is a
+rights-cleared music bed from `clipranking.music_dir` over the clips' own sound.
+Nothing is synthesised: an earlier build generated its own whoosh per reveal and
+it sounded like suction.
 
 Forked from video/ranking_assemble.py. The hard-won parts are kept verbatim:
 overlays are pre-composited into ONE frame sequence so each segment hands ffmpeg
@@ -23,15 +24,12 @@ stitched with the concat demuxer.
 """
 
 import json
-import math
 import random
 import re
 import shutil
-import struct
 import subprocess
 import sys
 import tempfile
-import wave
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
@@ -217,39 +215,48 @@ def _outro_layer(text: str) -> Image.Image:
     return img
 
 
-def _synth_sfx(total, reveal_times, transition_times, path, sr=44100):
-    """Whoosh-on-cut + impact-on-reveal, with NO chord bed.
+MUSIC_EXTS = (".mp3", ".m4a", ".wav", ".aac", ".ogg", ".opus")
 
-    The space channel's synthesised music bed was rejected by ear, so this
-    generates only the transient sound design; a real music track comes from
-    `clipranking.music` when one is configured."""
-    n = int(total * sr)
-    buf = [0.0] * n
 
-    def imp(t0):
-        st = int(t0 * sr)
-        for k in range(int(0.4 * sr)):
-            i = st + k
-            if 0 <= i < n:
-                e = math.exp(-(k / sr) * 12)
-                buf[i] += 0.38 * e * math.sin(2 * math.pi * 130 * (k / sr))
+def _pick_music(cfg: dict, post_id: str, category: str) -> Path | None:
+    """Choose this video's backing track.
 
-    def wh(t0):
-        st = int((t0 - 0.25) * sr)
-        for k in range(int(0.5 * sr)):
-            i = st + k
-            if 0 <= i < n:
-                buf[i] += 0.12 * math.sin(math.pi * k / (0.5 * sr)) \
-                    * (random.random() * 2 - 1)
+    `music_dir` is a folder of rights-cleared tracks. Drop files straight in it,
+    or group them in subfolders named after a category ("ocean", "extreme", …)
+    and a matching video takes its track from there — a calm reef and a motocross
+    crash want different energy.
 
-    for t in transition_times:
-        wh(t)
-    for t in reveal_times:
-        imp(t)
-    with wave.open(str(path), "w") as w:
-        w.setnchannels(1); w.setsampwidth(2); w.setframerate(sr)
-        w.writeframes(b"".join(
-            struct.pack("<h", int(max(-1.0, min(1.0, s)) * 32767)) for s in buf))
+    The track is picked deterministically from post_id, so a re-render of the
+    same video keeps its music, but consecutive uploads don't share one.
+
+    NOTE the deliberate choice of baked-in royalty-free audio over YouTube's own
+    trending sounds: a trending sound can only be attached by hand in the mobile
+    app (the upload API cannot select one at all), and a Short carrying a
+    licensed track sends about half its revenue to music licensing instead of the
+    Creator Pool. This costs neither.
+    """
+    mdir = cfg.get("music_dir")
+    if mdir:
+        root = (PROJECT_ROOT / mdir)
+        pool: list[Path] = []
+        sub = root / (category or "").strip().lower().replace(" ", "_")
+        if sub.is_dir():
+            pool = [f for f in sorted(sub.iterdir())
+                    if f.suffix.lower() in MUSIC_EXTS]
+        if not pool and root.is_dir():
+            pool = [f for f in sorted(root.rglob("*"))
+                    if f.suffix.lower() in MUSIC_EXTS]
+        if pool:
+            return random.Random(f"{post_id}:music").choice(pool)
+        log.warning("[clip] music_dir %r has no audio files in it.", mdir)
+
+    one = cfg.get("music")                     # single-track fallback
+    if one:
+        path = PROJECT_ROOT / one
+        if path.exists():
+            return path
+        log.warning("[clip] clipranking.music %r not found.", one)
+    return None
 
 
 def _ffmpeg():
@@ -467,44 +474,40 @@ def render_clip_video(post_id, payload, config=None) -> Path:
         subprocess.run([ff, "-y", "-f", "concat", "-safe", "0", "-i", str(alst),
                         "-c", "copy", str(native)], check=True, capture_output=True)
 
-        # Sound design: whoosh on every cut, impact on every reveal.
-        sfx = tmpd / "sfx.wav"
-        _synth_sfx(total, reveal_times=starts[1:6], transition_times=starts[1:],
-                   path=sfx)
+        # Music. There is deliberately no synthesised fallback and no
+        # synthesised sound design: an earlier build generated its own whoosh on
+        # every reveal (a half-second noise swell) and it read as a suction
+        # noise, the same way the space channel's synth bed read as fake. If we
+        # can't play real audio, we play none.
+        music_path = _pick_music(cfg, post_id, payload.get("category", ""))
+        if not music_path:
+            log.warning("[clip] no music configured (clipranking.music_dir). This "
+                        "format has no narration, so the video carries only its "
+                        "clips' own audio — add rights-cleared tracks.")
 
-        # Optional real music bed. There is no synthesised fallback on purpose —
-        # the space channel's synth bed was rejected by ear, and a bad bed is
-        # worse than none. A silent format really does want a track, though.
-        music = cfg.get("music")
-        music_path = (PROJECT_ROOT / music) if music else None
-        if music and not (music_path and music_path.exists()):
-            log.warning("[clip] clipranking.music %r not found — rendering with "
-                        "clip audio + SFX only.", music)
-            music_path = None
-        if not music:
-            log.warning("[clip] no clipranking.music set. This format is silent "
-                        "apart from clip audio; add a rights-cleared track.")
-
+        vol = float(cfg.get("music_volume", 0.55) or 0.55)
         full_audio = tmpd / "audio.wav"
         if music_path:
+            log.info("[clip] music: %s", music_path.name)
+            # The track is looped to cover the video, trimmed, levelled and faded
+            # out; the clips' own audio sits underneath as texture.
             subprocess.run(
-                [ff, "-y", "-i", str(native), "-i", str(sfx),
+                [ff, "-y", "-i", str(native),
                  "-stream_loop", "-1", "-i", str(music_path),
                  "-filter_complex",
-                 f"[2:a]atrim=0:{total:.2f},volume=0.45,afade=t=out:"
-                 f"st={max(total - 1.2, 0):.2f}:d=1.2[m];"
-                 "[0:a][1:a][m]amix=inputs=3:duration=first:normalize=0[a]",
+                 f"[1:a]atrim=0:{total:.2f},asetpts=N/SR/TB,"
+                 f"loudnorm=I=-16:TP=-1.5,volume={vol:.2f},"
+                 f"afade=t=out:st={max(total - 1.2, 0):.2f}:d=1.2[m];"
+                 "[0:a][m]amix=inputs=2:duration=first:normalize=0[a]",
                  "-map", "[a]", "-t", f"{total:.2f}",
                  "-ar", "44100", "-ac", "2", "-c:a", "pcm_s16le",
                  str(full_audio)], check=True, capture_output=True)
         else:
             subprocess.run(
-                [ff, "-y", "-i", str(native), "-i", str(sfx),
-                 "-filter_complex",
-                 "[0:a][1:a]amix=inputs=2:duration=first:normalize=0[a]",
-                 "-map", "[a]", "-t", f"{total:.2f}",
-                 "-ar", "44100", "-ac", "2", "-c:a", "pcm_s16le",
-                 str(full_audio)], check=True, capture_output=True)
+                [ff, "-y", "-i", str(native), "-map", "0:a",
+                 "-t", f"{total:.2f}", "-ar", "44100", "-ac", "2",
+                 "-c:a", "pcm_s16le", str(full_audio)],
+                check=True, capture_output=True)
 
         out_path = OUTPUT_DIR / f"{post_id}.mp4"
         log.info("[clip] %d/%d entries on a real clip -> %s (%.1fs)",
