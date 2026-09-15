@@ -24,8 +24,9 @@ log = setup_logging()
 
 
 def show_config(config: dict) -> None:
-    log.info("Subreddits     : %s", ", ".join(config["subreddits"]))
-    log.info("Story source   : %s", config.get("story_source"))
+    ctype = config.get("content_type", "clipranking")
+    log.info("Content type   : %s", ctype)
+    log.info("Datasets       : %s", config.get(ctype, {}).get("dataset_dir", "-"))
     log.info("Approval mode  : %s", config["approval_mode"])
     log.info("Videos/day     : %s at %s", config["upload"]["videos_per_day"],
              ", ".join(config["upload"]["upload_times"]))
@@ -232,233 +233,22 @@ def restock_ranking_datasets(config: dict) -> int:
 
 
 def produce_one_video(config: dict):
-    """Source -> screen -> rank -> narrate -> assemble -> queue.
+    """Produce one video for the configured content type.
 
-    Produces ALL parts of the top-ranked story (one video for short
-    stories, several "Part N" videos for long ones). Returns a list of
-    produced video results, or None if nothing was made. Spends TTS.
+    The Reddit-story pipeline that used to live here was removed on 2026-09-15
+    along with the StoryDropper and FootyEmoji channels. Only the ranking
+    formats remain: `clipranking` (live) and `ranking` (the retired space
+    format, kept so the pivot is reversible — see
+    sourcing/_retired_space/README.md).
     """
-    ctype = config.get("content_type", "story")
+    ctype = config.get("content_type", "clipranking")
     if ctype == "clipranking":
         return _produce_clipranking(config)
     if ctype == "ranking":
         return _produce_ranking(config)
-
-    from sourcing.get_stories import fetch_stories
-    from processing.screen import screen_story, clean_str
-    from processing.rank import rank_stories
-    from processing.split import num_parts, split_text
-    from processing.hook import generate_hook
-    from processing.title import generate_title, generate_series_titles
-    from processing.punch_up import punch_up
-    from processing.voice_direction import add_voice_direction
-    from processing.condense import condense_body
-    from voiceover.tts import synthesize, choose_voice
-    from video.assemble import assemble_video
-    from review.queue import submit_video
-
-    db.init_db()
-
-    # --- SAFEGUARD 1: daily video cap (checked before starting a story) ---
-    sg = config.get("safeguards", {})
-    max_per_day = sg.get("max_videos_per_day", 4)
-    if db.videos_produced_today() >= max_per_day:
-        log.warning("Daily cap reached (%d videos). Skipping production.",
-                    max_per_day)
-        return None
-
-    # Gather fresh, unseen, passing stories.
-    stories = fetch_stories(config, skip_seen=True)
-    passing = [s for s in stories if screen_story(s, config)[0]]
-    if not passing:
-        log.warning("No new passing stories available right now.")
-        return None
-
-    ranked = rank_stories(passing)
-
-    # Optional: bias toward subreddits that perform well. Uses the
-    # age-normalized composite score (views/day + engagement), with
-    # shrinkage toward the global mean so one lucky video doesn't dominate
-    # while we still have only a handful of data points per subreddit.
-    if config.get("use_performance_weighting"):
-        perf = db.subreddit_performance()
-        if perf:
-            pcfg = config.get("performance", {})
-            max_boost = pcfg.get("boost", 3.0)      # max points added to a score
-            prior = pcfg.get("prior_weight", 1.5)   # pseudo-count for shrinkage
-
-            scores = [d["score"] for d in perf.values()]
-            global_mean = sum(scores) / len(scores)
-
-            # Bayesian-style shrink: blend each subreddit toward the mean by
-            # its sample size (small n -> trust the mean more).
-            adj = {
-                sub: (d["n"] * d["score"] + prior * global_mean) / (d["n"] + prior)
-                for sub, d in perf.items()
-            }
-            max_s = max(adj.values()) or 1
-            for s in ranked:
-                # Unseen subreddits get the (shrunk) average, not zero, so
-                # they're still explored rather than starved.
-                sub_score = adj.get(s["subreddit"], global_mean)
-                s["captivation_score"] += (sub_score / max_s) * max_boost
-            ranked.sort(key=lambda s: s["captivation_score"], reverse=True)
-
-    story = ranked[0]
-    ctitle = clean_str(story["title"])
-    cbody = clean_str(story["body"])
-    words = len(f"{ctitle} {cbody}".split())
-
-    # Decide how many parts this story becomes.
-    split_cfg = config.get("splitting", {})
-    if split_cfg.get("enabled"):
-        # If the story is over the part cap's word ceiling, tighten it to fit
-        # (Claude shortens it, keeping the arc) instead of skipping it. Cached;
-        # fails safe to the original body (which may then still be skipped).
-        ceiling = split_cfg.get("words_per_part", 375) * split_cfg.get("max_parts", 8)
-        if words > ceiling:
-            cbody = condense_body(story["post_id"], ctitle, cbody, ceiling, config)
-            words = len(f"{ctitle} {cbody}".split())
-        n = num_parts(words, split_cfg.get("words_per_part", 375),
-                      split_cfg.get("max_parts", 8))
-        if n is None:
-            log.warning("Story too long even to split (%d words); skipping.", words)
-            db.save_post(post_id=story["post_id"], subreddit=story["subreddit"],
-                         title=story["title"], body=story["body"],
-                         score=story.get("score", 0),
-                         word_count=story.get("word_count", 0), status="skipped")
-            return None
-    else:
-        n = 1
-
-    # Write an AI cold-open hook (one per story, cached). It opens the FIRST
-    # part only; because captions are synced to the narration, the hook is
-    # both spoken and shown on screen. Falls back to None (title-first) on
-    # any problem — see processing/hook.py.
-    hook_line = generate_hook(story["post_id"], ctitle, cbody,
-                              story["subreddit"], config)
-
-    # Write an EXAGGERATED, superlative YouTube title (one per story, cached).
-    # This is the DISPLAY title only — it drives homepage CTR and is NEVER
-    # spoken; the narration keeps using the real story title (ctitle) for
-    # context. Falls back to the raw title on any problem — see
-    # processing/title.py.
-    ai_title = generate_title(story["post_id"], ctitle, cbody,
-                              story["subreddit"], config)
-    display_title = ai_title or story["title"]
-
-    # For a multi-part series, write a DISTINCT title per part (one API call)
-    # so siblings don't share one headline — an identical title across parts is
-    # a duplicate signal that helps land the later parts in the 0-view jail.
-    # Falls back to the shared "base (Part i/n)" title on any problem.
-    part_titles = None
-    if n > 1:
-        part_titles = generate_series_titles(story["post_id"], ctitle, cbody,
-                                             story["subreddit"], n, config)
-
-    def _opener(text: str, rest: str) -> str:
-        """Join an opening line to the rest, avoiding doubled punctuation."""
-        text = text.strip()
-        sep = " " if text[-1:] in ".!?" else ". "
-        return f"{text}{sep}{rest}"
-
-    # A fixed closing call-to-action, spoken + shown on screen on the LAST
-    # part only, to turn watchers into commenters/sharers (the engagement
-    # signal that pushes a video past the algorithm's first test audience).
-    outro_cfg = config.get("outro", {})
-    outro_text = (outro_cfg.get("text", "") or "").strip() \
-        if outro_cfg.get("enabled") else ""
-
-    base_id = story["post_id"]
-
-    # Build the spoken text per part. Part 1 leads with the hook (then the
-    # title for context on multi-part series); later parts keep the "Part N"
-    # cue so new viewers still have context. The body of each part first goes
-    # through a light retention-beat pass (punch_up), then a voice-direction
-    # pass that inserts ElevenLabs v3 audio tags ([sighs] etc.); the
-    # hook/title/"Part N" cues are added AFTER, so they're never touched.
-    body_chunks = split_text(cbody, n)
-    chunks = []
-    for i, bc in enumerate(body_chunks, 1):
-        part_id = base_id if n == 1 else f"{base_id}_p{i}"
-        bc = punch_up(part_id, bc, config)
-        bc = add_voice_direction(part_id, bc, config)
-        if n == 1:
-            # Single video: the hook REPLACES the title as the opener.
-            text = _opener(hook_line, bc) if hook_line else f"{ctitle}. {bc}"
-        elif i == 1:
-            # First of a series: hook, then the title for context, then Part 1.
-            lead = _opener(hook_line, ctitle) if hook_line else ctitle
-            text = f"{lead}. Part {i}. {bc}"
-        else:
-            text = f"{ctitle}. Part {i}. {bc}"
-        # CTA goes on the final part only (never repeated across a series).
-        if outro_text and i == n:
-            text = f"{text} {outro_text}"
-        chunks.append(text)
-
-    log.info("Selected (score %.2f): %s  [%d part(s)]",
-             story["captivation_score"], story["title"], n)
-
-    budget = sg.get("monthly_tts_char_budget", 110000)
-    results = []
-    completed_all = True
-
-    # Pick ONE voice for this whole story so a multi-part series keeps the
-    # same narrator; the next story rotates to a different voice.
-    voice = choose_voice(config)
-    log.info("Narrator for this story: %s", voice.get("name"))
-
-    for i, chunk in enumerate(chunks, 1):
-        part_id = base_id if n == 1 else f"{base_id}_p{i}"
-
-        # Resume support: skip parts already produced in a prior run.
-        if db.video_exists(part_id):
-            continue
-
-        # --- SAFEGUARD 2: monthly TTS budget (hard money wall) ---
-        char_count = len(chunk)
-        used = db.tts_chars_this_month()
-        if used + char_count > budget:
-            log.warning("TTS budget reached (%d + %d > %d). Stopping at part %d; "
-                        "will resume later.", used, char_count, budget, i)
-            completed_all = False
-            break
-
-        synthesize(chunk, part_id, config, voice=voice)
-        db.record_tts_usage(part_id, char_count)
-        video_path = assemble_video(part_id, config, subreddit=story.get("subreddit"))
-
-        if n == 1:
-            part_title = display_title
-        elif part_titles:
-            # Distinct per-part title; still tag the part number for the viewer.
-            part_title = f"{part_titles[i - 1]} (Part {i}/{n})"
-        else:
-            part_title = f"{display_title} (Part {i}/{n})"
-        part_story = {**story, "post_id": part_id, "title": part_title, "body": chunk}
-        result = submit_video(part_story, video_path, config)
-        results.append(result)
-        log.info("Produced part %d/%d -> %s (%s)",
-                 i, n, result["path"], result["status"])
-
-    # Mark the source post used only once every part is done.
-    if completed_all:
-        db.save_post(
-            post_id=base_id, subreddit=story["subreddit"],
-            title=story["title"], body=story["body"],
-            score=story.get("score", 0), word_count=story.get("word_count", 0),
-            status="used",
-        )
-    return results or None
-
-
-# A multi-part series must not put two of its parts on YouTube within this
-# many hours. At 3 uploads/day (~5-10h apart) this pushes each subsequent part
-# to the NEXT day, so siblings never cluster into a same-day burst — the
-# pattern YouTube reads as duplicate/repetitive content and drops to 0 views.
-SERIES_SPACING_HOURS = 20
-
+    log.error("Unknown content_type %r — nothing to produce. Use 'clipranking' "
+              "or 'ranking'.", ctype)
+    return None
 
 def upload_next_approved(config: dict):
     """Upload the oldest eligible video not yet on YouTube.

@@ -39,3 +39,6 @@ footage/*.mov
 # token backups (secrets)
 token.json.bak
 token.json*
+
+# Local render outputs — large, regenerable, never needed in the repo.
+output/

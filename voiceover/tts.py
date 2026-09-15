@@ -222,36 +222,3 @@ def synthesize(text: str, post_id: str, config: dict, voice: dict | None = None)
         "Saved audio (%.1fs, %d words) -> %s", duration, len(words), audio_path
     )
     return {"audio": audio_path, "words": words_path, "duration": duration}
-
-
-if __name__ == "__main__":
-    from sourcing.get_stories import fetch_stories
-    from processing.screen import clean_text, screen_story
-    from database import db
-
-    db.init_db()
-    cfg = load_config()
-    stories = fetch_stories(cfg, skip_seen=False)
-
-    # Find the first story that passes screening.
-    chosen = None
-    for s in stories:
-        passed, _ = screen_story(s, cfg)
-        if passed:
-            chosen = s
-            break
-
-    if not chosen:
-        log.error("No passing story found to narrate.")
-        sys.exit(1)
-
-    log.info("Narrating: %s", chosen["title"])
-    text = clean_text(chosen["title"], chosen["body"])
-    char_count = len(text)
-    log.info("This will use about %d characters of your quota.", char_count)
-
-    result = synthesize(text, chosen["post_id"], cfg)
-    print(f"\nAudio : {result['audio']}")
-    print(f"Words : {result['words']}")
-    print(f"Length: {result['duration']:.1f} seconds")
-    print("\nOpen the .mp3 to LISTEN before we continue.")
