@@ -338,8 +338,8 @@ def _b64(path: Path, max_side: int = 1024) -> str:
 
 
 _JUDGE_PROMPT = """You are choosing ONE stock video clip to fill the screen for a \
-single entry in a fast, silent "ranked clips" YouTube Short. The entry is: \
-**{name}**.{context}
+single entry in a fast, silent "ranked clips" YouTube Short.{subject} The entry \
+is: **{name}**.{context}
 
 Each image below is a frame taken from the MIDDLE of a candidate clip. Pick the \
 clip whose frame promises the most watchable few seconds.
@@ -347,6 +347,11 @@ clip whose frame promises the most watchable few seconds.
 A good pick is:
 - clearly and obviously about {name} — a viewer must recognise it instantly, with \
 no caption to help them,
+- ON TOPIC. Entry names are often short and ambiguous on their own, and stock \
+search happily returns the wrong sense of a word: for a video about GLASS \
+BLOWING, an entry called "Breath Inflate" must show molten glass at a furnace, \
+NOT a fizzy drink in a drinking glass. If a candidate matches the entry's words \
+but not the video's subject, it is WRONG — reject it,
 - VISUALLY STRIKING: dramatic, close, well-lit, high contrast. This format lives \
 or dies on the footage; a dull clip is worse than a slightly less literal one,
 - CLEAN: absolutely NO watermark, logo, stock-agency mark, channel name, URL, \
@@ -369,7 +374,8 @@ Return ONLY JSON, with `reason` at most 15 words:
 {{"best": <index or -1>, "framing": "cover"|"fit", "reason": "..."}}"""
 
 
-def _judge(name: str, cand: list[dict], context: str = "") -> tuple[int, str]:
+def _judge(name: str, cand: list[dict], context: str = "",
+           subject: str = "") -> tuple[int, str]:
     """Claude-vision pick: (best_index or -1, framing).
 
     Any failure returns (0, 'cover') so the pipeline degrades to the first
@@ -382,8 +388,9 @@ def _judge(name: str, cand: list[dict], context: str = "") -> tuple[int, str]:
     except ImportError:
         return 0, "cover"
     ctx = f"\nThe on-screen caption for this clip reads: \"{context}\"" if context else ""
+    subj = f" The whole video is ranking **{subject}**." if subject else ""
     content = [{"type": "text",
-                "text": _JUDGE_PROMPT.format(name=name, context=ctx)}]
+                "text": _JUDGE_PROMPT.format(name=name, context=ctx, subject=subj)}]
     for i, c in enumerate(cand):
         content.append({"type": "text", "text":
                         f"Candidate {i} (source: {c['src']}, {c['w']}x{c['h']}px, "
@@ -422,7 +429,8 @@ def _queries(query) -> list[str]:
 
 def fetch_item_clip(query, prefer: str | None = None,
                     exclude: set[str] | None = None,
-                    context: str = "") -> tuple[Path | None, str]:
+                    context: str = "",
+                    subject: str = "") -> tuple[Path | None, str]:
     """Best CLEAN stock clip for one ranked item + its framing hint.
 
     `query`   — one search term or the dataset's list of them (best first).
@@ -432,6 +440,11 @@ def fetch_item_clip(query, prefer: str | None = None,
                 ranks never show the same footage (a backdrop that doesn't change
                 while the ranking moves on reads as broken).
     `context` — the on-screen caption, so the judge knows what the clip must show.
+    `subject` — what the whole video ranks ("glass blowing"). Entry names are
+                short and often ambiguous alone, and stock search returns the
+                wrong sense of a word happily — "Breath Inflate" in a glassblowing
+                video pulled a fizzy drink. This keeps both the fallback search
+                and the judge anchored to the actual topic.
 
     Candidates are judged on their PREVIEW FRAME and only the winner is
     downloaded. Judging on downloaded files instead meant ~30 clips (500MB) per
@@ -446,10 +459,13 @@ def fetch_item_clip(query, prefer: str | None = None,
 
     # A dataset's terms describe the IDEAL shot ("great white breaching clean out
     # of the water") and stock libraries often simply do not have it. Falling back
-    # to the bare subject gets real footage of the right animal, which beats
-    # dropping the entry to an unrelated backdrop by a wide margin.
-    if prefer and prefer.lower() not in {t.lower() for t in terms}:
-        terms = terms + [prefer]
+    # to the plain subject gets real footage of the right thing, which beats
+    # dropping the entry to an unrelated backdrop by a wide margin. The topic is
+    # folded in because an entry name alone can be meaningless or ambiguous
+    # ("Breath Inflate" -> "glass blowing Breath Inflate").
+    fallback = " ".join(x for x in (subject, prefer) if x).strip()
+    if fallback and fallback.lower() not in {t.lower() for t in terms}:
+        terms = terms + [fallback]
 
     def gather() -> list[dict]:
         cands: list[dict] = []
@@ -476,7 +492,7 @@ def fetch_item_clip(query, prefer: str | None = None,
                     prefer or terms[0], "; ".join(terms))
         return None, "cover"
 
-    idx, framing = _judge(prefer or terms[0], cands, context=context)
+    idx, framing = _judge(prefer or terms[0], cands, context=context, subject=subject)
     if idx < 0:
         log.warning("[clips] judge rejected every candidate for %r.",
                     prefer or terms[0])

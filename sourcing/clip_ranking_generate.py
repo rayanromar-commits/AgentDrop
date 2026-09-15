@@ -167,6 +167,10 @@ stock library.
 are searched on Pexels/Pixabay, which are libraries of professional stock \
 footage — NOT a viral clip archive. So write terms that a stock library \
 actually contains.
+    * EVERY term must contain the TOPIC's own words. A stock library returns the
+wrong sense of a bare word without them — in a glass-blowing video the entry \
+"Breath Inflate" searched alone returned a fizzy drink in a drinking glass. So \
+write "glass blowing breath inflate", never "breath inflate".
     * Term 1 = the subject plus the shot you want: "great white shark \
 breaching slow motion", "lava fountain erupting at night".
     * Term 2 = a DIFFERENT wording or angle for the same subject: "shark \
@@ -182,6 +186,12 @@ a branded event, or anything user-generated. Stock libraries have none of it.
     * Never repeat a term, and never give three near-identical ones.
 - All five items must be VISUALLY DISTINCT from each other — five near-identical \
 shots make the ranking meaningless.
+- Each item must be a CONCRETE, SEARCHABLE THING, not a stage of one process. \
+Five species, five places, five objects: good. Five steps of a single procedure \
+("Molten Gather", "Shaping Roll", "Breath Inflate"): bad — they are not separate \
+subjects, stock has no clip of any one of them, and they look identical on \
+screen. If a topic is a PROCESS, rank the different THINGS it produces or the \
+different FORMS it takes instead.
 - Everything must be real. Do not invent species or fake claims.
 
 Output ONLY the JSON object — no prose, no code fences."""

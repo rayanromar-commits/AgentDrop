@@ -25,6 +25,7 @@ stitched with the concat demuxer.
 import json
 import math
 import random
+import re
 import shutil
 import struct
 import subprocess
@@ -169,6 +170,20 @@ def _caption_layer(name: str, label: str, scale: float = 1.0) -> Image.Image:
         _text(d, (W // 2, LABEL_CY), label, lsize, fill=YELLOW,
               anchor="mm", stroke=8)
     return img
+
+
+_TEMPLATE_WORDS = re.compile(
+    r"^\s*ranking\s+(?:best|funniest|craziest|most\s+satisfying|wildest)\s+|"
+    r"\s+(?:moments|fails)\s*$", re.I)
+
+
+def _topic(title: str) -> str:
+    """The ranked subject, with the genre template stripped off.
+
+    'Ranking Most Satisfying Glass Blowing Moments' -> 'Glass Blowing'."""
+    s = _TEMPLATE_WORDS.sub("", title or "")
+    s = _TEMPLATE_WORDS.sub("", s)          # leading and trailing are separate matches
+    return s.strip() or (title or "").strip()
 
 
 def _title_card(title: str) -> Image.Image:
@@ -333,6 +348,11 @@ def render_clip_video(post_id, payload, config=None) -> Path:
     OUTPUT_DIR.mkdir(exist_ok=True)
     ff = _ffmpeg()
 
+    # "Ranking Most Satisfying Glass Blowing Moments" -> "Glass Blowing". The
+    # clip fetcher needs this: entry names alone are ambiguous, and stock search
+    # will cheerfully return the wrong sense of a word.
+    subject = _topic(title)
+
     target = float(cfg.get("target_seconds", 25) or 25)
     item_dur = max(MIN_ITEM_DUR, (target - INTRO_DUR - OUTRO_DUR) / 5.0)
 
@@ -356,7 +376,8 @@ def render_clip_video(post_id, payload, config=None) -> Path:
     for it in sorted(payload["items"], key=lambda x: x["rank"]):
         path, framing = fetch_item_clip(
             it.get("queries") or it.get("query"), prefer=it["name"],
-            exclude=used, context=f"{it['name']} — {it.get('label', '')}".strip(" —"))
+            exclude=used, subject=subject,
+            context=f"{it['name']} — {it.get('label', '')}".strip(" —"))
         if path:
             used.add(clip_hash(path))
             used.add(path.stem)          # the source id, so a re-search skips it

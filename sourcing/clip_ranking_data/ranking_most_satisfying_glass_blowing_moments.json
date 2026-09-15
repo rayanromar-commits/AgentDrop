@@ -8,54 +8,54 @@
       "label": "glowing glass on the pipe",
       "queries": [
         "glass blowing molten gather furnace",
-        "glassblower gathering molten glass",
-        "molten glass close up"
+        "glassblowing pipe glowing glass close up",
+        "glass blowing"
       ],
       "query": "glass blowing molten gather furnace"
     },
     {
       "rank": 4,
-      "name": "Shaping Roll",
-      "label": "rolling glass into shape",
+      "name": "Color Rolling",
+      "label": "adding vivid color grains",
       "queries": [
-        "glassblower rolling hot glass marver",
-        "shaping molten glass tools",
-        "glass blowing shaping close up"
+        "glass blowing color rolling frit",
+        "glassblowing colored glass marver rolling",
+        "glass blowing color"
       ],
-      "query": "glassblower rolling hot glass marver"
+      "query": "glass blowing color rolling frit"
     },
     {
       "rank": 3,
-      "name": "Color Swirl",
-      "label": "colors melting into glass",
+      "name": "Shaping Tools",
+      "label": "spinning glass into shape",
       "queries": [
-        "glass blowing color swirl molten",
-        "adding color to hot glass",
-        "colored glass melting close up"
+        "glass blowing shaping jacks tools spinning",
+        "glassblowing shaping molten vase",
+        "glass blowing shaping"
       ],
-      "query": "glass blowing color swirl molten"
+      "query": "glass blowing shaping jacks tools spinning"
     },
     {
       "rank": 2,
-      "name": "Furnace Glow",
-      "label": "reheating in blazing furnace",
+      "name": "Breath Inflate",
+      "label": "bubble forming from breath",
       "queries": [
-        "glass blowing furnace reheat glowing",
-        "glassblower furnace orange glow",
-        "glass furnace fire close up"
+        "glass blowing breath inflate bubble",
+        "glassblowing blowing molten bubble slow motion",
+        "glass blowing bubble"
       ],
-      "query": "glass blowing furnace reheat glowing"
+      "query": "glass blowing breath inflate bubble"
     },
     {
       "rank": 1,
-      "name": "Breath Inflate",
-      "label": "glass expanding with breath",
+      "name": "Glowing Furnace",
+      "label": "molten glass into the fire",
       "queries": [
-        "glass blowing inflating bubble slow motion",
-        "glassblower blowing molten glass expanding",
-        "hot glass inflating close up"
+        "glass blowing furnace molten glass glowing",
+        "glassblowing reheating glory hole fire",
+        "glass blowing furnace"
       ],
-      "query": "glass blowing inflating bubble slow motion"
+      "query": "glass blowing furnace molten glass glowing"
     }
   ]
 }
