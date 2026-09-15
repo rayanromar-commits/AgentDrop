@@ -1,0 +1,69 @@
+{
+  "title": "Top 5 Weirdest Things Einstein Was RIGHT About",
+  "yt_titles": [
+    "Einstein Predicted These 5 Things Before Anyone Could See Them",
+    "How Was This Guy Right About Everything?",
+    "5 Insane Predictions That Took 100 Years to Prove",
+    "I Can't Believe Einstein Called This in 1915",
+    "The Universe Keeps Proving Einstein Right 😳"
+  ],
+  "hook": "He wrote it off as his biggest mistake — turns out he was right.",
+  "category": "physics",
+  "items": [
+    {
+      "rank": 5,
+      "name": "Gravitational Lensing",
+      "stat": "Gravity bends starlight, warping galaxies into glowing rings",
+      "queries": [
+        "Einstein ring Hubble",
+        "gravitational lensing Webb",
+        "galaxy cluster Abell 370 Hubble"
+      ],
+      "query": "Einstein ring Hubble"
+    },
+    {
+      "rank": 4,
+      "name": "Time Dilation (GPS)",
+      "stat": "Satellite clocks tick 38 microseconds faster every day",
+      "queries": [
+        "GPS satellite orbit NASA",
+        "GPS satellite artist concept",
+        "Earth from orbit ISS"
+      ],
+      "query": "GPS satellite orbit NASA"
+    },
+    {
+      "rank": 3,
+      "name": "Gravitational Waves",
+      "stat": "Ripples in spacetime detected 100 years after prediction",
+      "queries": [
+        "black hole merger simulation NASA",
+        "gravitational waves LIGO artist concept",
+        "binary black holes illustration"
+      ],
+      "query": "black hole merger simulation NASA"
+    },
+    {
+      "rank": 2,
+      "name": "Black Hole Event Horizon",
+      "stat": "First real photo matched his equations perfectly",
+      "queries": [
+        "M87 black hole Event Horizon Telescope",
+        "Sagittarius A star EHT image",
+        "black hole accretion disk NASA"
+      ],
+      "query": "M87 black hole Event Horizon Telescope"
+    },
+    {
+      "rank": 1,
+      "name": "Dark Energy (Cosmological Constant)",
+      "stat": "The universe's expansion is accelerating — powered by empty space",
+      "queries": [
+        "Hubble Ultra Deep Field",
+        "Webb deep field galaxies",
+        "expanding universe visualization NASA"
+      ],
+      "query": "Hubble Ultra Deep Field"
+    }
+  ]
+}

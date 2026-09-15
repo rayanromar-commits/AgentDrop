@@ -1,0 +1,69 @@
+{
+  "title": "Top 5 Stars That Could Go SUPERNOVA",
+  "yt_titles": [
+    "The Star That Might Already Have Exploded",
+    "What Happens If Betelgeuse Blows Up?",
+    "5 Nearby Stars Ready to Detonate",
+    "I Found the Closest Supernova to Earth 😳",
+    "These Dying Stars Are Way Too Close for Comfort"
+  ],
+  "hook": "This one might explode as a rare, blinding type Ia.",
+  "category": "stars",
+  "items": [
+    {
+      "rank": 5,
+      "name": "Antares",
+      "stat": "550 light-years away, a red supergiant 700x the Sun's width",
+      "queries": [
+        "Antares star Hubble",
+        "Antares red supergiant ESO",
+        "Rho Ophiuchi nebula Antares"
+      ],
+      "query": "Antares star Hubble"
+    },
+    {
+      "rank": 4,
+      "name": "Spica",
+      "stat": "260 light-years off, two hot stars nearly touching",
+      "queries": [
+        "Spica star Hubble",
+        "Spica Virgo artist concept",
+        "blue supergiant star ESO"
+      ],
+      "query": "Spica star Hubble"
+    },
+    {
+      "rank": 3,
+      "name": "Betelgeuse",
+      "stat": "640 light-years away, dimmed dramatically in 2019",
+      "queries": [
+        "Betelgeuse Hubble",
+        "Betelgeuse ALMA surface",
+        "Betelgeuse artist concept ESO"
+      ],
+      "query": "Betelgeuse Hubble"
+    },
+    {
+      "rank": 2,
+      "name": "Wolf-Rayet WR 104",
+      "stat": "8,000 light-years off, spinning like a cosmic pinwheel",
+      "queries": [
+        "WR 104 pinwheel Keck",
+        "Wolf-Rayet star Hubble",
+        "WR 104 artist concept"
+      ],
+      "query": "WR 104 pinwheel Keck"
+    },
+    {
+      "rank": 1,
+      "name": "IK Pegasi",
+      "stat": "150 light-years — nearest known future supernova to Earth",
+      "queries": [
+        "IK Pegasi artist concept",
+        "white dwarf binary Hubble",
+        "type Ia supernova artist concept NASA"
+      ],
+      "query": "IK Pegasi artist concept"
+    }
+  ]
+}

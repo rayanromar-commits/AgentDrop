@@ -1,0 +1,61 @@
+{
+  "title": "Ranking Best Jellyfish Moments",
+  "category": "jellyfish",
+  "items": [
+    {
+      "rank": 5,
+      "name": "Moon Jelly",
+      "label": "drifting in calm blue water",
+      "queries": [
+        "moon jellyfish drifting slow motion",
+        "moon jelly floating underwater",
+        "jellyfish underwater"
+      ],
+      "query": "moon jellyfish drifting slow motion"
+    },
+    {
+      "rank": 4,
+      "name": "Compass Jelly",
+      "label": "trailing long stinging tentacles",
+      "queries": [
+        "compass jellyfish swimming underwater",
+        "jellyfish tentacles trailing slow motion",
+        "jellyfish swimming ocean"
+      ],
+      "query": "compass jellyfish swimming underwater"
+    },
+    {
+      "rank": 3,
+      "name": "Sea Nettle",
+      "label": "golden bell pulsing gracefully",
+      "queries": [
+        "sea nettle jellyfish pulsing slow motion",
+        "orange jellyfish swimming aquarium",
+        "jellyfish glowing tank"
+      ],
+      "query": "sea nettle jellyfish pulsing slow motion"
+    },
+    {
+      "rank": 2,
+      "name": "Glowing Swarm",
+      "label": "hundreds lit up in dark",
+      "queries": [
+        "jellyfish swarm glowing dark aquarium",
+        "bioluminescent jellyfish floating slow motion",
+        "glowing jellyfish underwater"
+      ],
+      "query": "jellyfish swarm glowing dark aquarium"
+    },
+    {
+      "rank": 1,
+      "name": "Box Jelly",
+      "label": "electric blue drifting neon",
+      "queries": [
+        "box jellyfish glowing neon underwater",
+        "jellyfish bioluminescent blue slow motion",
+        "colorful jellyfish aquarium dark"
+      ],
+      "query": "box jellyfish glowing neon underwater"
+    }
+  ]
+}

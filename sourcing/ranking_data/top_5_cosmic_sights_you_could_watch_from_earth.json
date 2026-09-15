@@ -1,0 +1,69 @@
+{
+  "title": "Top 5 Cosmic Sights You Could WATCH From Earth",
+  "yt_titles": [
+    "You Could Actually See These 5 Cosmic Events",
+    "What Would The Sky Look Like If This Happened?",
+    "5 Rare Space Events Visible With Your Own Eyes",
+    "I Can't Believe Number 1 Is Coming Back",
+    "Cosmic Shows Even Ancient Humans Witnessed"
+  ],
+  "hook": "Number one lit up medieval skies for weeks straight.",
+  "category": "events",
+  "items": [
+    {
+      "rank": 5,
+      "name": "A Total Solar Eclipse",
+      "stat": "Moon covers Sun perfectly for up to 7 minutes",
+      "queries": [
+        "total solar eclipse corona",
+        "solar eclipse totality NASA",
+        "solar eclipse diamond ring"
+      ],
+      "query": "total solar eclipse corona"
+    },
+    {
+      "rank": 4,
+      "name": "The Aurora Borealis",
+      "stat": "Solar particles paint skies green 100 km up",
+      "queries": [
+        "aurora borealis ISS NASA",
+        "northern lights green sky",
+        "aurora from space station"
+      ],
+      "query": "aurora borealis ISS NASA"
+    },
+    {
+      "rank": 3,
+      "name": "A Great Comet",
+      "stat": "Tail can stretch across half the night sky",
+      "queries": [
+        "Comet NEOWISE 2020",
+        "Hale-Bopp comet",
+        "comet tail night sky"
+      ],
+      "query": "Comet NEOWISE 2020"
+    },
+    {
+      "rank": 2,
+      "name": "A Perseid Meteor Storm",
+      "stat": "Up to 100 shooting stars every single hour",
+      "queries": [
+        "Perseid meteor shower long exposure",
+        "meteor shower night sky NASA",
+        "Leonid meteor storm"
+      ],
+      "query": "Perseid meteor shower long exposure"
+    },
+    {
+      "rank": 1,
+      "name": "A Nearby Supernova",
+      "stat": "SN 1006 outshone everything but the Moon",
+      "queries": [
+        "SN 1006 supernova remnant",
+        "Crab Nebula supernova Hubble",
+        "supernova remnant Chandra"
+      ],
+      "query": "SN 1006 supernova remnant"
+    }
+  ]
+}

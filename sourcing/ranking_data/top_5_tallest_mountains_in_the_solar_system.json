@@ -1,0 +1,69 @@
+{
+  "title": "Top 5 TALLEST Mountains In The Solar System",
+  "yt_titles": [
+    "This Mountain Is 3 Times Taller Than Everest",
+    "Why Mars Has a Volcano the Size of Poland",
+    "Ranking the Solar System's Most Insane Peaks",
+    "I Can't Believe This Mountain Is Real",
+    "The Tallest Mountain Isn't Even on a Planet"
+  ],
+  "hook": "The tallest one sits on a tiny, battered moon.",
+  "category": "mountains",
+  "items": [
+    {
+      "rank": 5,
+      "name": "Maxwell Montes (Venus)",
+      "stat": "11 km high, capped in metallic 'snow' of lead frost",
+      "queries": [
+        "Maxwell Montes Venus Magellan",
+        "Venus topography Magellan radar",
+        "Venus surface Magellan"
+      ],
+      "query": "Maxwell Montes Venus Magellan"
+    },
+    {
+      "rank": 4,
+      "name": "Boösaule Montes (Io)",
+      "stat": "18 km tall, tilting on Jupiter's volcanic hell-moon",
+      "queries": [
+        "Boösaule Montes Io Galileo",
+        "Io volcanoes Galileo",
+        "Io Jupiter moon surface"
+      ],
+      "query": "Boösaule Montes Io Galileo"
+    },
+    {
+      "rank": 3,
+      "name": "Olympus Mons (Mars)",
+      "stat": "22 km high, wider than the whole of France",
+      "queries": [
+        "Olympus Mons Mars Viking",
+        "Olympus Mons Mars Global Surveyor",
+        "Olympus Mons artist concept"
+      ],
+      "query": "Olympus Mons Mars Viking"
+    },
+    {
+      "rank": 2,
+      "name": "Equatorial Ridge (Iapetus)",
+      "stat": "20 km wall wrapping a moon like a walnut seam",
+      "queries": [
+        "Iapetus equatorial ridge Cassini",
+        "Iapetus Cassini",
+        "Iapetus Saturn moon"
+      ],
+      "query": "Iapetus equatorial ridge Cassini"
+    },
+    {
+      "rank": 1,
+      "name": "Rheasilvia Central Peak (Vesta)",
+      "stat": "22 km peak on an asteroid, rivaling Mars' giant",
+      "queries": [
+        "Rheasilvia Vesta Dawn",
+        "Vesta asteroid Dawn spacecraft",
+        "Vesta south pole crater"
+      ],
+      "query": "Rheasilvia Vesta Dawn"
+    }
+  ]
+}

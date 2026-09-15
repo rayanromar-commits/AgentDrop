@@ -13,8 +13,10 @@
 
 # --- CONTENT TYPE ---------------------------------------------------
 # What this pipeline produces:
-#   story   = Reddit-story narration Shorts
-#   ranking = cinematic "Top 5 ___" space countdowns (this channel)
+#   story       = Reddit-story narration Shorts
+#   ranking     = cinematic "Top 5 ___" space countdowns (the old format)
+#   clipranking = silent "Ranking ___ Moments" ranked stock-video clips
+#                 (the 2026-09-15 pivot — see the clipranking: block below)
 content_type: ranking
 
 # --- RANKING CHANNEL (only used when content_type: ranking) ---------
@@ -40,6 +42,33 @@ ranking:
                                        # words. 0 = off.
   # Optional majestic music track (rights-cleared, e.g. YouTube Audio Library);
   # if unset, a synthesized cinematic bed is used. Example: assets/epic.mp3
+  music:
+
+# --- RANKED-CLIP CHANNEL (only used when content_type: clipranking) -
+# The 2026-09-15 pivot. Same countdown idea as `ranking` above, but each rank
+# shows a real VIDEO CLIP instead of a still, and there is NO narration at all.
+# Why no voiceover: 8 of the 10 reference channels in this genre have none, and
+# the one that does (2.95M subs) gets 5-50K views — the worst per subscriber of
+# the set. It also drops the ElevenLabs bill for this format to zero.
+clipranking:
+  dataset_dir: sourcing/clip_ranking_data   # folder of "Ranking ___" list JSONs
+  # Same self-refill safety net as the ranking channel: on 2026-07-22 the 4pm
+  # drop was missed because every list had been consumed. Each production cycle
+  # tops the buffer back up to `target` when fewer than `min_buffer` remain.
+  autorefill:
+    enabled: true
+    min_buffer: 4
+    target: 12
+  target_seconds: 25                 # finished length. Unlike `ranking` this is
+                                     # hit EXACTLY by choosing segment durations
+                                     # up front (no narration to measure), so
+                                     # there is no atempo speed-up pass — which
+                                     # would also chew up the music bed.
+  # STRONGLY RECOMMENDED: a rights-cleared music track (e.g. YouTube Audio
+  # Library), relative to the project root — e.g. assets/upbeat.mp3. This format
+  # is silent apart from the clips' own audio, so without a bed it can feel
+  # thin. There is deliberately NO synthesised fallback: the space channel's
+  # synth bed was rejected by ear, and a bad bed is worse than none.
   music:
 
 # The agent stays idle until this date, then produces + posts daily. Set so the

@@ -1,0 +1,69 @@
+{
+  "title": "Top 5 DEADLIEST Radiation Zones In Space",
+  "yt_titles": [
+    "These Places Would Fry You In Seconds",
+    "Why Is This Region So Radioactive? 😳",
+    "Ranking Space's Most Lethal Radiation Zones",
+    "I Can't Believe Anything Survives Here",
+    "The Invisible Killers Lurking In Our Solar System"
+  ],
+  "hook": "Number one pumps out radiation a spacesuit can't stop.",
+  "category": "phenomena",
+  "items": [
+    {
+      "rank": 5,
+      "name": "Earth's Van Allen Belts",
+      "stat": "Trapped radiation belts that fry unshielded satellites in orbit",
+      "queries": [
+        "Van Allen belts NASA",
+        "Van Allen radiation belt visualization",
+        "Earth magnetosphere aurora Hubble"
+      ],
+      "query": "Van Allen belts NASA"
+    },
+    {
+      "rank": 4,
+      "name": "The Solar Corona",
+      "stat": "Over 1 million °C, blasting deadly X-rays outward",
+      "queries": [
+        "solar corona eclipse",
+        "Sun corona SOHO",
+        "solar flare SDO"
+      ],
+      "query": "solar corona eclipse"
+    },
+    {
+      "rank": 3,
+      "name": "Io's Plasma Torus",
+      "stat": "A doughnut of radiation delivering 3,600 rem per day",
+      "queries": [
+        "Io Galileo",
+        "Io Jupiter volcanoes",
+        "Io plasma torus artist concept"
+      ],
+      "query": "Io Galileo"
+    },
+    {
+      "rank": 2,
+      "name": "The Crab Nebula Pulsar",
+      "stat": "Spins 30 times a second, beaming lethal gamma rays",
+      "queries": [
+        "Crab Nebula Hubble",
+        "Crab Nebula pulsar Chandra",
+        "Crab Nebula Webb"
+      ],
+      "query": "Crab Nebula Hubble"
+    },
+    {
+      "rank": 1,
+      "name": "A Magnetar's Surface",
+      "stat": "Magnetic field 1,000 trillion times Earth's — rips atoms apart",
+      "queries": [
+        "magnetar artist concept NASA",
+        "magnetar SGR ESO",
+        "neutron star illustration Hubble"
+      ],
+      "query": "magnetar artist concept NASA"
+    }
+  ]
+}

@@ -1,0 +1,61 @@
+{
+  "title": "Ranking Most Satisfying Sand Cutting Moments",
+  "category": "sand cutting",
+  "items": [
+    {
+      "rank": 5,
+      "name": "Wet Sand Slice",
+      "label": "blade gliding through wet sand",
+      "queries": [
+        "knife cutting wet sand close up",
+        "blade slicing sand slow motion",
+        "sand cutting close up"
+      ],
+      "query": "knife cutting wet sand close up"
+    },
+    {
+      "rank": 4,
+      "name": "Kinetic Sand",
+      "label": "clean cuts through colored sand",
+      "queries": [
+        "kinetic sand cutting close up",
+        "colored kinetic sand slicing",
+        "kinetic sand play"
+      ],
+      "query": "kinetic sand cutting close up"
+    },
+    {
+      "rank": 3,
+      "name": "Sand Block",
+      "label": "cube collapsing into grains",
+      "queries": [
+        "sand block cut crumbling slow motion",
+        "compacted sand slicing apart",
+        "sand crumbling close up"
+      ],
+      "query": "sand block cut crumbling slow motion"
+    },
+    {
+      "rank": 2,
+      "name": "Sand Ribbon",
+      "label": "ribbons peeling off the blade",
+      "queries": [
+        "sand ribbon peeling knife slow motion",
+        "sand shaving off blade macro",
+        "sand cutting macro"
+      ],
+      "query": "sand ribbon peeling knife slow motion"
+    },
+    {
+      "rank": 1,
+      "name": "Falling Sand Curtain",
+      "label": "grains cascading after the cut",
+      "queries": [
+        "sand pouring cascade slow motion macro",
+        "falling sand curtain slow motion",
+        "sand falling slow motion"
+      ],
+      "query": "sand pouring cascade slow motion macro"
+    }
+  ]
+}

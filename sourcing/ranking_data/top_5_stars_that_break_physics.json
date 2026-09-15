@@ -1,0 +1,69 @@
+{
+  "title": "Top 5 Stars That BREAK Physics",
+  "yt_titles": [
+    "This Star Spins 700 Times Every Second",
+    "How Is This Star Even Possible?",
+    "Stars That Shouldn't Be Allowed To Exist",
+    "I Found The Densest Objects In The Universe",
+    "Magnetars Could Kill You From 600 Miles Away"
+  ],
+  "hook": "One teaspoon of it weighs more than Mount Everest.",
+  "category": "stars",
+  "items": [
+    {
+      "rank": 5,
+      "name": "Betelgeuse",
+      "stat": "So huge it defies stable star models, ready to explode",
+      "queries": [
+        "Betelgeuse ALMA",
+        "Betelgeuse Hubble",
+        "red supergiant star artist concept"
+      ],
+      "query": "Betelgeuse ALMA"
+    },
+    {
+      "rank": 4,
+      "name": "PSR J1748-2446ad",
+      "stat": "Spins 716 times per second, surface racing near light speed",
+      "queries": [
+        "pulsar artist concept NASA",
+        "millisecond pulsar illustration",
+        "neutron star Chandra"
+      ],
+      "query": "pulsar artist concept NASA"
+    },
+    {
+      "rank": 3,
+      "name": "SGR 1806-20 (Magnetar)",
+      "stat": "Magnetic field a quadrillion times stronger than Earth's",
+      "queries": [
+        "magnetar artist concept NASA",
+        "SGR 1806-20 illustration",
+        "neutron star magnetic field art"
+      ],
+      "query": "magnetar artist concept NASA"
+    },
+    {
+      "rank": 2,
+      "name": "R136a1",
+      "stat": "260 solar masses, breaks the theoretical upper mass limit",
+      "queries": [
+        "R136a1 Hubble",
+        "R136 cluster Hubble",
+        "Tarantula Nebula Webb"
+      ],
+      "query": "R136a1 Hubble"
+    },
+    {
+      "rank": 1,
+      "name": "PSR J0740+6620",
+      "stat": "Two Suns crushed into a city-sized sphere",
+      "queries": [
+        "neutron star NASA artist concept",
+        "pulsar NICER illustration",
+        "neutron star Chandra X-ray"
+      ],
+      "query": "neutron star NASA artist concept"
+    }
+  ]
+}

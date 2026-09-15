@@ -1,0 +1,69 @@
+{
+  "title": "Top 5 Things Science CAN'T Explain",
+  "yt_titles": [
+    "Scientists Have No Idea What's Causing These",
+    "The Universe Is Breaking Its Own Rules",
+    "Why Can't Anyone Explain Number One?",
+    "5 Cosmic Mysteries That Keep Physicists Awake",
+    "I Can't Believe We Still Don't Know This 😳"
+  ],
+  "hook": "Something is pulling half a billion galaxies — nobody knows what.",
+  "category": "mysteries",
+  "items": [
+    {
+      "rank": 5,
+      "name": "The Cosmic Microwave Background Cold Spot",
+      "stat": "Unexplained frozen patch 1.8 billion light-years wide",
+      "queries": [
+        "CMB cold spot Planck",
+        "cosmic microwave background WMAP",
+        "Planck all sky map"
+      ],
+      "query": "CMB cold spot Planck"
+    },
+    {
+      "rank": 4,
+      "name": "Fast Radio Bursts",
+      "stat": "Millisecond blasts release a Sun's yearly energy instantly",
+      "queries": [
+        "fast radio burst artist concept",
+        "FRB magnetar illustration",
+        "radio telescope Parkes"
+      ],
+      "query": "fast radio burst artist concept"
+    },
+    {
+      "rank": 3,
+      "name": "Dark Energy",
+      "stat": "68% of everything, forcing the universe to accelerate",
+      "queries": [
+        "dark energy illustration NASA",
+        "accelerating universe expansion diagram",
+        "Hubble deep field galaxies"
+      ],
+      "query": "dark energy illustration NASA"
+    },
+    {
+      "rank": 2,
+      "name": "The Hubble Tension",
+      "stat": "Two methods measure the expansion rate — they disagree",
+      "queries": [
+        "Hubble constant measurement diagram",
+        "Cepheid variable Hubble",
+        "Hubble Space Telescope galaxies"
+      ],
+      "query": "Hubble constant measurement diagram"
+    },
+    {
+      "rank": 1,
+      "name": "The Great Attractor",
+      "stat": "Invisible mass dragging the Milky Way at 1.4 million mph",
+      "queries": [
+        "Great Attractor Laniakea supercluster",
+        "Norma cluster ESO",
+        "Laniakea supercluster map"
+      ],
+      "query": "Great Attractor Laniakea supercluster"
+    }
+  ]
+}

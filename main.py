@@ -134,6 +134,54 @@ def _produce_ranking(config: dict):
     return [result]
 
 
+def _produce_clipranking(config: dict):
+    """Produce ONE silent ranked-clip Short (content_type=clipranking).
+
+    Pulls an unused ranked-clip list, renders it over licensed stock footage with
+    no narration, and queues it. Single video, no split. Deliberately a sibling of
+    _produce_ranking rather than a rewrite of it: the space format stays intact on
+    disk so the pivot is revertible with a one-line config change.
+    """
+    import json as _json
+    from sourcing.clip_ranking_source import (fetch_stories as clip_fetch,
+                                              youtube_title, mark_posted)
+    from video.clip_assemble import render_clip_video
+    from review.queue import submit_video
+
+    db.init_db()
+    sg = config.get("safeguards", {})
+    max_per_day = sg.get("max_videos_per_day", 4)
+    if db.videos_produced_today() >= max_per_day:
+        log.warning("Daily cap reached (%d videos). Skipping clip production.",
+                    max_per_day)
+        return None
+
+    candidates = clip_fetch(config, skip_seen=True)
+    if not candidates:
+        log.warning("No fresh ranked-clip lists available (dataset exhausted?).")
+        return None
+
+    # Same learning loop as the space channel: bias the pick toward the
+    # categories the channel's own engagement data says are winning.
+    if config.get("use_performance_weighting"):
+        _apply_ranking_performance_weight(candidates, config)
+
+    item = candidates[0]
+    payload = _json.loads(item["body"])
+    log.info("Producing ranked-clip Short %s: %s", item["post_id"], item["title"])
+    video_path = render_clip_video(item["post_id"], payload, config)
+    # The genre template IS the YouTube title here — no variant rotation.
+    item["title"] = youtube_title(item["title"], item["post_id"])
+    result = submit_video(item, video_path, config)
+    db.save_post(post_id=item["post_id"], subreddit=item["subreddit"],
+                 title=item["title"], body=item["body"], score=0,
+                 word_count=item.get("word_count", 0), status="used")
+    mark_posted(payload["title"], date=__import__("datetime").date.today().isoformat(),
+                note="auto")
+    log.info("Produced ranked clip -> %s (%s)", result["path"], result["status"])
+    return [result]
+
+
 def restock_ranking_datasets(config: dict) -> int:
     """Keep the ranking dataset buffer stocked so production never runs dry.
 
@@ -144,17 +192,22 @@ def restock_ranking_datasets(config: dict) -> int:
     buffer is healthy, when disabled, or for the story channel; never raises
     (a refill hiccup must not block the day's production).
     """
-    if config.get("content_type", "story") != "ranking":
+    ctype = config.get("content_type", "story")
+    if ctype not in ("ranking", "clipranking"):
         return 0
-    acfg = config.get("ranking", {}).get("autorefill", {})
+    acfg = config.get(ctype, {}).get("autorefill", {})
     if not acfg.get("enabled", True):
         return 0
     min_buffer = int(acfg.get("min_buffer", 4))
     target = int(acfg.get("target", 12))
 
     try:
-        from sourcing.ranking_source import fetch_stories as rank_fetch
-        from sourcing import ranking_generate as rgen
+        if ctype == "clipranking":
+            from sourcing.clip_ranking_source import fetch_stories as rank_fetch
+            from sourcing import clip_ranking_generate as rgen
+        else:
+            from sourcing.ranking_source import fetch_stories as rank_fetch
+            from sourcing import ranking_generate as rgen
 
         db.init_db()
         fresh = len(rank_fetch(config, skip_seen=True))
@@ -185,7 +238,10 @@ def produce_one_video(config: dict):
     stories, several "Part N" videos for long ones). Returns a list of
     produced video results, or None if nothing was made. Spends TTS.
     """
-    if config.get("content_type", "story") == "ranking":
+    ctype = config.get("content_type", "story")
+    if ctype == "clipranking":
+        return _produce_clipranking(config)
+    if ctype == "ranking":
         return _produce_ranking(config)
 
     from sourcing.get_stories import fetch_stories

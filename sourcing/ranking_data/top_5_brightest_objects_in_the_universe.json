@@ -1,0 +1,69 @@
+{
+  "title": "Top 5 BRIGHTEST Objects In The Universe",
+  "yt_titles": [
+    "This Object Shines Like 600 Trillion Suns",
+    "What Is the Brightest Thing in the Universe?",
+    "I Ranked the Universe's Blinding Light Sources",
+    "These Cosmic Beacons Outshine Entire Galaxies",
+    "The Brightest Thing We've Ever Found 😳"
+  ],
+  "hook": "One beacon pumps out 600 trillion Suns of light.",
+  "category": "objects",
+  "items": [
+    {
+      "rank": 5,
+      "name": "Sirius",
+      "stat": "Brightest star in our night sky, 25 times the Sun.",
+      "queries": [
+        "Sirius star Hubble",
+        "Sirius A B binary",
+        "bright blue star field Hubble"
+      ],
+      "query": "Sirius star Hubble"
+    },
+    {
+      "rank": 4,
+      "name": "Betelgeuse",
+      "stat": "Red supergiant blasting 100,000 times the Sun's light.",
+      "queries": [
+        "Betelgeuse ESO",
+        "Betelgeuse Hubble surface",
+        "red supergiant star artist concept"
+      ],
+      "query": "Betelgeuse ESO"
+    },
+    {
+      "rank": 3,
+      "name": "R136a1",
+      "stat": "Most luminous star known, 4.6 million Suns.",
+      "queries": [
+        "R136a1 Hubble",
+        "R136 cluster Tarantula Nebula",
+        "Tarantula Nebula Hubble"
+      ],
+      "query": "R136a1 Hubble"
+    },
+    {
+      "rank": 2,
+      "name": "GRB 080319B",
+      "stat": "Gamma-ray burst briefly visible to the naked eye, 7.5 billion light-years away.",
+      "queries": [
+        "gamma ray burst artist concept",
+        "GRB 080319B Swift",
+        "gamma ray burst jet Hubble"
+      ],
+      "query": "gamma ray burst artist concept"
+    },
+    {
+      "rank": 1,
+      "name": "Quasar 3C 273",
+      "stat": "Blazes with 4 trillion Suns from a feeding black hole.",
+      "queries": [
+        "3C 273 quasar Hubble",
+        "quasar jet artist concept",
+        "quasar accretion disk NASA"
+      ],
+      "query": "3C 273 quasar Hubble"
+    }
+  ]
+}

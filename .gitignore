@@ -19,6 +19,7 @@ __pycache__/
 database/*.db
 media/*
 !media/clip_source.py
+!media/video_source.py
 voiceover/output/
 video/output/
 review/pending/

@@ -1,0 +1,69 @@
+{
+  "title": "Top 5 WEIRDEST Objects In The Universe",
+  "yt_titles": [
+    "This Object Ticks Faster Than Your Heartbeat",
+    "5 Space Objects That Make No Sense",
+    "Why Is There a Diamond Bigger Than Earth?",
+    "I Can't Believe These Are Actually Real",
+    "The Universe Is Way Stranger Than You Think"
+  ],
+  "hook": "Number one is a star made of solid crystal diamond.",
+  "category": "objects",
+  "items": [
+    {
+      "rank": 5,
+      "name": "Oumuamua",
+      "stat": "First interstellar visitor, tumbling and mysteriously accelerating past the Sun.",
+      "queries": [
+        "Oumuamua ESO",
+        "Oumuamua artist concept",
+        "interstellar asteroid Hubble"
+      ],
+      "query": "Oumuamua ESO"
+    },
+    {
+      "rank": 4,
+      "name": "Boomerang Nebula",
+      "stat": "Coldest known spot, just 1°C above absolute zero.",
+      "queries": [
+        "Boomerang Nebula Hubble",
+        "Boomerang Nebula ALMA",
+        "bipolar nebula Hubble"
+      ],
+      "query": "Boomerang Nebula Hubble"
+    },
+    {
+      "rank": 3,
+      "name": "PSR J1748-2446ad",
+      "stat": "Spins 716 times per second, edge racing near light-speed.",
+      "queries": [
+        "pulsar artist concept",
+        "millisecond pulsar NASA",
+        "neutron star Chandra"
+      ],
+      "query": "pulsar artist concept"
+    },
+    {
+      "rank": 2,
+      "name": "Hoag's Object",
+      "stat": "Perfect ring of blue stars encircling an empty gap.",
+      "queries": [
+        "Hoag's Object Hubble",
+        "Hoag's Object galaxy",
+        "ring galaxy Hubble"
+      ],
+      "query": "Hoag's Object Hubble"
+    },
+    {
+      "rank": 1,
+      "name": "BPM 37093 (Lucy)",
+      "stat": "White dwarf crystallized into a diamond 4,000 km wide.",
+      "queries": [
+        "white dwarf artist concept",
+        "crystallized white dwarf NASA",
+        "white dwarf star Hubble"
+      ],
+      "query": "white dwarf artist concept"
+    }
+  ]
+}

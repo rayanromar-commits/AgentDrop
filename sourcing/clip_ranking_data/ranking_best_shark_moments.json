@@ -1,0 +1,61 @@
+{
+  "title": "Ranking Best Shark Moments",
+  "category": "sharks",
+  "items": [
+    {
+      "rank": 5,
+      "name": "Reef Shark",
+      "label": "cruising the coral shallows",
+      "queries": [
+        "reef shark swimming over coral reef",
+        "reef shark underwater close up",
+        "shark swimming underwater"
+      ],
+      "query": "reef shark swimming over coral reef"
+    },
+    {
+      "rank": 4,
+      "name": "Hammerhead",
+      "label": "schooling in blue water",
+      "queries": [
+        "hammerhead shark school swimming underwater",
+        "hammerhead shark close up ocean",
+        "shark school underwater"
+      ],
+      "query": "hammerhead shark school swimming underwater"
+    },
+    {
+      "rank": 3,
+      "name": "Tiger Shark",
+      "label": "gliding through open ocean",
+      "queries": [
+        "tiger shark swimming slow motion",
+        "tiger shark underwater diver",
+        "large shark underwater"
+      ],
+      "query": "tiger shark swimming slow motion"
+    },
+    {
+      "rank": 2,
+      "name": "Whale Shark",
+      "label": "giant drifting past divers",
+      "queries": [
+        "whale shark swimming with divers underwater",
+        "whale shark aerial ocean surface",
+        "whale shark underwater"
+      ],
+      "query": "whale shark swimming with divers underwater"
+    },
+    {
+      "rank": 1,
+      "name": "Great White",
+      "label": "breaching clean out of water",
+      "queries": [
+        "great white shark breaching slow motion",
+        "great white shark jumping out of water",
+        "great white shark underwater"
+      ],
+      "query": "great white shark breaching slow motion"
+    }
+  ]
+}

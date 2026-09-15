@@ -1,0 +1,61 @@
+{
+  "title": "Ranking Best Parrot Moments",
+  "category": "parrots",
+  "items": [
+    {
+      "rank": 5,
+      "name": "Cockatiel",
+      "label": "perched and whistling softly",
+      "queries": [
+        "cockatiel whistling close up",
+        "cockatiel perched on branch",
+        "cockatiel bird"
+      ],
+      "query": "cockatiel whistling close up"
+    },
+    {
+      "rank": 4,
+      "name": "African Grey",
+      "label": "tilting head curiously",
+      "queries": [
+        "african grey parrot close up",
+        "grey parrot head tilt",
+        "parrot close up"
+      ],
+      "query": "african grey parrot close up"
+    },
+    {
+      "rank": 3,
+      "name": "Cockatoo",
+      "label": "raising its crest wide",
+      "queries": [
+        "cockatoo crest raised slow motion",
+        "white cockatoo dancing",
+        "cockatoo bird"
+      ],
+      "query": "cockatoo crest raised slow motion"
+    },
+    {
+      "rank": 2,
+      "name": "Scarlet Macaw",
+      "label": "flying through the canopy",
+      "queries": [
+        "scarlet macaw flying slow motion",
+        "macaw in flight jungle",
+        "macaw flying"
+      ],
+      "query": "scarlet macaw flying slow motion"
+    },
+    {
+      "rank": 1,
+      "name": "Rainbow Lorikeets",
+      "label": "flock exploding into flight",
+      "queries": [
+        "rainbow lorikeet flock flying slow motion",
+        "colorful parrots taking off",
+        "parrots flying flock"
+      ],
+      "query": "rainbow lorikeet flock flying slow motion"
+    }
+  ]
+}

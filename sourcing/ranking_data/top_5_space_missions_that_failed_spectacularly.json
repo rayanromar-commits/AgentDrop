@@ -1,0 +1,69 @@
+{
+  "title": "Top 5 Space Missions That FAILED Spectacularly",
+  "yt_titles": [
+    "The $327 Million Mistake That Doomed a Mars Probe",
+    "Why Did These Spacecraft Just... Vanish?",
+    "5 Space Missions That Ended in Disaster",
+    "NASA Lost a Whole Spacecraft Over a Simple Math Error",
+    "These Missions Cost Billions and Failed Anyway"
+  ],
+  "hook": "One crashed because engineers forgot to convert the units.",
+  "category": "missions",
+  "items": [
+    {
+      "rank": 5,
+      "name": "Beagle 2",
+      "stat": "Landed on Mars in 2003 but never phoned home",
+      "queries": [
+        "Beagle 2 lander Mars",
+        "Beagle 2 artist concept",
+        "Mars surface Viking"
+      ],
+      "query": "Beagle 2 lander Mars"
+    },
+    {
+      "rank": 4,
+      "name": "Phobos-Grunt",
+      "stat": "Stranded in Earth orbit, fell back to sea in 2012",
+      "queries": [
+        "Phobos-Grunt spacecraft",
+        "Phobos-Grunt artist concept",
+        "Phobos moon Mars Express"
+      ],
+      "query": "Phobos-Grunt spacecraft"
+    },
+    {
+      "rank": 3,
+      "name": "Mars Polar Lander",
+      "stat": "Engines cut early — slammed into Mars at full speed",
+      "queries": [
+        "Mars Polar Lander NASA",
+        "Mars Polar Lander artist concept",
+        "Mars south pole Viking"
+      ],
+      "query": "Mars Polar Lander NASA"
+    },
+    {
+      "rank": 2,
+      "name": "Schiaparelli EDM",
+      "stat": "Faulty sensor fired thrusters off — crashed at 300 mph",
+      "queries": [
+        "Schiaparelli lander ESA",
+        "Schiaparelli crash site Mars",
+        "Mars surface ExoMars"
+      ],
+      "query": "Schiaparelli lander ESA"
+    },
+    {
+      "rank": 1,
+      "name": "Mars Climate Orbiter",
+      "stat": "Lost forever from a metric-to-imperial unit mix-up",
+      "queries": [
+        "Mars Climate Orbiter NASA",
+        "Mars Climate Orbiter artist concept",
+        "Mars from orbit Hubble"
+      ],
+      "query": "Mars Climate Orbiter NASA"
+    }
+  ]
+}
