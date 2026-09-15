@@ -144,8 +144,11 @@ def _search_pexels(query: str, n: int) -> list[dict]:
     if not key:
         log.warning("[clips] PEXELS_API_KEY not set — cannot source footage.")
         return []
+    # Ask for noticeably more than we need: the duration and height filters
+    # below reject roughly half of what comes back, and a judge choosing between
+    # two clips is barely choosing at all.
     url = f"{PEXELS_SEARCH}?" + urlencode({
-        "query": query, "per_page": n, "orientation": "portrait"})
+        "query": query, "per_page": max(n * 3, 15), "orientation": "portrait"})
     try:
         raw = _get(url, headers={"Authorization": key})
         data = json.loads(raw)
@@ -160,9 +163,15 @@ def _search_pexels(query: str, n: int) -> list[dict]:
         f = _best_file(v.get("video_files") or [])
         if not f:
             continue
+        # Pexels ships a strip of preview frames per video. Judging on one of
+        # those instead of the file itself is the difference between pulling
+        # ~30 clips per video (500MB, minutes) and pulling 5.
+        pics = [pp.get("picture") for pp in (v.get("video_pictures") or [])
+                if pp.get("picture")]
+        poster = pics[len(pics) // 2] if pics else v.get("image")
         out.append({"src": "pexels", "url": f["link"], "dur": dur,
                     "w": f.get("width") or 0, "h": f.get("height") or 0,
-                    "id": f"pexels_{v.get('id')}"})
+                    "poster": poster, "id": f"pexels_{v.get('id')}"})
     return out
 
 
@@ -173,7 +182,7 @@ def _search_pixabay(query: str, n: int) -> list[dict]:
     if not key:
         return []
     url = f"{PIXABAY_SEARCH}?" + urlencode({
-        "key": key, "q": query, "per_page": max(3, n), "video_type": "film"})
+        "key": key, "q": query, "per_page": max(3, n * 3), "video_type": "film"})
     try:
         data = json.loads(_get(url))
     except Exception as e:
@@ -195,6 +204,7 @@ def _search_pixabay(query: str, n: int) -> list[dict]:
             continue
         out.append({"src": "pixabay", "url": best["url"], "dur": dur,
                     "w": best.get("width") or 0, "h": best.get("height") or 0,
+                    "poster": best.get("thumbnail") or v.get("userImageURL"),
                     "id": f"pixabay_{v.get('id')}"})
     return out
 
@@ -267,6 +277,53 @@ def clip_hash(path: Path) -> str:
         # hashing the whole file per candidate would dominate render time.
         h.update(f.read(2_000_000))
     return h.hexdigest()
+
+
+def _download_poster(cand: dict) -> Path | None:
+    """Fetch a candidate's preview frame (a few KB) for the judge to look at."""
+    if not cand.get("poster"):
+        return None
+    CACHE_DIR.mkdir(parents=True, exist_ok=True)
+    out = CACHE_DIR / f"{cand['id']}.poster.jpg"
+    if out.exists() and out.stat().st_size > 0:
+        return out
+    try:
+        data = _get(cand["poster"], timeout=20)
+    except Exception as e:
+        log.warning("[clips] poster fetch failed (%s): %s", cand["id"], e)
+        return None
+    if len(data) < 500:
+        return None
+    out.write_bytes(data)
+    return out
+
+
+def prune_cache(max_bytes: int = 1_500_000_000) -> int:
+    """Keep the clip cache under a size cap, oldest first.
+
+    Railway's disk is ephemeral and small; one video can pull hundreds of MB of
+    footage, so an unbounded cache eventually fills it and the daily render dies
+    with no obvious cause. Returns the bytes freed."""
+    try:
+        files = [(f, f.stat()) for f in CACHE_DIR.glob("*") if f.is_file()]
+    except Exception:
+        return 0
+    total = sum(st.st_size for _f, st in files)
+    if total <= max_bytes:
+        return 0
+    files.sort(key=lambda t: t[1].st_mtime)          # oldest first
+    freed = 0
+    for f, st in files:
+        if total - freed <= max_bytes:
+            break
+        try:
+            f.unlink()
+            freed += st.st_size
+        except Exception:
+            pass
+    if freed:
+        log.info("[clips] pruned %.0f MB from the clip cache.", freed / 1e6)
+    return freed
 
 
 # --- vision judge -------------------------------------------------------------
@@ -369,41 +426,51 @@ def fetch_item_clip(query, prefer: str | None = None,
     """Best CLEAN stock clip for one ranked item + its framing hint.
 
     `query`   — one search term or the dataset's list of them (best first).
-    `prefer`  — the item's display name, used as the judge's subject.
-    `exclude` — clip hashes already used in THIS video, dropped BEFORE judging so
-                two ranks never show the same footage (a repeated backdrop while
-                the ranking moves on reads as broken, and risks suppression).
+    `prefer`  — the item's display name; the judge's subject, and the last-resort
+                search term.
+    `exclude` — clip ids AND content hashes already used in THIS video, so two
+                ranks never show the same footage (a backdrop that doesn't change
+                while the ranking moves on reads as broken).
     `context` — the on-screen caption, so the judge knows what the clip must show.
 
-    Returns (path, framing) or (None, 'cover') when nothing usable was found.
+    Candidates are judged on their PREVIEW FRAME and only the winner is
+    downloaded. Judging on downloaded files instead meant ~30 clips (500MB) per
+    video; this pulls five.
+
+    Returns (path, framing), or (None, 'cover') when nothing usable was found.
     """
     exclude = set(exclude or ())
     terms = _queries(query)
     if not terms:
         return None, "cover"
 
-    cands: list[dict] = []
-    seen_ids: set[str] = set()
-    for term in terms:
-        if len(cands) >= CANDIDATES:
-            break
-        raw = _search_pexels(term, CANDIDATES) or _search_pixabay(term, CANDIDATES)
-        for c in raw:
+    # A dataset's terms describe the IDEAL shot ("great white breaching clean out
+    # of the water") and stock libraries often simply do not have it. Falling back
+    # to the bare subject gets real footage of the right animal, which beats
+    # dropping the entry to an unrelated backdrop by a wide margin.
+    if prefer and prefer.lower() not in {t.lower() for t in terms}:
+        terms = terms + [prefer]
+
+    def gather() -> list[dict]:
+        cands: list[dict] = []
+        seen: set[str] = set()
+        for term in terms:
             if len(cands) >= CANDIDATES:
                 break
-            if c["id"] in seen_ids:
-                continue
-            seen_ids.add(c["id"])
-            path = _download(c)
-            if not path:
-                continue
-            if clip_hash(path) in exclude:       # already used by another rank
-                continue
-            frame = poster_frame(path)
-            if not frame:
-                continue
-            cands.append({**c, "path": path, "frame": frame})
+            for c in (_search_pexels(term, CANDIDATES) or
+                      _search_pixabay(term, CANDIDATES)):
+                if len(cands) >= CANDIDATES:
+                    break
+                if c["id"] in seen or c["id"] in exclude:
+                    continue
+                seen.add(c["id"])
+                poster = _download_poster(c)
+                if not poster:
+                    continue
+                cands.append({**c, "frame": poster})
+        return cands
 
+    cands = gather()
     if not cands:
         log.warning("[clips] no usable candidate for %r (terms: %s)",
                     prefer or terms[0], "; ".join(terms))
@@ -411,9 +478,27 @@ def fetch_item_clip(query, prefer: str | None = None,
 
     idx, framing = _judge(prefer or terms[0], cands, context=context)
     if idx < 0:
-        log.warning("[clips] judge rejected every candidate for %r.", prefer or terms[0])
+        log.warning("[clips] judge rejected every candidate for %r.",
+                    prefer or terms[0])
         return None, framing
-    return cands[idx]["path"], framing
+
+    # Download the winner; if its content collides with footage another rank is
+    # already using (the same stock clip republished under two ids), step down
+    # the list rather than repeating a shot.
+    for c in [cands[idx]] + [c for i, c in enumerate(cands) if i != idx]:
+        path = _download(c)
+        if not path:
+            continue
+        if clip_hash(path) in exclude:
+            log.info("[clips] %s duplicates footage already used; trying another.",
+                     c["id"])
+            continue
+        prune_cache()
+        return path, framing
+
+    log.warning("[clips] every candidate for %r failed to download.",
+                prefer or terms[0])
+    return None, framing
 
 
 if __name__ == "__main__":

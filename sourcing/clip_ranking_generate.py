@@ -147,11 +147,22 @@ rank slot, so it must be instantly readable ("Great White", "Lava Fountain", \
 "Snow Leopard").
 - label: a SHORT on-screen caption for that clip — AT MOST 5 WORDS, a fragment, \
 no full sentence, no final period. It is read in about a second while the clip \
-plays. Good: "breaching clean out of water", "40 mph in open ocean". Bad: \
+plays. Good: "largest fish in the ocean", "40 mph in open water". Bad: \
 "The great white shark is capable of breaching entirely out of the water."
 - RANK ORDER MATTERS. #1 must be the single most visually spectacular of the \
 five — it is the payoff the viewer stays for, and it is always revealed last. \
-Rank on how jaw-dropping the FOOTAGE is, not on facts or size.
+Rank on how jaw-dropping the FOOTAGE is, not on facts or size. But rank on \
+footage that STOCK LIBRARIES ACTUALLY HAVE: a whale shark gliding past divers \
+is a real stock clip, a great white breaching clean out of the water is not, so \
+the second one must never be your #1.
+- THE LABEL MUST STAY TRUE OF ORDINARY GOOD FOOTAGE of that subject. This is the \
+most common way these videos fail: the label promises a rare peak moment, the \
+clip shows the animal calmly swimming, and the two visibly contradict each \
+other on screen. Describe what the subject IS or is typically doing, not a \
+once-in-a-decade action. Good: "largest fish in the ocean", "hunts in packs \
+after dark", "wingspan wider than a person". Bad: "breaching clean out of \
+water", "catching prey mid-air", "attacking the camera" — nobody has that on a \
+stock library.
 - queries: EXACTLY 3 STOCK VIDEO search terms for this item, BEST FIRST. These \
 are searched on Pexels/Pixabay, which are libraries of professional stock \
 footage — NOT a viral clip archive. So write terms that a stock library \
@@ -160,8 +171,10 @@ actually contains.
 breaching slow motion", "lava fountain erupting at night".
     * Term 2 = a DIFFERENT wording or angle for the same subject: "shark \
 swimming underwater close up".
-    * Term 3 = a BROADER, guaranteed-to-return fallback that still fits the \
-label: "shark underwater".
+    * Term 3 = THE BARE SUBJECT NAME and nothing else ("whale shark", \
+"volcano"). This is the safety net that guarantees the entry gets real footage \
+of the right thing when the specific shots come up empty, so it must stay \
+plain — no adjectives, no action, no camera direction.
     * Prefer terms that suggest motion ("running", "erupting", "diving", \
 "slow motion", "aerial") — a static clip looks like a photo and kills the format.
     * NEVER write a term for a specific viral incident, a named person, a meme, \

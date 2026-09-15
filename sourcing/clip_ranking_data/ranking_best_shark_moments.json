@@ -7,55 +7,55 @@
       "name": "Reef Shark",
       "label": "cruising the coral shallows",
       "queries": [
-        "reef shark swimming over coral reef",
+        "reef shark swimming coral reef",
         "reef shark underwater close up",
-        "shark swimming underwater"
+        "reef shark"
       ],
-      "query": "reef shark swimming over coral reef"
+      "query": "reef shark swimming coral reef"
     },
     {
       "rank": 4,
       "name": "Hammerhead",
-      "label": "schooling in blue water",
+      "label": "wide head scanning the seafloor",
       "queries": [
-        "hammerhead shark school swimming underwater",
-        "hammerhead shark close up ocean",
-        "shark school underwater"
+        "hammerhead shark swimming underwater",
+        "hammerhead shark school ocean",
+        "hammerhead shark"
       ],
-      "query": "hammerhead shark school swimming underwater"
+      "query": "hammerhead shark swimming underwater"
     },
     {
       "rank": 3,
       "name": "Tiger Shark",
-      "label": "gliding through open ocean",
+      "label": "patrolling the open blue",
       "queries": [
         "tiger shark swimming slow motion",
-        "tiger shark underwater diver",
-        "large shark underwater"
+        "tiger shark underwater divers",
+        "tiger shark"
       ],
       "query": "tiger shark swimming slow motion"
     },
     {
       "rank": 2,
       "name": "Whale Shark",
-      "label": "giant drifting past divers",
+      "label": "largest fish in the ocean",
       "queries": [
-        "whale shark swimming with divers underwater",
-        "whale shark aerial ocean surface",
-        "whale shark underwater"
+        "whale shark gliding past divers",
+        "whale shark swimming underwater",
+        "whale shark"
       ],
-      "query": "whale shark swimming with divers underwater"
+      "query": "whale shark gliding past divers"
     },
     {
       "rank": 1,
       "name": "Great White",
-      "label": "breaching clean out of water",
+      "label": "apex predator up close",
       "queries": [
-        "great white shark breaching slow motion",
-        "great white shark jumping out of water",
-        "great white shark underwater"
+        "great white shark cage diving",
+        "great white shark swimming close up",
+        "great white shark"
       ],
-      "query": "great white shark breaching slow motion"
+      "query": "great white shark cage diving"
     }
   ]
 }

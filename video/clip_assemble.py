@@ -346,23 +346,31 @@ def render_clip_video(post_id, payload, config=None) -> Path:
     # Source one clean clip per entry. `used` keeps two ranks from landing on the
     # same stock footage — a backdrop that doesn't change while the ranking moves
     # on reads as broken, and repeated stills risk duplicate-content suppression.
+    #
+    # Sourcing runs in RANK ORDER (#1 first), which is deliberately NOT the reveal
+    # order. Every entry sourced adds to `used`, so whatever goes last picks from
+    # the most-depleted pool — and #1 is the payoff the whole countdown builds to,
+    # the one shot that must not fall back.
     used: set[str] = set()
     clips: dict[int, tuple[Path | None, str]] = {}
-    for it in order:
+    for it in sorted(payload["items"], key=lambda x: x["rank"]):
         path, framing = fetch_item_clip(
             it.get("queries") or it.get("query"), prefer=it["name"],
             exclude=used, context=f"{it['name']} — {it.get('label', '')}".strip(" —"))
         if path:
             used.add(clip_hash(path))
+            used.add(path.stem)          # the source id, so a re-search skips it
         else:
             log.warning("[clip] no clean clip for %r — entry will show the "
                         "opening shot instead.", it["name"])
         clips[it["rank"]] = (path, framing)
 
-    found = [p for p, _f in clips.values() if p]
+    found = [clips[r][0] for r in sorted(clips) if clips[r][0]]
     if not found:
         raise RuntimeError(f"no usable clips for {title!r} — nothing to render")
-    opener = found[0]
+    # #1's clip leads the intro: it's the best shot we sourced, and the opening
+    # second is what decides whether anyone stays.
+    opener = clips.get(1, (None, ""))[0] or found[0]
 
     # plan entries: (clip, framing, dur, base_overlay, timed_overlays)
     plan = []
@@ -393,8 +401,16 @@ def render_clip_video(post_id, payload, config=None) -> Path:
             # Excerpt from the clip's middle: stock footage routinely opens on a
             # fade or an establishing beat, so the front of a clip is the least
             # interesting part of it.
+            #
+            # The intro is the exception. It reuses #1's clip (the best shot we
+            # sourced, and the opening second decides whether anyone stays), so
+            # it takes the HEAD instead — otherwise the intro and the #1 reveal
+            # play the identical few seconds and the payoff lands as a repeat.
             cdur = probe_duration(clip) if clip else 0.0
-            start = max(0.0, (cdur - dur) / 2.0) if cdur > dur else 0.0
+            if i == 0:
+                start = 0.0
+            else:
+                start = max(0.0, (cdur - dur) / 2.0) if cdur > dur else 0.0
             seg = tmpd / f"seg{i}.mp4"
             try:
                 pattern = _overlay_track(tmpd, i, base, timed, dur)
