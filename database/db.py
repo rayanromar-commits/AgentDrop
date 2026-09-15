@@ -234,6 +234,35 @@ def _add_column_if_missing(conn, table: str, column: str, decl: str) -> None:
         conn.execute(f"ALTER TABLE {table} ADD COLUMN {column} {decl}")
 
 
+def get_meta(key: str) -> str | None:
+    """Read a value from the small app_meta key/value store (None if unset)."""
+    conn = get_connection()
+    with conn:
+        conn.execute(
+            "CREATE TABLE IF NOT EXISTS app_meta (key TEXT PRIMARY KEY, value TEXT)"
+        )
+        row = conn.execute(
+            "SELECT value FROM app_meta WHERE key = ?", (key,)
+        ).fetchone()
+    conn.close()
+    return row["value"] if row else None
+
+
+def set_meta(key: str, value: str) -> None:
+    """Write a value into app_meta (upsert)."""
+    conn = get_connection()
+    with conn:
+        conn.execute(
+            "CREATE TABLE IF NOT EXISTS app_meta (key TEXT PRIMARY KEY, value TEXT)"
+        )
+        conn.execute(
+            "INSERT INTO app_meta (key, value) VALUES (?, ?) "
+            "ON CONFLICT(key) DO UPDATE SET value = excluded.value",
+            (key, str(value)),
+        )
+    conn.close()
+
+
 def next_rotation_index(key: str) -> int:
     """Return a steadily-incrementing counter for round-robin rotation.
 

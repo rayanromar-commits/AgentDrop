@@ -218,6 +218,40 @@ def _outro_layer(text: str) -> Image.Image:
 MUSIC_EXTS = (".mp3", ".m4a", ".wav", ".aac", ".ogg", ".opus")
 
 
+def _rotate(pool: list[Path], key: str) -> Path:
+    """Next track for `key`, round-robin, never repeating the last one played.
+
+    Seeded-random picking looked fine in a unit test and then handed the first
+    two real videos in one category the same track — with only a handful of files
+    per folder, random collides constantly. A persisted counter per folder walks
+    the whole folder before any track comes round again.
+
+    The cross-folder case still needs guarding: a track can sit in two categories
+    (cutscene-crush is in both ocean/ and nature/), so the LAST track used by any
+    video is remembered and skipped. Falls back to plain rotation if the DB is
+    unreachable — music choice must never break a render.
+    """
+    pool = sorted(pool)
+    last = None
+    try:
+        from database import db
+        idx = db.next_rotation_index(f"music:{key}")
+        last = db.get_meta("last_music")
+    except Exception as e:
+        log.info("[clip] music rotation state unavailable (%s); using the first "
+                 "track in the folder.", e)
+        return pool[0]
+
+    pick = pool[idx % len(pool)]
+    if last and pick.name == last and len(pool) > 1:
+        pick = pool[(idx + 1) % len(pool)]         # don't play it twice running
+    try:
+        db.set_meta("last_music", pick.name)
+    except Exception:
+        pass
+    return pick
+
+
 def _pick_music(cfg: dict, post_id: str, category: str) -> Path | None:
     """Choose this video's backing track.
 
@@ -252,18 +286,20 @@ def _pick_music(cfg: dict, post_id: str, category: str) -> Path | None:
                 names.append(_category_group(cat))
             except Exception:
                 pass
+        key = "root"
         for name in names:
             sub = root / name
             if sub.is_dir():
                 pool = [f for f in sorted(sub.iterdir())
                         if f.suffix.lower() in MUSIC_EXTS]
                 if pool:
+                    key = name
                     break
         if not pool and root.is_dir():
             pool = [f for f in sorted(root.rglob("*"))
                     if f.suffix.lower() in MUSIC_EXTS]
         if pool:
-            return random.Random(f"{post_id}:music").choice(pool)
+            return _rotate(pool, key)
         log.warning("[clip] music_dir %r has no audio files in it.", mdir)
 
     one = cfg.get("music")                     # single-track fallback
