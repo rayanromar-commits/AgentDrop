@@ -1,0 +1,61 @@
+{
+  "title": "Ranking Deadliest Predators That Hunt Humans",
+  "category": "predators",
+  "items": [
+    {
+      "rank": 5,
+      "name": "Komodo Dragon",
+      "label": "venomous bite drops prey",
+      "queries": [
+        "komodo dragon walking tongue",
+        "komodo dragon close up",
+        "komodo dragon"
+      ],
+      "query": "komodo dragon walking tongue"
+    },
+    {
+      "rank": 4,
+      "name": "Nile Crocodile",
+      "label": "ambushes from the water",
+      "queries": [
+        "nile crocodile lunging river",
+        "crocodile swimming underwater close up",
+        "nile crocodile"
+      ],
+      "query": "nile crocodile lunging river"
+    },
+    {
+      "rank": 3,
+      "name": "Bengal Tiger",
+      "label": "stalks silently through jungle",
+      "queries": [
+        "bengal tiger stalking slow motion",
+        "tiger walking jungle close up",
+        "bengal tiger"
+      ],
+      "query": "bengal tiger stalking slow motion"
+    },
+    {
+      "rank": 2,
+      "name": "Saltwater Crocodile",
+      "label": "largest reptile on earth",
+      "queries": [
+        "saltwater crocodile jaws open",
+        "saltwater crocodile swimming aerial",
+        "saltwater crocodile"
+      ],
+      "query": "saltwater crocodile jaws open"
+    },
+    {
+      "rank": 1,
+      "name": "Great White Shark",
+      "label": "hunts seals in open water",
+      "queries": [
+        "great white shark swimming slow motion",
+        "great white shark cage underwater",
+        "great white shark"
+      ],
+      "query": "great white shark swimming slow motion"
+    }
+  ]
+}

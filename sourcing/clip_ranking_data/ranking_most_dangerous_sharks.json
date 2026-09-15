@@ -1,0 +1,61 @@
+{
+  "title": "Ranking Most Dangerous Sharks",
+  "category": "sharks",
+  "items": [
+    {
+      "rank": 5,
+      "name": "Blue Shark",
+      "label": "sleek open ocean hunter",
+      "queries": [
+        "blue shark swimming open ocean",
+        "blue shark underwater close up",
+        "blue shark"
+      ],
+      "query": "blue shark swimming open ocean"
+    },
+    {
+      "rank": 4,
+      "name": "Oceanic Whitetip",
+      "label": "follows shipwreck survivors",
+      "queries": [
+        "oceanic whitetip shark swimming",
+        "whitetip shark open water divers",
+        "oceanic whitetip shark"
+      ],
+      "query": "oceanic whitetip shark swimming"
+    },
+    {
+      "rank": 3,
+      "name": "Bull Shark",
+      "label": "swims into rivers and shallows",
+      "queries": [
+        "bull shark swimming shallow water",
+        "bull shark underwater close up",
+        "bull shark"
+      ],
+      "query": "bull shark swimming shallow water"
+    },
+    {
+      "rank": 2,
+      "name": "Tiger Shark",
+      "label": "eats almost anything",
+      "queries": [
+        "tiger shark swimming slow motion",
+        "tiger shark underwater divers",
+        "tiger shark"
+      ],
+      "query": "tiger shark swimming slow motion"
+    },
+    {
+      "rank": 1,
+      "name": "Great White",
+      "label": "largest predatory fish alive",
+      "queries": [
+        "great white shark swimming slow motion",
+        "great white shark underwater cage",
+        "great white shark"
+      ],
+      "query": "great white shark swimming slow motion"
+    }
+  ]
+}

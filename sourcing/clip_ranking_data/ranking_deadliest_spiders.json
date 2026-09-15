@@ -1,0 +1,61 @@
+{
+  "title": "Ranking Deadliest Spiders",
+  "category": "spiders",
+  "items": [
+    {
+      "rank": 5,
+      "name": "Black Widow",
+      "label": "venom stronger than a snake",
+      "queries": [
+        "black widow spider web close up",
+        "black widow spider crawling macro",
+        "black widow spider"
+      ],
+      "query": "black widow spider web close up"
+    },
+    {
+      "rank": 4,
+      "name": "Brazilian Wanderer",
+      "label": "roams the forest floor at",
+      "queries": [
+        "brazilian wandering spider crawling",
+        "wandering spider legs raised macro",
+        "brazilian wandering spider"
+      ],
+      "query": "brazilian wandering spider crawling"
+    },
+    {
+      "rank": 3,
+      "name": "Sydney Funnel-Web",
+      "label": "fangs pierce a fingernail",
+      "queries": [
+        "funnel web spider fangs close up",
+        "sydney funnel web spider crawling",
+        "funnel web spider"
+      ],
+      "query": "funnel web spider fangs close up"
+    },
+    {
+      "rank": 2,
+      "name": "Brown Recluse",
+      "label": "bite rots the flesh",
+      "queries": [
+        "brown recluse spider macro crawling",
+        "brown recluse spider close up",
+        "brown recluse spider"
+      ],
+      "query": "brown recluse spider macro crawling"
+    },
+    {
+      "rank": 1,
+      "name": "Goliath Birdeater",
+      "label": "largest spider on earth",
+      "queries": [
+        "goliath birdeater tarantula crawling slow motion",
+        "giant tarantula walking macro close up",
+        "goliath birdeater"
+      ],
+      "query": "goliath birdeater tarantula crawling slow motion"
+    }
+  ]
+}

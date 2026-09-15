@@ -1,0 +1,61 @@
+{
+  "title": "Ranking Deadliest Animals In Africa",
+  "category": "africananimals",
+  "items": [
+    {
+      "rank": 5,
+      "name": "Nile Crocodile",
+      "label": "lurks below the surface",
+      "queries": [
+        "nile crocodile swimming underwater",
+        "crocodile in river africa close up",
+        "nile crocodile"
+      ],
+      "query": "nile crocodile swimming underwater"
+    },
+    {
+      "rank": 4,
+      "name": "Cape Buffalo",
+      "label": "charges without warning",
+      "queries": [
+        "cape buffalo charging herd",
+        "african buffalo standing aggressive",
+        "cape buffalo"
+      ],
+      "query": "cape buffalo charging herd"
+    },
+    {
+      "rank": 3,
+      "name": "Lion",
+      "label": "hunts in coordinated prides",
+      "queries": [
+        "lion pride walking savanna slow motion",
+        "male lion roaring close up",
+        "lion"
+      ],
+      "query": "lion pride walking savanna slow motion"
+    },
+    {
+      "rank": 2,
+      "name": "Hippopotamus",
+      "label": "most deadly land mammal",
+      "queries": [
+        "hippo opening mouth wide water",
+        "hippopotamus charging river",
+        "hippopotamus"
+      ],
+      "query": "hippo opening mouth wide water"
+    },
+    {
+      "rank": 1,
+      "name": "African Elephant",
+      "label": "largest land animal alive",
+      "queries": [
+        "african elephant charging dust",
+        "elephant herd walking savanna aerial",
+        "african elephant"
+      ],
+      "query": "african elephant charging dust"
+    }
+  ]
+}

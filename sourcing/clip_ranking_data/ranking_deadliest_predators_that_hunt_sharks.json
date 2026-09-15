@@ -1,0 +1,61 @@
+{
+  "title": "Ranking Deadliest Predators That Hunt Sharks",
+  "category": "predators",
+  "items": [
+    {
+      "rank": 5,
+      "name": "Grouper",
+      "label": "swallows small sharks whole",
+      "queries": [
+        "giant grouper swimming underwater",
+        "goliath grouper close up",
+        "grouper"
+      ],
+      "query": "giant grouper swimming underwater"
+    },
+    {
+      "rank": 4,
+      "name": "Crocodile",
+      "label": "ambushes sharks in shallows",
+      "queries": [
+        "saltwater crocodile swimming underwater",
+        "crocodile hunting in water",
+        "crocodile"
+      ],
+      "query": "saltwater crocodile swimming underwater"
+    },
+    {
+      "rank": 3,
+      "name": "Great White",
+      "label": "sharks that eat other sharks",
+      "queries": [
+        "great white shark swimming slow motion",
+        "great white shark underwater close up",
+        "great white shark"
+      ],
+      "query": "great white shark swimming slow motion"
+    },
+    {
+      "rank": 2,
+      "name": "Sperm Whale",
+      "label": "dives deep after prey",
+      "queries": [
+        "sperm whale swimming underwater",
+        "sperm whale diving deep",
+        "sperm whale"
+      ],
+      "query": "sperm whale swimming underwater"
+    },
+    {
+      "rank": 1,
+      "name": "Orca",
+      "label": "sharks flee at their arrival",
+      "queries": [
+        "orca hunting underwater slow motion",
+        "killer whale swimming close up",
+        "orca"
+      ],
+      "query": "orca hunting underwater slow motion"
+    }
+  ]
+}

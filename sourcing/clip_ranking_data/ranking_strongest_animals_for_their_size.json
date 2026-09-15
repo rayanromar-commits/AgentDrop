@@ -1,0 +1,61 @@
+{
+  "title": "Ranking Strongest Animals For Their Size",
+  "category": "animals",
+  "items": [
+    {
+      "rank": 5,
+      "name": "Leafcutter Ant",
+      "label": "carries 50 times its weight",
+      "queries": [
+        "leafcutter ant carrying leaf macro",
+        "ants carrying leaves close up",
+        "leafcutter ant"
+      ],
+      "query": "leafcutter ant carrying leaf macro"
+    },
+    {
+      "rank": 4,
+      "name": "Rhino Beetle",
+      "label": "lifts 850 times its body",
+      "queries": [
+        "rhinoceros beetle climbing macro",
+        "rhino beetle horns close up",
+        "rhinoceros beetle"
+      ],
+      "query": "rhinoceros beetle climbing macro"
+    },
+    {
+      "rank": 3,
+      "name": "Mantis Shrimp",
+      "label": "punch fast as a bullet",
+      "queries": [
+        "mantis shrimp striking underwater slow motion",
+        "mantis shrimp colorful reef",
+        "mantis shrimp"
+      ],
+      "query": "mantis shrimp striking underwater slow motion"
+    },
+    {
+      "rank": 2,
+      "name": "Gorilla",
+      "label": "ten times stronger than a",
+      "queries": [
+        "silverback gorilla pounding chest",
+        "gorilla walking through jungle",
+        "gorilla"
+      ],
+      "query": "silverback gorilla pounding chest"
+    },
+    {
+      "rank": 1,
+      "name": "African Elephant",
+      "label": "lifts trees with its trunk",
+      "queries": [
+        "african elephant pushing tree trunk",
+        "elephant lifting log slow motion",
+        "african elephant"
+      ],
+      "query": "african elephant pushing tree trunk"
+    }
+  ]
+}

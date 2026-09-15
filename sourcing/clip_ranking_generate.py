@@ -30,57 +30,79 @@ PROJECT_ROOT = Path(__file__).resolve().parent.parent
 DATA_DIR = PROJECT_ROOT / "sourcing" / "clip_ranking_data"
 MODEL = "claude-opus-4-8"
 
-# Subjects are chosen for STOCK FOOTAGE STRENGTH, not for comedy.
+# THE NICHE: dangerous and extreme wildlife, led by the ocean.
 #
-# The reference channels (Xiro 323M, Mugi 158M, Polar 116M) run on scraped
-# user-generated "peak moments" — a chicken screaming, a trampoline fail. No
-# stock library contains those, and we are not scraping (see the plan: that is
-# both a copyright and a reused-content exposure). So we play to where licensed
-# footage is genuinely spectacular: wildlife, water, slow motion, natural
-# phenomena, extreme sport, satisfying process shots.
+# Chosen from measured evidence, not taste. The space channel failed because
+# nobody had built an audience in its lane at any size — that looked like an
+# open goal and actually meant the audience wasn't there, and 70 videos capped
+# at ~1,000 views each proved it. So the test for a lane is whether big numbers
+# already happen in it:
+#   * Ocean Pulse: 23,200 subscribers and a 54,000,000-view video. A SMALL
+#     channel broke out — the algorithm doesn't gate this lane on channel size.
+#   * "Why Deep Sea Creatures Are Giant" did 37M, then a near-copy did 9.8M.
+#     The TOPIC carries it, not the creator, which is what makes it enterable.
+#   * "Biggest Animal Ever Known" 24M, "Speed Kings of the Animal Kingdom" 8.3M,
+#     "Top 3 Most Dangerous Snakes in America" 6.5M.
+#   * 1 Minute Animals sustains 2.88M subscribers across 1,400 videos, so the
+#     lane has the depth to feed a daily upload for years. Space ran dry at 24.
 #
-# Groups map to the per-`category` engagement the channel measures, so
-# generation leans toward whatever actually earns shares. Add rows freely.
+# It is also the lane licensed stock actually serves: sharks, jellyfish, snakes,
+# predators and deep-sea footage are abundant, whereas the "funny animal moments"
+# lane that dominates this format runs on scraped user clips we won't touch.
+#
+# And the framing carries the argument axis we're missing — people argue about
+# what's deadliest. Beautiful scenery, which stock also does well, measured at
+# 1K-36K views: nobody shares a nice sunset. Danger travels; pretty doesn't.
 TOPIC_GROUPS: dict[str, list[str]] = {
-    "ocean": [
-        "shark moments", "whale moments", "dolphin moments", "jellyfish moments",
-        "octopus moments", "coral reef moments", "sea turtle moments",
-        "underwater predator moments", "deep sea creature moments",
-        "crashing wave moments", "surfing wipeout moments",
+    "deep_sea": [
+        "deep sea creatures", "creatures of the mariana trench",
+        "bioluminescent sea creatures", "anglerfish and deep sea hunters",
+        "giant squid and colossal squid", "deep sea gigantism",
+        "creatures that live without sunlight", "hydrothermal vent creatures",
+        "deep sea creatures that look alien", "the deepest living fish",
+        "monsters of the midnight zone", "transparent sea creatures",
     ],
-    "wildlife": [
-        "big cat moments", "wolf moments", "bear moments", "elephant moments",
-        "monkey moments", "fox moments", "deer moments", "snake moments",
-        "lizard moments", "insect close up moments", "spider moments",
-        "predator hunting moments", "baby animal moments", "herd stampede moments",
+    "sharks": [
+        "most dangerous sharks", "biggest sharks ever", "fastest sharks",
+        "strangest sharks", "prehistoric sharks", "sharks with the strongest bite",
+        "deep sea sharks", "sharks that hunt in packs",
+        "sharks people never see coming", "rarest sharks alive",
     ],
-    "birds": [
-        "eagle moments", "owl moments", "hummingbird moments", "penguin moments",
-        "flamingo moments", "parrot moments", "bird of prey diving moments",
-        "flock murmuration moments",
+    "ocean_predators": [
+        "deadliest ocean predators", "orcas and what they hunt",
+        "most venomous sea creatures", "box jellyfish and deadly jellyfish",
+        "sea snakes and ocean venom", "predators that hunt sharks",
+        "most aggressive fish", "electric and shocking sea creatures",
+        "ocean ambush predators", "creatures that can kill a diver",
     ],
-    "pets": [
-        "dog moments", "cat moments", "puppy moments", "kitten moments",
-        "dogs swimming moments", "cats jumping moments", "rabbit moments",
-        "horse moments", "farm animal moments",
+    "venomous": [
+        "most venomous snakes", "deadliest spiders", "most venomous insects",
+        "poison dart frogs and toxic amphibians", "deadliest scorpions",
+        "venomous animals of australia", "snakes with the fastest strike",
+        "animals whose venom has no antivenom", "most painful stings",
+        "tiny animals that can kill you",
     ],
-    "nature": [
-        "volcano moments", "lightning strike moments", "tornado moments",
-        "avalanche moments", "waterfall moments", "aurora moments",
-        "desert storm moments", "glacier calving moments", "wildfire moments",
-        "sunset timelapse moments",
+    "apex_predators": [
+        "deadliest land predators", "big cats ranked by power",
+        "strongest bite force in the animal kingdom", "deadliest pack hunters",
+        "most dangerous animals in africa", "apex predators of the arctic",
+        "bears ranked by danger", "crocodiles and alligators ranked",
+        "predators that hunt humans", "deadliest animals in the amazon",
     ],
-    "extreme": [
-        "skydiving moments", "surfing moments", "snowboarding moments",
-        "mountain biking moments", "rock climbing moments", "parkour moments",
-        "motocross moments", "wingsuit moments", "skateboarding moments",
-        "cliff diving moments",
+    "extremes": [
+        "fastest animals on earth", "strongest animals for their size",
+        "biggest animals that ever lived", "longest living animals",
+        "animals that survive the impossible", "highest flying animals",
+        "animals with the best senses", "deadliest animals by body count",
+        "animals with the most extreme migrations", "loudest animals",
+        "animals that can regenerate", "coldest and hottest surviving animals",
     ],
-    "satisfying": [
-        "slow motion water moments", "paint mixing moments", "glass blowing moments",
-        "welding sparks moments", "domino moments", "ink in water moments",
-        "macro food moments", "fire in slow motion moments",
-        "bubble popping moments", "sand cutting moments",
+    "weird_rare": [
+        "weirdest animals alive", "rarest animals on earth",
+        "animals that shouldn't exist", "animals with bizarre defenses",
+        "creatures discovered recently", "animals that look prehistoric",
+        "animals with impossible abilities", "ugliest animals in the ocean",
+        "animals that change their body", "nearly extinct creatures",
     ],
 }
 
@@ -88,38 +110,28 @@ TOPICS = [t for group in TOPIC_GROUPS.values() for t in group]
 
 # Measured dataset `category` (Claude's granular tag) -> coarse group above.
 CATEGORY_TO_GROUP: dict[str, str] = {
-    "ocean": "ocean", "sea": "ocean", "underwater": "ocean", "marine": "ocean",
-    "sharks": "ocean", "whales": "ocean", "waves": "ocean", "surfing": "ocean",
-    "dolphins": "ocean", "jellyfish": "ocean", "octopus": "ocean",
-    "coral": "ocean", "sea turtles": "ocean", "deep sea": "ocean", "fish": "ocean",
-    "wildlife": "wildlife", "animals": "wildlife", "predators": "wildlife",
-    "big cats": "wildlife", "reptiles": "wildlife", "insects": "wildlife",
-    "spiders": "wildlife", "snakes": "wildlife", "lizards": "wildlife",
-    "wolves": "wildlife", "bears": "wildlife", "elephants": "wildlife",
-    "monkeys": "wildlife", "primates": "wildlife", "foxes": "wildlife",
-    "deer": "wildlife", "baby animals": "wildlife",
-    "birds": "birds", "raptors": "birds", "eagles": "birds", "owls": "birds",
-    "penguins": "birds", "parrots": "birds", "hummingbirds": "birds",
-    "flamingos": "birds",
-    "pets": "pets", "dogs": "pets", "cats": "pets", "puppies": "pets",
-    "kittens": "pets", "rabbits": "pets", "horses": "pets", "farm": "pets",
-    "farm animals": "pets",
-    "nature": "nature", "weather": "nature", "geology": "nature",
-    "storms": "nature", "landscapes": "nature", "volcanoes": "nature",
-    "lightning": "nature", "tornadoes": "nature", "waterfalls": "nature",
-    "aurora": "nature", "glaciers": "nature", "wildfire": "nature",
-    "avalanche": "nature", "sunsets": "nature",
-    "extreme": "extreme", "sports": "extreme", "extreme sports": "extreme",
-    "stunts": "extreme", "skydiving": "extreme", "snowboarding": "extreme",
-    "climbing": "extreme", "mountain biking": "extreme", "parkour": "extreme",
-    "motocross": "extreme", "skateboarding": "extreme", "cliff diving": "extreme",
-    "satisfying": "satisfying", "macro": "satisfying", "slow motion": "satisfying",
-    "process": "satisfying", "glass blowing": "satisfying", "glassblowing": "satisfying",
-    "paint": "satisfying", "welding": "satisfying", "dominoes": "satisfying",
-    "ink": "satisfying", "food": "satisfying", "fire": "satisfying",
-    "bubbles": "satisfying", "sand": "satisfying",
+    "deep sea": "deep_sea", "deep_sea": "deep_sea", "abyss": "deep_sea",
+    "mariana trench": "deep_sea", "bioluminescence": "deep_sea",
+    "anglerfish": "deep_sea", "squid": "deep_sea", "octopus": "deep_sea",
+    "sharks": "sharks", "shark": "sharks", "megalodon": "sharks",
+    "ocean predators": "ocean_predators", "orcas": "ocean_predators",
+    "whales": "ocean_predators", "jellyfish": "ocean_predators",
+    "sea snakes": "ocean_predators", "marine": "ocean_predators",
+    "ocean": "ocean_predators", "sea": "ocean_predators", "fish": "ocean_predators",
+    "venomous": "venomous", "venom": "venomous", "snakes": "venomous",
+    "spiders": "venomous", "scorpions": "venomous", "insects": "venomous",
+    "frogs": "venomous", "toxic": "venomous", "stings": "venomous",
+    "apex predators": "apex_predators", "predators": "apex_predators",
+    "big cats": "apex_predators", "bears": "apex_predators",
+    "crocodiles": "apex_predators", "wolves": "apex_predators",
+    "land predators": "apex_predators", "africa": "apex_predators",
+    "extremes": "extremes", "speed": "extremes", "strength": "extremes",
+    "size": "extremes", "senses": "extremes", "longevity": "extremes",
+    "migration": "extremes", "records": "extremes",
+    "weird": "weird_rare", "rare": "weird_rare", "strange": "weird_rare",
+    "bizarre": "weird_rare", "prehistoric": "weird_rare",
+    "endangered": "weird_rare", "discoveries": "weird_rare",
 }
-
 
 def _category_group(category: str) -> str:
     """Map a measured dataset category onto one of TOPIC_GROUPS' coarse buckets."""
@@ -132,7 +144,7 @@ def _category_group(category: str) -> str:
     for group in TOPIC_GROUPS:                        # group name literally present
         if group in c:
             return group
-    return "wildlife"
+    return "apex_predators"
 
 
 SYSTEM = """You write faceless "ranked clip" YouTube Shorts for a channel that \
@@ -154,10 +166,16 @@ Return ONE JSON object (and nothing else) with this exact shape:
 
 Rules:
 - title: MUST follow the genre template exactly — \
-"Ranking {Best|Funniest|Craziest|Most Satisfying|Wildest} <TOPIC> {Moments|Fails}". \
-No colons, no numbers, no emoji, no extra clauses. This is a house format, not a \
-place to be creative: "Ranking Best Shark Moments", "Ranking Craziest Volcano \
-Moments", "Ranking Most Satisfying Slow Motion Water Moments".
+"Ranking {Deadliest|Most Dangerous|Most Venomous|Strongest|Biggest|Fastest|\
+Weirdest|Rarest|Scariest} <TOPIC>". No colons, no numbers, no emoji, no extra \
+clauses. This is a house format, not a place to be creative: "Ranking Deadliest \
+Ocean Predators", "Ranking Most Venomous Snakes", "Ranking Weirdest Deep Sea \
+Creatures".
+  The superlative is doing real work, so do NOT soften it. Titles built on \
+"Best ... Moments" or on beauty measure 1,000-36,000 views in this lane; titles \
+built on danger, size and strangeness measure 200,000-54,000,000. People share \
+what unsettles them, not what is pretty. Pick the superlative that is TRUE of \
+your list and lean on it.
 - category: ONE short lowercase tag for the subject ("sharks", "volcanoes", \
 "big cats"). The channel measures engagement per category.
 - name: the thing being ranked, 1-3 words, TITLE CASE. It goes on screen in the \
@@ -218,7 +236,8 @@ Output ONLY the JSON object — no prose, no code fences."""
 # genre format IS the product here and a drifting title breaks the channel's
 # recognisability.
 _TITLE_RE = re.compile(
-    r"^Ranking (Best|Funniest|Craziest|Most Satisfying|Wildest) .+ (Moments|Fails)$")
+    r"^Ranking (Deadliest|Most Dangerous|Most Venomous|Strongest|Biggest|"
+    r"Fastest|Weirdest|Rarest|Scariest) \S.*$")
 
 
 def _slug(title: str) -> str:
@@ -226,7 +245,8 @@ def _slug(title: str) -> str:
 
 
 def generate_clip_ranking(topic: str | None = None,
-                          avoid: list[str] | None = None) -> dict | None:
+                          avoid: list[str] | None = None,
+                          trending: list[dict] | None = None) -> dict | None:
     """Ask Claude for one ranked-clip list. Returns a validated dict, or None.
 
     `avoid` = titles the channel already holds; shown to the model so it doesn't
@@ -249,6 +269,21 @@ def generate_clip_ranking(topic: str | None = None,
                  "must cover a genuinely different subject, not a re-worded one, "
                  "and must not repeat their headline subjects:\n"
                  + "\n".join(f"- {t}" for t in avoid[-40:]))
+    if trending:
+        # Show the model what is ACTUALLY pulling views in this lane right now.
+        # It is evidence, not a menu: the searches drag in gaming clips, vlogs
+        # and non-English uploads that merely share a keyword, so the model is
+        # told to read through them for the underlying subject rather than copy
+        # any single title.
+        lines = "\n".join(f"- {t['views']:,} views: {t['title'][:80]}"
+                           for t in trending[:20])
+        user += ("\n\nFor reference, these Shorts are performing well in this "
+                 "lane right now:\n" + lines +
+                 "\n\nUse these to judge WHAT KIND of subject is landing — the "
+                 "angles, the level of danger or strangeness, how specific the "
+                 "hook is. Ignore any that are off-topic (gaming, vlogs, "
+                 "personal channels, other languages); they came from a keyword "
+                 "collision. Do NOT copy a title or remake a specific video.")
     user += " Write the JSON now."
     try:
         client = anthropic.Anthropic()
@@ -376,17 +411,31 @@ def _group_weights(perf: dict | None) -> dict[str, float]:
 
 def pick_topics(n: int, perf: dict | None = None,
                 exclude: set[str] | None = None,
-                seed: str | None = None) -> list[str]:
-    """Choose ``n`` distinct topics, biased toward high-performing groups."""
+                seed: str | None = None,
+                mined: list[str] | None = None) -> list[str]:
+    """Choose ``n`` distinct topics, biased toward high-performing groups.
+
+    `mined` holds subjects the trend miner found doing well on YouTube right
+    now. They're folded in as an extra pool so the channel isn't limited to the
+    topics someone wrote down in advance — roughly a third of picks come from
+    live evidence, the rest from the curated list, which keeps the channel on
+    its niche even when a week's search results are noisy.
+    """
     rng = random.Random(seed)
     exclude = set(exclude or ())
     weights = _group_weights(perf)
     avail: dict[str, list[str]] = {
         g: [t for t in ts if t not in exclude] for g, ts in TOPIC_GROUPS.items()
     }
+    mined_pool = [m for m in (mined or []) if m not in exclude]
     picked: list[str] = []
-    while len(picked) < n and any(avail.values()):
+    while len(picked) < n and (any(avail.values()) or mined_pool):
+        if mined_pool and (not any(avail.values()) or rng.random() < 0.35):
+            picked.append(mined_pool.pop(0))       # best-performing first
+            continue
         live = [g for g, ts in avail.items() if ts]
+        if not live:
+            break
         w = [weights.get(g, 0.35) for g in live]
         g = rng.choices(live, weights=w, k=1)[0]
         t = rng.choice(avail[g])
@@ -415,11 +464,28 @@ def generate_batch(n: int, perf: dict | None = None,
         if d.get("title") and d.get("items"):
             existing.append(d)
 
+    # What's actually working in the niche right now. Cached for a week, and
+    # empty if the API is unreachable — generation still runs off the curated
+    # list in that case, it just stops learning from outside.
+    trending, mined = [], []
+    try:
+        from sourcing.trend_miner import trending_topics, winning_titles
+        trending = winning_titles(20)
+        mined = trending_topics(20)
+        if trending:
+            log.info("[clip-gen] %d proven performers in the niche informing "
+                     "this batch (top: %s).", len(trending),
+                     trending[0]["title"][:50])
+    except Exception as e:
+        log.info("[clip-gen] trend data unavailable (%s); using the curated "
+                 "topic list only.", e)
+
     saved: list[Path] = []
     tried: set[str] = set()
     while len(saved) < n:
         need = n - len(saved)
-        topics = pick_topics(need + 3, perf=perf, exclude=tried, seed=seed)
+        topics = pick_topics(need + 3, perf=perf, exclude=tried, seed=seed,
+                             mined=mined)
         if not topics:
             log.warning("[clip-gen] topic pool exhausted after %d new dataset(s).",
                         len(saved))
@@ -429,7 +495,8 @@ def generate_batch(n: int, perf: dict | None = None,
             if len(saved) >= n:
                 break
             tried.add(t)
-            d = generate_clip_ranking(t, avoid=[e["title"] for e in existing])
+            d = generate_clip_ranking(t, avoid=[e["title"] for e in existing],
+                                      trending=trending)
             if not d:
                 continue
             if _slug(d["title"]) in existing_slugs:

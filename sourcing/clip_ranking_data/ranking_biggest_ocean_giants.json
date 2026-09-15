@@ -1,0 +1,61 @@
+{
+  "title": "Ranking Biggest Ocean Giants",
+  "category": "marinegiants",
+  "items": [
+    {
+      "rank": 5,
+      "name": "Giant Squid",
+      "label": "eyes the size of dinner",
+      "queries": [
+        "giant squid deep sea swimming",
+        "giant squid tentacles underwater",
+        "giant squid"
+      ],
+      "query": "giant squid deep sea swimming"
+    },
+    {
+      "rank": 4,
+      "name": "Whale Shark",
+      "label": "largest fish in the ocean",
+      "queries": [
+        "whale shark swimming with divers",
+        "whale shark underwater close up",
+        "whale shark"
+      ],
+      "query": "whale shark swimming with divers"
+    },
+    {
+      "rank": 3,
+      "name": "Giant Manta Ray",
+      "label": "wingspan wider than a car",
+      "queries": [
+        "giant manta ray gliding underwater",
+        "manta ray swimming slow motion",
+        "manta ray"
+      ],
+      "query": "giant manta ray gliding underwater"
+    },
+    {
+      "rank": 2,
+      "name": "Sperm Whale",
+      "label": "largest teeth of any predator",
+      "queries": [
+        "sperm whale diving deep ocean",
+        "sperm whale swimming underwater",
+        "sperm whale"
+      ],
+      "query": "sperm whale diving deep ocean"
+    },
+    {
+      "rank": 1,
+      "name": "Blue Whale",
+      "label": "biggest animal on earth",
+      "queries": [
+        "blue whale swimming aerial ocean",
+        "blue whale underwater slow motion",
+        "blue whale"
+      ],
+      "query": "blue whale swimming aerial ocean"
+    }
+  ]
+}

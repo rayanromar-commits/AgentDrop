@@ -1,0 +1,61 @@
+{
+  "title": "Ranking Weirdest Animal Superpowers",
+  "category": "animals",
+  "items": [
+    {
+      "rank": 5,
+      "name": "Mantis Shrimp",
+      "label": "punches faster than a bullet",
+      "queries": [
+        "mantis shrimp underwater colorful",
+        "mantis shrimp close up reef",
+        "mantis shrimp"
+      ],
+      "query": "mantis shrimp underwater colorful"
+    },
+    {
+      "rank": 4,
+      "name": "Electric Eel",
+      "label": "generates 600 volts of shock",
+      "queries": [
+        "electric eel swimming underwater",
+        "electric eel dark water close up",
+        "electric eel"
+      ],
+      "query": "electric eel swimming underwater"
+    },
+    {
+      "rank": 3,
+      "name": "Axolotl",
+      "label": "regrows its own limbs",
+      "queries": [
+        "axolotl swimming close up",
+        "axolotl aquarium pink",
+        "axolotl"
+      ],
+      "query": "axolotl swimming close up"
+    },
+    {
+      "rank": 2,
+      "name": "Chameleon",
+      "label": "eyes move independently",
+      "queries": [
+        "chameleon changing color close up",
+        "chameleon tongue slow motion",
+        "chameleon"
+      ],
+      "query": "chameleon changing color close up"
+    },
+    {
+      "rank": 1,
+      "name": "Octopus",
+      "label": "vanishes into any surface",
+      "queries": [
+        "octopus camouflage color change underwater",
+        "octopus swimming reef close up",
+        "octopus"
+      ],
+      "query": "octopus camouflage color change underwater"
+    }
+  ]
+}

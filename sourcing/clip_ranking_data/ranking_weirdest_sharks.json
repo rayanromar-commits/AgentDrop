@@ -1,0 +1,61 @@
+{
+  "title": "Ranking Weirdest Sharks",
+  "category": "sharks",
+  "items": [
+    {
+      "rank": 5,
+      "name": "Frilled Shark",
+      "label": "living fossil of the deep",
+      "queries": [
+        "frilled shark swimming deep sea",
+        "frilled shark eel like body",
+        "frilled shark"
+      ],
+      "query": "frilled shark swimming deep sea"
+    },
+    {
+      "rank": 4,
+      "name": "Wobbegong",
+      "label": "carpet shark camouflaged on reef",
+      "queries": [
+        "wobbegong shark on seafloor",
+        "carpet shark camouflage reef",
+        "wobbegong"
+      ],
+      "query": "wobbegong shark on seafloor"
+    },
+    {
+      "rank": 3,
+      "name": "Sawshark",
+      "label": "long saw studded with teeth",
+      "queries": [
+        "sawshark swimming underwater",
+        "saw shark long snout teeth",
+        "sawshark"
+      ],
+      "query": "sawshark swimming underwater"
+    },
+    {
+      "rank": 2,
+      "name": "Goblin Shark",
+      "label": "jaws slide out to strike",
+      "queries": [
+        "goblin shark deep sea",
+        "goblin shark long snout",
+        "goblin shark"
+      ],
+      "query": "goblin shark deep sea"
+    },
+    {
+      "rank": 1,
+      "name": "Hammerhead",
+      "label": "eyes on both ends",
+      "queries": [
+        "hammerhead shark swimming close up",
+        "great hammerhead shark underwater",
+        "hammerhead shark"
+      ],
+      "query": "hammerhead shark swimming close up"
+    }
+  ]
+}

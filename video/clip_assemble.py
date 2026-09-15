@@ -217,6 +217,16 @@ def _outro_layer(text: str) -> Image.Image:
 
 MUSIC_EXTS = (".mp3", ".m4a", ".wav", ".aac", ".ogg", ".opus")
 
+# Topic groups are finer-grained than the music needs to be — deep_sea, sharks
+# and ocean_predators all want the same underwater energy. Mapping them onto a
+# handful of mood folders keeps one copy of each track instead of duplicating
+# 20MB of audio across seven directories.
+MUSIC_FOLDER = {
+    "deep_sea": "ocean", "sharks": "ocean", "ocean_predators": "ocean",
+    "venomous": "wildlife", "apex_predators": "wildlife", "weird_rare": "wildlife",
+    "extremes": "extreme",
+}
+
 
 def _rotate(pool: list[Path], key: str) -> Path:
     """Next track for `key`, round-robin, never repeating the last one played.
@@ -283,7 +293,9 @@ def _pick_music(cfg: dict, post_id: str, category: str) -> Path | None:
             names.append(cat.replace(" ", "_"))
             try:
                 from sourcing.clip_ranking_generate import _category_group
-                names.append(_category_group(cat))
+                group = _category_group(cat)
+                names.append(MUSIC_FOLDER.get(group, group))
+                names.append(group)
             except Exception:
                 pass
         key = "root"

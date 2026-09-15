@@ -1,0 +1,61 @@
+{
+  "title": "Ranking Weirdest Cat Breeds",
+  "category": "cats",
+  "items": [
+    {
+      "rank": 5,
+      "name": "Scottish Fold",
+      "label": "ears folded flat forward",
+      "queries": [
+        "scottish fold cat sitting close up",
+        "folded ear cat looking at camera",
+        "scottish fold cat"
+      ],
+      "query": "scottish fold cat sitting close up"
+    },
+    {
+      "rank": 4,
+      "name": "Maine Coon",
+      "label": "giant fluffy house cat",
+      "queries": [
+        "maine coon cat walking slow motion",
+        "large fluffy maine coon close up",
+        "maine coon cat"
+      ],
+      "query": "maine coon cat walking slow motion"
+    },
+    {
+      "rank": 3,
+      "name": "Munchkin",
+      "label": "shortest legs on any cat",
+      "queries": [
+        "munchkin cat walking short legs",
+        "munchkin kitten playing close up",
+        "munchkin cat"
+      ],
+      "query": "munchkin cat walking short legs"
+    },
+    {
+      "rank": 2,
+      "name": "Sphynx",
+      "label": "completely hairless and wrinkled",
+      "queries": [
+        "sphynx cat looking at camera close up",
+        "hairless sphynx cat sitting",
+        "sphynx cat"
+      ],
+      "query": "sphynx cat looking at camera close up"
+    },
+    {
+      "rank": 1,
+      "name": "Bengal",
+      "label": "leopard spots on a housecat",
+      "queries": [
+        "bengal cat jumping slow motion",
+        "bengal cat spotted coat close up",
+        "bengal cat"
+      ],
+      "query": "bengal cat jumping slow motion"
+    }
+  ]
+}

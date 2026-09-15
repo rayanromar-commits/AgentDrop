@@ -1,0 +1,61 @@
+{
+  "title": "Ranking Weirdest Animals That Change Their Body",
+  "category": "shapeshifters",
+  "items": [
+    {
+      "rank": 5,
+      "name": "Chameleon",
+      "label": "shifts color across its skin",
+      "queries": [
+        "chameleon changing color close up",
+        "chameleon color shift skin macro",
+        "chameleon"
+      ],
+      "query": "chameleon changing color close up"
+    },
+    {
+      "rank": 4,
+      "name": "Cuttlefish",
+      "label": "rewrites its skin instantly",
+      "queries": [
+        "cuttlefish changing color camouflage",
+        "cuttlefish skin pattern underwater",
+        "cuttlefish"
+      ],
+      "query": "cuttlefish changing color camouflage"
+    },
+    {
+      "rank": 3,
+      "name": "Pufferfish",
+      "label": "inflates into a spiked ball",
+      "queries": [
+        "pufferfish inflating underwater slow motion",
+        "pufferfish puffing up close up",
+        "pufferfish"
+      ],
+      "query": "pufferfish inflating underwater slow motion"
+    },
+    {
+      "rank": 2,
+      "name": "Frilled Lizard",
+      "label": "flares a huge neck frill",
+      "queries": [
+        "frilled lizard opening frill",
+        "frilled dragon frill display close up",
+        "frilled lizard"
+      ],
+      "query": "frilled lizard opening frill"
+    },
+    {
+      "rank": 1,
+      "name": "Mimic Octopus",
+      "label": "morphs into other creatures",
+      "queries": [
+        "mimic octopus shapeshifting underwater",
+        "octopus changing shape camouflage close up",
+        "mimic octopus"
+      ],
+      "query": "mimic octopus shapeshifting underwater"
+    }
+  ]
+}
