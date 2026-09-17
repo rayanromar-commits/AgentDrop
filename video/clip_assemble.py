@@ -41,6 +41,16 @@ from media.video_source import (clip_hash, fetch_item_clip, probe_duration)
 
 log = setup_logging()
 
+
+class UnusableDataset(RuntimeError):
+    """This ranking cannot be rendered honestly — try a different list.
+
+    Raised when an entry has no stock footage that verifiably shows it (the
+    usual cause is a subject nothing has ever filmed: extinct, mythical or
+    microscopic). Distinct from a real error so production can move on to the
+    next ranking instead of failing the day's drop.
+    """
+
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 FONT = PROJECT_ROOT / "video" / "fonts" / "DejaVuSans-Bold.ttf"
 OUTPUT_DIR = PROJECT_ROOT / "output"
@@ -443,6 +453,7 @@ def render_clip_video(post_id, payload, config=None) -> Path:
     # the most-depleted pool — and #1 is the payoff the whole countdown builds to,
     # the one shot that must not fall back.
     used: set[str] = set()
+    missing: list[str] = []
     clips: dict[int, tuple[Path | None, str]] = {}
     for it in sorted(payload["items"], key=lambda x: x["rank"]):
         path, framing = fetch_item_clip(
@@ -453,13 +464,20 @@ def render_clip_video(post_id, payload, config=None) -> Path:
             used.add(clip_hash(path))
             used.add(path.stem)          # the source id, so a re-search skips it
         else:
-            log.warning("[clip] no clean clip for %r — entry will show the "
-                        "opening shot instead.", it["name"])
+            missing.append(it["name"])
         clips[it["rank"]] = (path, framing)
 
+    # ALL OR NOTHING. An entry with no verified clip used to fall back to the
+    # opening shot, which meant one animal appeared twice under two different
+    # captions — exactly what shipped as "whale shark footage labelled
+    # megalodon". There is no honest filler for a named subject, so a list that
+    # cannot be fully sourced is abandoned and production moves to another one.
+    if missing:
+        raise UnusableDataset(
+            f"{title!r}: no verified footage for {len(missing)} of 5 entries "
+            f"({', '.join(missing)}) — abandoning this list rather than showing "
+            f"the wrong subject under a caption")
     found = [clips[r][0] for r in sorted(clips) if clips[r][0]]
-    if not found:
-        raise RuntimeError(f"no usable clips for {title!r} — nothing to render")
     # #1's clip leads the intro: it's the best shot we sourced, and the opening
     # second is what decides whether anyone stays.
     opener = clips.get(1, (None, ""))[0] or found[0]
@@ -479,7 +497,7 @@ def render_clip_video(post_id, payload, config=None) -> Path:
         cap_big = _crop(_caption_layer(it["name"], it.get("label", ""), scale=1.14))
         cap = _crop(_caption_layer(it["name"], it.get("label", "")))
         timed = [(*cap_big, 0.0, 0.16), (*cap, 0.16, item_dur)]
-        plan.append((path or opener, framing, item_dur, base, timed))
+        plan.append((path, framing, item_dur, base, timed))
 
     outro_base = _base_overlay(title, by_rank, {1, 2, 3, 4, 5}, None)
     plan.append((found[-1], "cover", OUTRO_DUR, outro_base,

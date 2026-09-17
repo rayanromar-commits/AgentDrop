@@ -149,7 +149,7 @@ def _produce_clipranking(config: dict):
     import json as _json
     from sourcing.clip_ranking_source import (fetch_stories as clip_fetch,
                                               youtube_title, mark_posted)
-    from video.clip_assemble import render_clip_video
+    from video.clip_assemble import UnusableDataset, render_clip_video
     from review.queue import submit_video
 
     db.init_db()
@@ -170,10 +170,26 @@ def _produce_clipranking(config: dict):
     if config.get("use_performance_weighting"):
         _apply_ranking_performance_weight(candidates, config)
 
-    item = candidates[0]
-    payload = _json.loads(item["body"])
-    log.info("Producing ranked-clip Short %s: %s", item["post_id"], item["title"])
-    video_path = render_clip_video(item["post_id"], payload, config)
+    # Walk the ranked candidates until one can be sourced HONESTLY. A list whose
+    # entries have no verifiable footage (extinct or otherwise unfilmable
+    # subjects) is skipped, not patched with look-alike clips — but skipping it
+    # must not cost the day's drop, so the next list gets a turn.
+    item = payload = video_path = None
+    for cand in candidates[:MAX_DATASET_ATTEMPTS]:
+        cand_payload = _json.loads(cand["body"])
+        log.info("Producing ranked-clip Short %s: %s", cand["post_id"], cand["title"])
+        try:
+            video_path = render_clip_video(cand["post_id"], cand_payload, config)
+        except UnusableDataset as e:
+            log.warning("[clip] %s", e)
+            continue
+        item, payload = cand, cand_payload
+        break
+    if video_path is None:
+        log.error("No ranking could be sourced with verified footage in %d "
+                  "attempt(s). Nothing produced — the datasets need subjects "
+                  "that stock libraries actually have.", MAX_DATASET_ATTEMPTS)
+        return None
     # The genre template IS the YouTube title here — no variant rotation.
     item["title"] = youtube_title(item["title"], item["post_id"])
     result = submit_video(item, video_path, config)
@@ -258,6 +274,11 @@ def produce_one_video(config: dict):
 # siblings — but the guard below is kept because it is what keeps a multi-part
 # format out of the 0-view jail if one is ever reintroduced.
 SERIES_SPACING_HOURS = 20
+
+# How many rankings a single production run will try before giving up. A list is
+# abandoned when its entries have no verifiable stock footage, so without a few
+# attempts one bad dataset would cost the whole drop.
+MAX_DATASET_ATTEMPTS = 4
 
 
 def upload_next_approved(config: dict):

@@ -229,6 +229,27 @@ subjects, stock has no clip of any one of them, and they look identical on \
 screen. If a topic is a PROCESS, rank the different THINGS it produces or the \
 different FORMS it takes instead.
 - Everything must be real. Do not invent species or fake claims.
+- EVERY ITEM MUST BE FILMABLE, AND ALREADY FILMED. The channel shows real stock \
+footage of the thing named on screen; there is no illustration, no recreation \
+and no substitute. Before you write an item, apply this test: has a camera \
+actually pointed at this, and would a stock library plausibly hold that clip? \
+If not, it cannot be on the list. Excluded outright:
+    * EXTINCT and PREHISTORIC subjects — megalodon, titanoboa, any dinosaur, any \
+species known only from fossils. This is the single worst failure this format \
+has: asked for prehistoric sharks, the pipeline found whale-shark footage and \
+put "Megalodon" over it. Nothing has ever filmed a megalodon. A whole TOPIC \
+about the extinct past is therefore banned, not just the individual item.
+    * MYTHICAL or speculative subjects — cryptids, monsters, aliens.
+    * Anything too small or too remote to film — microscopic organisms, bacteria, \
+distant exoplanets, the inside of the Earth.
+    * ABSTRACT ideas with no single object to point at ("evolution", "extinction").
+    * Anything that exists mainly as an artist's reconstruction, a diagram or a \
+CGI render rather than as real recorded footage.
+- EACH ITEM MUST BE TELLABLE APART ON SCREEN. A viewer sees a few silent seconds \
+with a name over it, so an item that looks like a generic member of its family \
+is a failure even when footage exists: a named individual animal, a subspecies \
+that is visually identical to its cousin, or a fish that reads as "just a fish". \
+Rank things a stranger could distinguish at a glance.
 
 Output ONLY the JSON object — no prose, no code fences."""
 
@@ -310,6 +331,88 @@ def generate_clip_ranking(topic: str | None = None,
     return _validate(data)
 
 
+# Words that give away a subject nothing has ever filmed. A cheap pre-filter in
+# front of the model-based audit below: it costs nothing and catches the exact
+# failure that shipped ("Ranking Deadliest Prehistoric Sharks" -> whale-shark
+# footage captioned "Megalodon").
+_UNFILMABLE_RE = re.compile(
+    r"\b(prehistoric|extinct|dinosaur|fossil|ancient|mythical|mythological|"
+    r"legendary|cryptid|monster|alien|microscopic|bacteria|virus|"
+    r"megalodon|titanoboa|mammoth|sabertooth|saber-tooth|trilobite|"
+    r"\w+saurus|\w+raptor|\w+odon|\w+ceratops)\b", re.I)
+
+_AUDIT_PROMPT = """You are the last check before a ranked-clip video is built \
+from this list. The pipeline will search a STOCK FOOTAGE library (Pexels, \
+Pixabay) for each item and put that clip on screen under the item's name. There \
+is no illustration and no recreation — whatever it finds is presented to viewers \
+as the real thing.
+
+For each item, answer one question: does real recorded video of THIS EXACT \
+SUBJECT plausibly exist in a stock library?
+
+Answer "no" when the subject is extinct or prehistoric, mythical, microscopic, \
+an abstract idea, a specific named individual or event, or anything that exists \
+only as an artist's reconstruction or CGI. Answer "no" as well when footage of \
+the subject exists but would be indistinguishable on screen from a generic \
+member of its family, because a viewer cannot be shown a random look-alike under \
+a confident caption.
+
+Be strict. A "yes" means we publish a clip under that name. Say no when unsure.
+
+Return ONLY JSON: {{"unfilmable": [{{"name": "...", "why": "<8 words"}}]}} — an \
+empty list if every item is fine.
+
+The list is titled "{title}". The items are:
+{items}"""
+
+
+def _unfilmable_items(data: dict) -> list[str]:
+    """Names in `data` that stock footage cannot honestly show.
+
+    Two passes: a keyword pre-filter, then Claude on what survives. The video
+    pipeline refuses to render an entry it cannot source, so an unfilmable item
+    does not produce a wrong clip — it wastes a whole day's list. Catching it at
+    generation time is what keeps the buffer full of lists that can actually be
+    built.
+    """
+    names = [str(it.get("name", "")) for it in data.get("items", [])]
+    hits = [n for n in names
+            if _UNFILMABLE_RE.search(n) or _UNFILMABLE_RE.search(data.get("title", ""))]
+    if hits:
+        return names if _UNFILMABLE_RE.search(data.get("title", "")) else hits
+
+    try:
+        import anthropic
+    except ImportError:
+        return []
+    if not os.getenv("ANTHROPIC_API_KEY"):
+        return []
+    # Name quoted and separated from the caption, so the model echoes back a
+    # name that matches an item instead of the whole line.
+    listing = "\n".join(f'- "{n}"  (on-screen caption: {it.get("label", "")})'
+                        for n, it in zip(names, data["items"]))
+    try:
+        resp = anthropic.Anthropic().messages.create(
+            model=MODEL, max_tokens=500,
+            output_config={"effort": "low"},
+            messages=[{"role": "user", "content": _AUDIT_PROMPT.format(
+                title=data.get("title", ""), items=listing)}])
+        txt = "".join(b.text for b in resp.content if b.type == "text")
+        m = re.search(r"\{.*\}", txt, re.S)
+        if not m:
+            return []
+        bad = json.loads(m.group(0)).get("unfilmable") or []
+    except Exception as e:
+        log.warning("[clip-gen] filmability audit failed (%s); keeping list.", e)
+        return []
+    out = []
+    for b in bad:
+        if isinstance(b, dict) and b.get("name"):
+            out.append(str(b["name"]))
+            log.info("[clip-gen] unfilmable: %s (%s)", b["name"], b.get("why", ""))
+    return out
+
+
 def _validate(data: dict) -> dict | None:
     """Enforce the dataset contract. Returns the normalized dict, or None."""
     title = (data.get("title") or "").strip()
@@ -364,6 +467,15 @@ def _validate(data: dict) -> dict | None:
 
     if ranks != {1, 2, 3, 4, 5}:
         log.warning("[clip-gen] ranks are not 1-5 in %r: %s", title, sorted(ranks))
+        return None
+
+    # Last gate: a list is only worth keeping if every entry can be SHOWN. One
+    # unfilmable item is fatal, not fixable — the renderer refuses to caption
+    # stand-in footage, so the list would be abandoned at production time.
+    bad = _unfilmable_items(data)
+    if bad:
+        log.warning("[clip-gen] rejected %r — no real footage can exist for: %s",
+                    title, ", ".join(bad))
         return None
     return data
 

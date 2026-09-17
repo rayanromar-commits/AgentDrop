@@ -337,56 +337,77 @@ def _b64(path: Path, max_side: int = 1024) -> str:
     return base64.b64encode(buf.getvalue()).decode()
 
 
-_JUDGE_PROMPT = """You are choosing ONE stock video clip to fill the screen for a \
-single entry in a fast, silent "ranked clips" YouTube Short.{subject} The entry \
-is: **{name}**.{context}
+_JUDGE_PROMPT = """You are the fact-checker for ONE entry in a silent "ranked \
+clips" YouTube Short.{subject} The entry is: **{name}**.{context}
 
-Each image below is a frame taken from the MIDDLE of a candidate clip. Pick the \
-clip whose frame promises the most watchable few seconds.
+Each image below is a frame from the middle of a candidate stock clip. Your job \
+is NOT to pick the nicest clip. It is to decide which candidates, if any, \
+genuinely show **{name}** — and to throw out the rest.
 
-A good pick is:
-- clearly and obviously about {name} — a viewer must recognise it instantly, with \
-no caption to help them,
-- ON TOPIC. Entry names are often short and ambiguous on their own, and stock \
-search happily returns the wrong sense of a word: for a video about GLASS \
-BLOWING, an entry called "Breath Inflate" must show molten glass at a furnace, \
-NOT a fizzy drink in a drinking glass. If a candidate matches the entry's words \
-but not the video's subject, it is WRONG — reject it,
-- VISUALLY STRIKING: dramatic, close, well-lit, high contrast. This format lives \
-or dies on the footage; a dull clip is worse than a slightly less literal one,
+THE IDENTITY TEST comes first, and a candidate that fails it is out no matter \
+how good it looks:
+- The clip must show **{name}** ITSELF. A different species, a relative, or \
+something merely similar is WRONG. A whale shark is not a megalodon. A garden \
+spider is not a Sydney funnel-web. A generic reef is not a named fish.
+- Some entries CANNOT be filmed, because they are extinct, mythical, \
+microscopic, or an abstract idea. For those, the honest answer is that NO \
+candidate is correct. Never accept a living look-alike as a stand-in for an \
+extinct animal — that is the single worst failure in this format, because the \
+caption names one thing while the screen shows another.
+- If you cannot tell from the frame whether it is really {name} — because the \
+subject is small, distant, blurred, or the species is genuinely ambiguous — that \
+is NOT a pass. Leave it out.
+- Entry names are short and stock search returns the wrong sense of a word \
+happily: for a video about GLASS BLOWING, an entry "Breath Inflate" must show \
+molten glass at a furnace, NOT a fizzy drink in a glass.
+
+REJECTING IS SAFE AND OFTEN CORRECT. Returning an empty list costs nothing: the \
+entry is dropped and a different ranking is used instead. Nothing you reject \
+ever ends up on screen mislabelled. A viewer seeing the wrong animal under a \
+confident caption is far more damaging than a video we simply do not publish, so \
+when in doubt, leave it out.
+
+Among candidates that PASS the identity test, order them best-first by:
+- VISUALLY STRIKING: dramatic, close, well-lit, high contrast,
 - CLEAN: absolutely NO watermark, logo, stock-agency mark, channel name, URL, \
-social handle, or overlaid text of any kind,
+social handle, or overlaid text of any kind (a watermark is also an automatic \
+fail, like a wrong subject),
 - full-frame and sharp, not a soft or tiny source,
-- suggestive of MOTION (an animal moving, water breaking, something erupting). A \
-static locked-off shot reads as a still photo and kills the format.
+- suggestive of MOTION. A static locked-off shot reads as a still photo.
 
-Reject (best: -1) ONLY if every candidate is watermarked, has overlaid text, is \
-plainly the WRONG subject, or is too low-quality to fill a phone screen. A \
-rejection drops this entry to a generic backdrop, so it is a last resort.
-
-Also decide framing for the winner in a tall 9:16 phone frame:
+Also decide framing for your top pick in a tall 9:16 phone frame:
 - "cover" = the shot already fills a vertical frame, or the subject is central \
 enough that cropping the sides loses nothing. This is usually right.
 - "fit"   = the important action spans the full WIDTH of a wide shot, so cropping \
 to full-bleed would cut it in half — fit it to the width instead.
 
-Return ONLY JSON, with `reason` at most 15 words:
-{{"best": <index or -1>, "framing": "cover"|"fit", "reason": "..."}}"""
+Return ONLY JSON. `acceptable` lists the indices that PASS the identity test, \
+best first, and is `[]` when none do. `reason` at most 15 words:
+{{"acceptable": [<indices>], "framing": "cover"|"fit", "reason": "..."}}"""
 
 
 def _judge(name: str, cand: list[dict], context: str = "",
-           subject: str = "") -> tuple[int, str]:
-    """Claude-vision pick: (best_index or -1, framing).
+           subject: str = "") -> tuple[list[int], str]:
+    """Claude-vision verification: (acceptable indices best-first, framing).
 
-    Any failure returns (0, 'cover') so the pipeline degrades to the first
-    candidate rather than breaking the day's video."""
+    Returns EVERY candidate that genuinely shows `name`, not just a winner, so
+    the caller can step past one that duplicates footage already used without
+    falling onto something the judge never approved.
+
+    A failure here returns [] — no clip — rather than defaulting to the first
+    candidate. Silently accepting an unverified clip is exactly how a whale
+    shark ended up captioned as a megalodon; an unjudged clip is not publishable.
+    """
     load_dotenv()
     if not os.getenv("ANTHROPIC_API_KEY"):
-        return 0, "cover"
+        log.error("[clip-judge] ANTHROPIC_API_KEY not set — cannot verify that "
+                  "footage matches %r, so nothing is accepted.", name)
+        return [], "cover"
     try:
         import anthropic
     except ImportError:
-        return 0, "cover"
+        log.error("[clip-judge] anthropic package missing — cannot verify %r.", name)
+        return [], "cover"
     ctx = f"\nThe on-screen caption for this clip reads: \"{context}\"" if context else ""
     subj = f" The whole video is ranking **{subject}**." if subject else ""
     content = [{"type": "text",
@@ -404,19 +425,26 @@ def _judge(name: str, cand: list[dict], context: str = "",
         txt = "".join(b.text for b in resp.content if b.type == "text")
         m = re.search(r"\{.*\}", txt, re.S)
         if not m:
-            log.warning("[clip-judge] no JSON for %r; using first candidate.", name)
-            return 0, "cover"
+            log.warning("[clip-judge] no JSON for %r; accepting nothing.", name)
+            return [], "cover"
         data = json.loads(m.group(0))
     except Exception as e:
-        log.warning("[clip-judge] failed (%s); using first candidate.", e)
-        return 0, "cover"
-    best = data.get("best", 0)
+        log.warning("[clip-judge] failed (%s); accepting nothing for %r.", e, name)
+        return [], "cover"
     framing = "fit" if data.get("framing") == "fit" else "cover"
-    log.info("[clip-judge] %s -> best=%s framing=%s (%s)", name, best, framing,
+    raw = data.get("acceptable")
+    if not isinstance(raw, list):
+        raw = []
+    ok, seen = [], set()
+    for i in raw:
+        if isinstance(i, bool) or not isinstance(i, int):
+            continue
+        if 0 <= i < len(cand) and i not in seen:
+            seen.add(i)
+            ok.append(i)
+    log.info("[clip-judge] %s -> accepted=%s framing=%s (%s)", name, ok, framing,
              str(data.get("reason", ""))[:80])
-    if best is None or not isinstance(best, int) or best < 0 or best >= len(cand):
-        return -1, framing
-    return best, framing
+    return ok, framing
 
 
 # --- public API ---------------------------------------------------------------
@@ -492,28 +520,31 @@ def fetch_item_clip(query, prefer: str | None = None,
                     prefer or terms[0], "; ".join(terms))
         return None, "cover"
 
-    idx, framing = _judge(prefer or terms[0], cands, context=context, subject=subject)
-    if idx < 0:
-        log.warning("[clips] judge rejected every candidate for %r.",
+    ok, framing = _judge(prefer or terms[0], cands, context=context, subject=subject)
+    if not ok:
+        log.warning("[clips] no candidate verified as %r — entry has no clip.",
                     prefer or terms[0])
         return None, framing
 
-    # Download the winner; if its content collides with footage another rank is
-    # already using (the same stock clip republished under two ids), step down
-    # the list rather than repeating a shot.
-    for c in [cands[idx]] + [c for i, c in enumerate(cands) if i != idx]:
+    # Download the best VERIFIED candidate; if its content collides with footage
+    # another rank is already using (the same stock clip republished under two
+    # ids), step down to the next candidate THE JUDGE ALSO APPROVED. Stepping
+    # onto an unapproved one to avoid a repeat just trades a duplicate shot for
+    # a mislabelled one, which is the worse of the two.
+    for i in ok:
+        c = cands[i]
         path = _download(c)
         if not path:
             continue
         if clip_hash(path) in exclude:
-            log.info("[clips] %s duplicates footage already used; trying another.",
-                     c["id"])
+            log.info("[clips] %s duplicates footage already used; trying the "
+                     "next verified candidate.", c["id"])
             continue
         prune_cache()
         return path, framing
 
-    log.warning("[clips] every candidate for %r failed to download.",
-                prefer or terms[0])
+    log.warning("[clips] every verified candidate for %r was a duplicate or "
+                "failed to download.", prefer or terms[0])
     return None, framing
 
 
