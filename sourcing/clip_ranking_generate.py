@@ -404,7 +404,55 @@ best first, EVERY one containing the topic's own words, with the third being \
 the bare subject name alone.
 
 Return ONLY JSON:
-{{"name": "...", "label": "...", "queries": ["...", "...", "..."]}}"""
+{{"name": "...", "label": "...", "why": "<why it truly belongs, <=12 words>", \
+"queries": ["...", "...", "..."]}}"""
+
+_VERIFY_SUB_PROMPT = """Answer one factual question, with no regard for what \
+anyone wants the answer to be.
+
+Would "{name}" be a DEFENSIBLE entry at rank {rank} of 5 on a list titled \
+"{title}", where rank 1 is the most extreme?
+
+Say no if the claim is simply false — if it is the wrong kind of thing for that \
+title, or if it belongs on the opposite side of it. A sea lion is not one of \
+the deadliest predators that hunt sharks; it is what sharks eat. Say no if it \
+is a stretch you would have to argue for.
+
+Return ONLY JSON: {{"ok": true|false, "why": "<=12 words"}}"""
+
+
+def _substitute_is_true(title: str, name: str, rank) -> bool:
+    """Second opinion on whether a replacement actually belongs on the list.
+
+    The first call is asked to produce something, and a model asked to produce
+    something produces something: a live run replaced an unsourceable Orca on
+    "Deadliest Predators That Hunt Sharks" with a SEA LION — at rank 1, the
+    payoff slot. Sea lions are what sharks eat. Asking a separate, fresh call
+    the plain factual question, with no pressure to fill a slot, catches that.
+    """
+    try:
+        import anthropic
+    except ImportError:
+        return False
+    try:
+        resp = anthropic.Anthropic().messages.create(
+            model=MODEL, max_tokens=400,
+            output_config={"effort": "low"},
+            messages=[{"role": "user", "content": _VERIFY_SUB_PROMPT.format(
+                name=name, rank=rank, title=title)}])
+        txt = "".join(b.text for b in resp.content if b.type == "text")
+        m = re.search(r"\{.*\}", txt, re.S)
+        if not m:
+            return False
+        data = json.loads(m.group(0))
+    except Exception as e:
+        log.warning("[clip-gen] substitute verification failed (%s); rejecting.", e)
+        return False
+    ok = bool(data.get("ok"))
+    if not ok:
+        log.info("[clip-gen] substitute %r rejected as untrue for %r: %s",
+                 name, title, str(data.get("why", ""))[:60])
+    return ok
 
 
 def substitute_item(data: dict, failed_name: str) -> dict | None:
@@ -432,6 +480,14 @@ def substitute_item(data: dict, failed_name: str) -> dict | None:
                    if str(it.get("name", "")).lower() == failed_name.lower()), None)
     if not failed:
         return None
+    # #1 is the payoff the whole countdown builds to and the list's strongest
+    # claim. If THAT cannot be sourced honestly, the list is the wrong list —
+    # swapping the headline act for whatever happens to be filmable is how a
+    # sea lion ends up ranked the deadliest thing that hunts sharks.
+    if failed.get("rank") == 1:
+        log.info("[clip-gen] %r is rank 1 — not substituting the payoff slot.",
+                 failed_name)
+        return None
     listing = ", ".join(str(it.get("name", "")) for it in items)
     try:
         resp = anthropic.Anthropic().messages.create(
@@ -458,6 +514,8 @@ def substitute_item(data: dict, failed_name: str) -> dict | None:
         return None
     if _UNFILMABLE_RE.search(name):
         log.info("[clip-gen] substitute %r is unfilmable; skipping.", name)
+        return None
+    if not _substitute_is_true(data.get("title", ""), name, failed.get("rank")):
         return None
     qs = [q.strip() for q in (sub.get("queries") or [])
           if isinstance(q, str) and q.strip()]

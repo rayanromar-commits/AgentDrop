@@ -536,9 +536,17 @@ def render_clip_video(post_id, payload, config=None) -> Path:
     # captioned here, so this clip only has to be on-topic — any animal from the
     # subject works, which is why it is sourced on the topic rather than an item.
     # It is strictly optional: a list is never abandoned for want of a backdrop.
+    # Search the CATEGORY, not the full topic, when the topic is a phrase: for
+    # "Deadliest Predators That Hunt Sharks" the judge correctly rejected every
+    # candidate because no stock clip depicts a whole sentence. The category
+    # ("predators", "sharks") is the searchable noun behind it.
+    outro_subject = payload.get("category") or subject
+    if len(subject.split()) <= 3:
+        outro_subject = subject
     outro_clip, outro_framing = fetch_item_clip(
-        [subject, f"{subject} close up", f"{subject} slow motion"],
-        prefer=subject, exclude=used, subject=subject)
+        [outro_subject, f"{outro_subject} close up",
+         f"{outro_subject} slow motion"],
+        prefer=outro_subject, exclude=used, subject=outro_subject)
     if outro_clip:
         used.add(clip_hash(outro_clip))
     else:
@@ -547,7 +555,7 @@ def render_clip_video(post_id, payload, config=None) -> Path:
         outro_clip = clips[order[0]["rank"]][0]
         outro_framing = clips[order[0]["rank"]][1]
         log.info("[clip] no separate outro shot for %r; reusing the "
-                 "first-revealed entry's clip.", subject)
+                 "first-revealed entry's clip.", outro_subject)
     # #1's clip leads the intro: it's the best shot we sourced, and the opening
     # second is what decides whether anyone stays.
     opener = clips.get(1, (None, ""))[0] or found[0]
