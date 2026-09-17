@@ -13,6 +13,7 @@ Both are idempotent and quiet: a second upload of the same post_id (YouTube
 then TikTok) returns False rather than double-counting.
 """
 
+import json
 import sys
 from datetime import date
 from pathlib import Path
@@ -48,22 +49,50 @@ def _unused(config: dict) -> list[dict]:
 
 
 def archive_story(post_id: str, config: dict, youtube_id: str = "") -> bool:
-    """Retire the dataset behind `post_id` in the posted ledger.
+    """Make sure `post_id` is retired in the posted ledger, with its video id.
 
-    Returns True only the first time, so the caller's low-stock nudge fires
-    once per video rather than once per platform.
+    Production already calls mark_posted() when it queues a video, so the usual
+    job here is to backfill the YouTube id onto that entry once the upload
+    succeeds — which is what lets a ledger row be matched back to the live
+    channel. Returns True if the ledger changed.
     """
     src = source_module(config)
-    if post_id in src.posted_ids():
-        return False
+    title = None
     for _path, data in src._datasets(config):
         if src._post_id(data["title"]) == post_id:
-            src.mark_posted(data["title"], youtube_id=youtube_id,
-                            date=date.today().isoformat())
-            return post_id in src.posted_ids()
-    log.warning("[ledger] no dataset on disk for %s — nothing to retire.",
-                post_id)
-    return False
+            title = data["title"]
+            break
+    if title is None:
+        log.warning("[ledger] no dataset on disk for %s — nothing to retire.",
+                    post_id)
+        return False
+    if post_id not in src.posted_ids():
+        src.mark_posted(title, youtube_id=youtube_id,
+                        date=date.today().isoformat())
+        return True
+    return _backfill_youtube_id(src, post_id, youtube_id)
+
+
+def _backfill_youtube_id(src, post_id: str, youtube_id: str) -> bool:
+    """Write `youtube_id` onto an already-retired ledger entry that lacks one."""
+    if not youtube_id:
+        return False
+    data = src._load_posted()
+    changed = False
+    for e in data.get("posted", []):
+        if isinstance(e, dict) and e.get("post_id") == post_id and not e.get("youtube_id"):
+            e["youtube_id"] = youtube_id
+            changed = True
+    if not changed:
+        return False
+    try:
+        src.POSTED_LEDGER.write_text(
+            json.dumps(data, indent=2, ensure_ascii=False), encoding="utf-8")
+        log.info("[ledger] recorded youtube id %s for %s", youtube_id, post_id)
+        return True
+    except Exception as e:
+        log.warning("[ledger] could not write posted-ledger: %s", e)
+        return False
 
 
 def restock_status(config: dict) -> dict:

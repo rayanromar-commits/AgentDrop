@@ -10,6 +10,9 @@ Commands:
   python3 main.py digest      send the daily Slack performance digest now
   python3 main.py schedule    run continuously on your configured schedule
 
+Env: RUN_NOW=1 makes 'schedule' do one catch-up produce+upload at startup
+(for recovering a missed cloud slot), then follow the normal schedule.
+
 NOTE: 'produce' calls the TTS API and so SPENDS ElevenLabs credits.
 'schedule' will do this automatically on a timer — only run it when you
 intend AgentDrop to operate (and spend) on its own.
@@ -280,13 +283,14 @@ def upload_next_approved(config: dict):
             vid = upload_video(row, config)
             notify_posted("YouTube", row["title"],
                           f"https://youtube.com/watch?v={vid}")
-            # Retire the source script so it's never reused (avoids the
-            # repetitive-content penalties that throttle a channel). If a
-            # story was actually retired, nudge Slack when stock runs low.
-            if archive_story(row["post_id"], config, youtube_id=vid):
-                min_days = config.get("notifications", {}).get(
-                    "restock_min_days", 4)
-                notify_low_stock(restock_status(config), min_days)
+            # The dataset was already retired in the posted ledger at produce
+            # time, so this only backfills the YouTube id onto that entry. The
+            # low-stock nudge is unconditional: the runway is what matters at
+            # posting time, not who happened to retire the list.
+            archive_story(row["post_id"], config, youtube_id=vid)
+            min_days = config.get("notifications", {}).get(
+                "restock_min_days", 4)
+            notify_low_stock(restock_status(config), min_days)
             return vid
         except Exception as e:
             log.error("[youtube] upload failed for %s: %s", row["post_id"], e)
@@ -306,7 +310,7 @@ def upload_next_tiktok(config: dict):
     from pathlib import Path
     from upload.tiktok_upload import upload_video_tiktok
     from notify.events import notify_posted, notify_failed, notify_low_stock
-    from sourcing.ledger import archive_story, restock_status
+    from sourcing.ledger import restock_status
     db.init_db()
     if not config.get("tiktok", {}).get("enabled"):
         log.info("TikTok disabled in config; skipping.")
@@ -319,11 +323,9 @@ def upload_next_tiktok(config: dict):
             mode = config["tiktok"].get("mode", "inbox")
             where = "TikTok drafts" if mode == "inbox" else "TikTok"
             notify_posted(where, row["title"])
-            # Idempotent: no-op if YouTube already archived this story.
-            if archive_story(row["post_id"], config):
-                min_days = config.get("notifications", {}).get(
-                    "restock_min_days", 4)
-                notify_low_stock(restock_status(config), min_days)
+            min_days = config.get("notifications", {}).get(
+                "restock_min_days", 4)
+            notify_low_stock(restock_status(config), min_days)
             return pid
         except Exception as e:
             log.error("[tiktok] upload failed for %s: %s", row["post_id"], e)
@@ -474,6 +476,31 @@ def start_scheduler(config: dict) -> None:
     if config["approval_mode"] == "manual":
         log.info("Manual mode: videos are produced into the review queue but "
                  "NOT uploaded until you approve them (python3 -m review.review).")
+
+    # One-shot catch-up: set RUN_NOW=1 in the environment to produce + upload
+    # ONCE at startup, then carry on with the normal schedule. This is how a
+    # missed slot gets recovered in the cloud, where there is no shell to run
+    # `python main.py produce` in. Guarded by a dated marker so a container
+    # restart can't post twice — but REMOVE THE VARIABLE once it has run: a
+    # redeploy wipes the marker along with the rest of the SQLite file.
+    import os
+    if os.getenv("RUN_NOW", "").strip().lower() in ("1", "true", "yes"):
+        today = datetime.now(tz).date().isoformat()
+        if db.get_meta("run_now_done") == today:
+            log.info("[scheduler] RUN_NOW set but already ran today (%s); "
+                     "skipping. Remove RUN_NOW from the environment.", today)
+        else:
+            log.info("[scheduler] RUN_NOW set — running one catch-up "
+                     "production + upload now.")
+            try:
+                production_job()
+                upload_job()
+                db.set_meta("run_now_done", today)
+            except Exception as e:
+                log.error("[scheduler] RUN_NOW catch-up failed: %s", e)
+            log.info("[scheduler] RUN_NOW catch-up finished — remove RUN_NOW "
+                     "so the next redeploy doesn't post an extra video.")
+
     try:
         sched.start()
     except (KeyboardInterrupt, SystemExit):
