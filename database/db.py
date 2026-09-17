@@ -315,7 +315,7 @@ def record_stats(post_id, youtube_id, subreddit, views, likes, comments,
     conn.close()
 
 
-def video_performance() -> list[dict]:
+def video_performance(prefix: str | None = None) -> list[dict]:
     """Per-video performance from each video's latest snapshot.
 
     Returns one dict per uploaded video with an age-normalized ``score``:
@@ -337,6 +337,15 @@ def video_performance() -> list[dict]:
     from looking "better" just because they've had more time to rack up views.
     """
     conn = get_connection()
+    # `prefix` scopes the learning to ONE content format. post_id namespaces are
+    # per-format ("clip_", "rank_", "manual_"), and without this the ranker
+    # learns from the retired Reddit story channel: a live check had the clip
+    # channel's "best category" coming back as r/ProRevenge.
+    where = "WHERE l.rn = 1"
+    params: tuple = ()
+    if prefix:
+        where += " AND l.post_id LIKE ?"
+        params = (prefix + "%",)
     rows = conn.execute(
         """
         WITH latest AS (
@@ -355,8 +364,8 @@ def video_performance() -> list[dict]:
                (julianday('now') - julianday(f.first_at)) AS age_days
         FROM latest l
         JOIN firstseen f ON l.post_id = f.post_id
-        WHERE l.rn = 1
-        """
+        """ + where,
+        params
     ).fetchall()
     conn.close()
 
@@ -386,7 +395,7 @@ def video_performance() -> list[dict]:
     return out
 
 
-def subreddit_performance() -> dict:
+def subreddit_performance(prefix: str | None = None) -> dict:
     """Aggregate per-video performance into per-subreddit averages.
 
     Each subreddit gets: n (sample size), avg_views, avg_views_per_day,
@@ -395,7 +404,7 @@ def subreddit_performance() -> dict:
     rather than just how long a video has been live.
     """
     by_sub: dict[str, list] = {}
-    for v in video_performance():
+    for v in video_performance(prefix=prefix):
         by_sub.setdefault(v["subreddit"], []).append(v)
 
     out = {}

@@ -38,6 +38,7 @@ from PIL import Image, ImageDraw, ImageFont
 
 from agentdrop_common import setup_logging
 from media.video_source import (clip_hash, fetch_item_clip, probe_duration)
+from sourcing.clip_ranking_generate import substitute_item
 
 log = setup_logging()
 
@@ -74,8 +75,9 @@ LABEL_CY = 1590                      # short label under it
 # video lands on target exactly and needs no atempo pass (which would also chew
 # up the music bed).
 INTRO_DUR = 1.8
-OUTRO_DUR = 1.5
+OUTRO_DUR = 2.4        # the question is alone on screen here, so it needs a beat
 MIN_ITEM_DUR = 2.6
+MAX_SUBSTITUTIONS = 2   # a list needing more rewrites than this is just a bad list
 OUTRO_TEXT = "Which one was your #1?"      # a question — this format lives on comments
 
 
@@ -211,17 +213,30 @@ def _title_card(title: str) -> Image.Image:
 
 
 def _outro_layer(text: str) -> Image.Image:
-    """The closing call-to-action.
+    """The closing call-to-action, ALONE in the centre of the frame.
 
-    Deliberately NOT centred in the frame: the outro keeps the completed 1-5
-    list on screen (that's the satisfying payoff), and a mid-frame CTA lands
-    straight on top of rank 4. It sits in the caption band instead, which is
-    empty by then."""
+    It used to sit in the caption band with the finished 1-5 list still on
+    screen, and it was missed: after five reveals the eye is parked on the list,
+    and one more line of text at the bottom reads as more of the same. The whole
+    frame clearing is the signal that the countdown is over — nothing else to
+    look at, so the question is the only thing left to answer.
+
+    The dim behind it is part of the layer rather than the base overlay, so the
+    footage still moves underneath without competing for attention.
+    """
     img = Image.new("RGBA", (W, H), (0, 0, 0, 0))
     d = ImageDraw.Draw(img)
-    size = _fit(d, text.upper(), W - 2 * ML, 82)
-    _text(d, (W // 2, NAME_CY), text.upper(), size, fill=WHITE,
-          anchor="mm", stroke=12)
+    d.rectangle([0, 0, W, H], fill=(0, 0, 0, 165))
+    size = 104
+    lines = _wrap(d, text.upper(), W - 2 * ML, size)
+    while len(lines) > 3 and size > 64:
+        size -= 6
+        lines = _wrap(d, text.upper(), W - 2 * ML, size)
+    line_h = size + 22
+    y = H // 2 - (len(lines) - 1) * line_h // 2
+    for ln in lines:
+        _text(d, (W // 2, y), ln, size, fill=WHITE, anchor="mm", stroke=14)
+        y += line_h
     return img
 
 
@@ -467,17 +482,72 @@ def render_clip_video(post_id, payload, config=None) -> Path:
             missing.append(it["name"])
         clips[it["rank"]] = (path, framing)
 
-    # ALL OR NOTHING. An entry with no verified clip used to fall back to the
-    # opening shot, which meant one animal appeared twice under two different
-    # captions — exactly what shipped as "whale shark footage labelled
-    # megalodon". There is no honest filler for a named subject, so a list that
-    # cannot be fully sourced is abandoned and production moves to another one.
+    # One unsourceable entry should not cost the whole ranking. Before giving
+    # up, ask for a replacement that genuinely belongs on this list and is
+    # easier to film — the CAPTION CHANGES WITH IT, so the video ends up ranking
+    # what it actually shows. Bounded, because a list needing three rewrites is
+    # a bad list, not a sourcing problem.
+    for failed in list(missing)[:MAX_SUBSTITUTIONS]:
+        sub = substitute_item(payload, failed)
+        if not sub:
+            continue
+        path, framing = fetch_item_clip(
+            sub["queries"], prefer=sub["name"], exclude=used, subject=subject,
+            context=f"{sub['name']} — {sub.get('label', '')}".strip(" —"))
+        if not path:
+            log.info("[clip] substitute %r for %r also had no footage.",
+                     sub["name"], failed)
+            continue
+        used.add(clip_hash(path))
+        used.add(path.stem)
+        rank = sub["rank"]
+        for i, it in enumerate(payload["items"]):
+            if it["rank"] == rank:
+                payload["items"][i] = sub
+                break
+        clips[rank] = (path, framing)
+        missing.remove(failed)
+        log.info("[clip] %r had no footage — ranking %r at #%s instead.",
+                 failed, sub["name"], rank)
+
+    # A substitution rewrites payload["items"], so anything derived from it
+    # before now is stale — the rank list and the caption would still show the
+    # entry we could not source.
+    by_rank = {it["rank"]: it for it in payload["items"]}
+    rest = [it for it in payload["items"] if it["rank"] != 1]
+    random.Random(post_id).shuffle(rest)
+    order = rest + [it for it in payload["items"] if it["rank"] == 1]
+
+    # ALL OR NOTHING for whatever is still missing. An entry with no verified
+    # clip used to fall back to the opening shot, which meant one animal
+    # appeared twice under two different captions — exactly what shipped as
+    # "whale shark footage labelled megalodon". There is no honest filler for a
+    # named subject, so a list that cannot be fully sourced is abandoned and
+    # production moves to another one.
     if missing:
         raise UnusableDataset(
             f"{title!r}: no verified footage for {len(missing)} of 5 entries "
             f"({', '.join(missing)}) — abandoning this list rather than showing "
             f"the wrong subject under a caption")
     found = [clips[r][0] for r in sorted(clips) if clips[r][0]]
+
+    # The outro gets its OWN shot. It used to replay rank 5's clip, so the video
+    # ended on footage the viewer had already seen mid-countdown. Nothing is
+    # captioned here, so this clip only has to be on-topic — any animal from the
+    # subject works, which is why it is sourced on the topic rather than an item.
+    # It is strictly optional: a list is never abandoned for want of a backdrop.
+    outro_clip, outro_framing = fetch_item_clip(
+        [subject, f"{subject} close up", f"{subject} slow motion"],
+        prefer=subject, exclude=used, subject=subject)
+    if outro_clip:
+        used.add(clip_hash(outro_clip))
+    else:
+        # Fall back to the FIRST-revealed entry's clip — the one furthest back in
+        # the viewer's memory — instead of the last, which just played.
+        outro_clip = clips[order[0]["rank"]][0]
+        outro_framing = clips[order[0]["rank"]][1]
+        log.info("[clip] no separate outro shot for %r; reusing the "
+                 "first-revealed entry's clip.", subject)
     # #1's clip leads the intro: it's the best shot we sourced, and the opening
     # second is what decides whether anyone stays.
     opener = clips.get(1, (None, ""))[0] or found[0]
@@ -499,8 +569,10 @@ def render_clip_video(post_id, payload, config=None) -> Path:
         timed = [(*cap_big, 0.0, 0.16), (*cap, 0.16, item_dur)]
         plan.append((path, framing, item_dur, base, timed))
 
-    outro_base = _base_overlay(title, by_rank, {1, 2, 3, 4, 5}, None)
-    plan.append((found[-1], "cover", OUTRO_DUR, outro_base,
+    # The outro clears completely: no title, no rank list, no caption — just the
+    # question. `_outro_layer` carries its own dim, so the base is empty.
+    outro_base = Image.new("RGBA", (W, H), (0, 0, 0, 0))
+    plan.append((outro_clip, outro_framing, OUTRO_DUR, outro_base,
                  [(*_crop(_outro_layer(OUTRO_TEXT)), 0.0, OUTRO_DUR)]))
 
     with tempfile.TemporaryDirectory() as tmp:

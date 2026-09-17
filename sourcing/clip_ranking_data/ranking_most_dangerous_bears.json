@@ -1,0 +1,61 @@
+{
+  "title": "Ranking Most Dangerous Bears",
+  "category": "bears",
+  "items": [
+    {
+      "rank": 5,
+      "name": "Sun Bear",
+      "label": "smallest but fiercely aggressive",
+      "queries": [
+        "sun bear walking forest",
+        "sun bear close up",
+        "sun bear"
+      ],
+      "query": "sun bear walking forest"
+    },
+    {
+      "rank": 4,
+      "name": "Sloth Bear",
+      "label": "unpredictable and quick to charge",
+      "queries": [
+        "sloth bear walking wild",
+        "sloth bear close up",
+        "sloth bear"
+      ],
+      "query": "sloth bear walking wild"
+    },
+    {
+      "rank": 3,
+      "name": "Black Bear",
+      "label": "climbs trees and raids camps",
+      "queries": [
+        "black bear walking forest",
+        "black bear close up wild",
+        "black bear"
+      ],
+      "query": "black bear walking forest"
+    },
+    {
+      "rank": 2,
+      "name": "Grizzly Bear",
+      "label": "massive claws and raw power",
+      "queries": [
+        "grizzly bear roaring river",
+        "grizzly bear walking slow motion",
+        "grizzly bear"
+      ],
+      "query": "grizzly bear roaring river"
+    },
+    {
+      "rank": 1,
+      "name": "Polar Bear",
+      "label": "largest land predator alive",
+      "queries": [
+        "polar bear walking ice",
+        "polar bear swimming close up",
+        "polar bear"
+      ],
+      "query": "polar bear walking ice"
+    }
+  ]
+}

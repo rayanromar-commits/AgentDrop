@@ -5,6 +5,7 @@ Contents:
   - channel totals (subscribers / views / videos) with 1d / 7d / 30d deltas
   - top 3 videos by views (title + link)
   - how many unused ranking lists remain, with a restock warning
+  - what the daily learning pass concluded (framings, comments, rivals)
 
 Test on demand:  python3 main.py digest
 """
@@ -87,6 +88,14 @@ def build_digest(config: dict) -> str:
         f"*Queue:* {rs['stories']} stories ≈ *{rs['uploads']} uploads* "
         f"≈ {rs['days_runway']} days at {rs['uploads_per_day']}/day",
     ]
+    # What the daily learning pass found: best framings, what viewers actually
+    # said (jokes filtered out), and which rival video beat its own channel.
+    try:
+        from tracking.insights import digest_lines
+        lines += digest_lines()
+    except Exception as e:
+        log.debug("[digest] insights unavailable: %s", e)
+
     if rs["days_runway"] <= restock_min_days:
         lines.append(
             f"⚠️ *Restock soon* — only ~{rs['days_runway']} days of uploads left "

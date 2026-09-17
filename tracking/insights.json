@@ -1,0 +1,449 @@
+{
+  "built_at": "2026-09-17T02:10:44.243345+00:00",
+  "categories": {
+    "africananimals": {
+      "n": 1,
+      "avg_views": 355.0,
+      "avg_views_per_day": 710.0,
+      "engagement_rate": 0.04507042253521127,
+      "avg_completion": null,
+      "avg_shares": 0.0,
+      "score": 870.0
+    }
+  },
+  "superlatives": {
+    "deadliest": {
+      "n": 1,
+      "score": 870.0,
+      "avg_views": 355.0,
+      "avg_shares": 0.0
+    }
+  },
+  "comments": {
+    "counts": {
+      "joke": 4,
+      "answer": 1
+    },
+    "total": 5,
+    "answer_rate": 0.2,
+    "feedback": [],
+    "requests": [],
+    "as_of": "2026-09-16"
+  },
+  "rivals": {
+    "outliers": [
+      {
+        "title": "Ranking Best Cats Stealing The Spotlight",
+        "views": 159093818,
+        "multiple": 135.4,
+        "channel": "Mugi Ranks",
+        "subject": "cats stealing spotlight",
+        "superlative": "",
+        "published": "2026-04-21T00:37:00Z",
+        "servable": false
+      },
+      {
+        "title": "Ranking Best Tree Cutting Moments! 🌴😮 #usa",
+        "views": 4237809,
+        "multiple": 97.6,
+        "channel": "CallMeRanks",
+        "subject": "tree cutting moments",
+        "superlative": "",
+        "published": "2026-08-13T21:11:10Z",
+        "servable": false
+      },
+      {
+        "title": "Ranking Best Clingy Cat Moments",
+        "views": 94844433,
+        "multiple": 80.7,
+        "channel": "Mugi Ranks",
+        "subject": "clingy cat moments",
+        "superlative": "",
+        "published": "2026-06-11T00:39:15Z",
+        "servable": false
+      },
+      {
+        "title": "Ranking Best Shark Moments",
+        "views": 324953790,
+        "multiple": 65.3,
+        "channel": "Xiro Ranks",
+        "subject": "shark moments",
+        "superlative": "",
+        "published": "2026-07-08T23:50:22Z",
+        "servable": false
+      },
+      {
+        "title": "Weird habits we secretly do as a kid 🙈",
+        "views": 7147800,
+        "multiple": 61.9,
+        "channel": "Rankexa",
+        "subject": "weird habits secretly kid",
+        "superlative": "",
+        "published": "2026-09-08T14:00:08Z",
+        "servable": false
+      },
+      {
+        "title": "DON'T CHECK THE SOUND 😭😭",
+        "views": 408551509,
+        "multiple": 53.3,
+        "channel": "RankZilla",
+        "subject": "don check sound",
+        "superlative": "",
+        "published": "2026-05-28T16:05:22Z",
+        "servable": false
+      },
+      {
+        "title": "Ranking Best Snake Moments",
+        "views": 56589566,
+        "multiple": 48.2,
+        "channel": "Mugi Ranks",
+        "subject": "snake moments",
+        "superlative": "",
+        "published": "2026-04-14T01:31:57Z",
+        "servable": false
+      },
+      {
+        "title": "Ranking Best Objects Having Nightmare! 😀😭 #usa",
+        "views": 2078317,
+        "multiple": 47.9,
+        "channel": "CallMeRanks",
+        "subject": "objects having nightmare",
+        "superlative": "",
+        "published": "2026-09-04T03:49:55Z",
+        "servable": false
+      },
+      {
+        "title": "Ranking Best Cheetah Moments",
+        "views": 175121896,
+        "multiple": 35.2,
+        "channel": "Xiro Ranks",
+        "subject": "cheetah moments",
+        "superlative": "",
+        "published": "2026-05-19T20:52:17Z",
+        "servable": false
+      },
+      {
+        "title": "Ranking Funniest Chicken Scream 💀",
+        "views": 117166155,
+        "multiple": 32.6,
+        "channel": "Polar Ranks",
+        "subject": "funniest chicken scream",
+        "superlative": "",
+        "published": "2026-05-14T01:44:52Z",
+        "servable": false
+      },
+      {
+        "title": "Ranking Best Kissing Cats Moments",
+        "views": 37325246,
+        "multiple": 31.8,
+        "channel": "Mugi Ranks",
+        "subject": "kissing cats moments",
+        "superlative": "",
+        "published": "2026-05-23T04:08:48Z",
+        "servable": false
+      },
+      {
+        "title": "Ranking Crazy Demolition Clips! 🫤😭 #usa",
+        "views": 1370366,
+        "multiple": 31.6,
+        "channel": "CallMeRanks",
+        "subject": "crazy demolition clips",
+        "superlative": "",
+        "published": "2026-08-10T12:28:54Z",
+        "servable": false
+      },
+      {
+        "title": "Ranking Funniest Bungee Moments✌🏼😭",
+        "views": 43676414,
+        "multiple": 31.5,
+        "channel": "LaylaRanks",
+        "subject": "funniest bungee moments",
+        "superlative": "",
+        "published": "2026-07-11T17:00:36Z",
+        "servable": false
+      },
+      {
+        "title": "Brother And Sister Moments We Get 💀✨",
+        "views": 3523569,
+        "multiple": 30.5,
+        "channel": "Rankexa",
+        "subject": "brother sister moments get",
+        "superlative": "",
+        "published": "2026-09-07T16:00:14Z",
+        "servable": false
+      },
+      {
+        "title": "Ranking Funniest Waterpark Moments✌🏼😭",
+        "views": 38818874,
+        "multiple": 28.0,
+        "channel": "LaylaRanks",
+        "subject": "funniest waterpark moments",
+        "superlative": "",
+        "published": "2026-07-13T16:00:37Z",
+        "servable": false
+      },
+      {
+        "title": "Ranking Weirdest Sea Creatures",
+        "views": 132931087,
+        "multiple": 26.7,
+        "channel": "Xiro Ranks",
+        "subject": "weirdest sea creatures",
+        "superlative": "weirdest",
+        "published": "2026-06-20T21:11:21Z",
+        "servable": true
+      },
+      {
+        "title": "Ranking The Best Billiard Moments! 😭😬 #usa",
+        "views": 1141639,
+        "multiple": 26.3,
+        "channel": "CallMeRanks",
+        "subject": "billiard moments",
+        "superlative": "",
+        "published": "2026-08-28T02:22:57Z",
+        "servable": false
+      },
+      {
+        "title": "Ranking The Best Slide Moments! 😮😂 #usa",
+        "views": 1095794,
+        "multiple": 25.2,
+        "channel": "CallMeRanks",
+        "subject": "slide moments",
+        "superlative": "",
+        "published": "2026-09-05T03:54:55Z",
+        "servable": false
+      },
+      {
+        "title": "Ranking Best Amusement Park Moments! 😁😋 #usa",
+        "views": 1081991,
+        "multiple": 24.9,
+        "channel": "CallMeRanks",
+        "subject": "amusement park moments",
+        "superlative": "",
+        "published": "2026-08-31T01:48:07Z",
+        "servable": false
+      },
+      {
+        "title": "Ranking Pets Taking Medicine Moments",
+        "views": 60272727,
+        "multiple": 23.1,
+        "channel": "AuraShorts",
+        "subject": "pets taking medicine moments",
+        "superlative": "",
+        "published": "2026-09-02T21:08:07Z",
+        "servable": false
+      },
+      {
+        "title": "Ranking Satisfying Wasp Nest Removal 😭",
+        "views": 72103143,
+        "multiple": 20.1,
+        "channel": "Polar Ranks",
+        "subject": "satisfying wasp nest removal",
+        "superlative": "",
+        "published": "2026-07-29T17:59:59Z",
+        "servable": false
+      },
+      {
+        "title": "Ranking The Best Scooter Moments! 🛴😜😬 #usa",
+        "views": 841648,
+        "multiple": 19.4,
+        "channel": "CallMeRanks",
+        "subject": "scooter moments",
+        "superlative": "",
+        "published": "2026-09-01T01:09:10Z",
+        "servable": false
+      },
+      {
+        "title": "Ranking Best Frog Moments",
+        "views": 94367877,
+        "multiple": 19.0,
+        "channel": "Xiro Ranks",
+        "subject": "frog moments",
+        "superlative": "",
+        "published": "2026-07-01T02:19:13Z",
+        "servable": false
+      },
+      {
+        "title": "Ranking Best Bunny Moments",
+        "views": 20696873,
+        "multiple": 17.6,
+        "channel": "Mugi Ranks",
+        "subject": "bunny moments",
+        "superlative": "",
+        "published": "2026-07-29T03:57:12Z",
+        "servable": false
+      },
+      {
+        "title": "Unexplainable Pet Behaviors Ranked 🐶😹",
+        "views": 1900349,
+        "multiple": 16.5,
+        "channel": "Rankexa",
+        "subject": "unexplainable pet behaviors",
+        "superlative": "",
+        "published": "2026-09-07T20:00:28Z",
+        "servable": false
+      }
+    ],
+    "superlatives": {
+      "weirdest": 26.7
+    },
+    "channels": [
+      {
+        "name": "AuraShorts",
+        "median": 2608654.5,
+        "n": 50
+      },
+      {
+        "name": "Mugi Ranks",
+        "median": 1175255.0,
+        "n": 33
+      },
+      {
+        "name": "Rankexa",
+        "median": 115389.5,
+        "n": 50
+      },
+      {
+        "name": "RankZilla",
+        "median": 7670854.0,
+        "n": 50
+      },
+      {
+        "name": "Ryth",
+        "median": 1107105.0,
+        "n": 50
+      },
+      {
+        "name": "CallMeRanks",
+        "median": 43408.0,
+        "n": 50
+      },
+      {
+        "name": "Ranked Flow",
+        "median": 27433.0,
+        "n": 50
+      },
+      {
+        "name": "Xiro Ranks",
+        "median": 4974155.0,
+        "n": 50
+      },
+      {
+        "name": "LaylaRanks",
+        "median": 1385448.0,
+        "n": 50
+      },
+      {
+        "name": "Polar Ranks",
+        "median": 3589200.5,
+        "n": 30
+      }
+    ]
+  },
+  "trending": [
+    {
+      "title": "This Shark Hunts Giants 🦈☠️ #shorts",
+      "views": 54032901,
+      "channel": "Ocean Pulse",
+      "video_id": "S4Jj7IL4w18",
+      "seed": "apex predator shorts"
+    },
+    {
+      "title": "Cute Hero Japan‼️ How to Survive Flood💕❤️😘 | JJaiPan #Shorts",
+      "views": 49902050,
+      "channel": "เจไจ๋แปน J Jai Pan",
+      "video_id": "LDPX_Xo3z4U",
+      "seed": "animal survival shorts"
+    },
+    {
+      "title": "Why Deep Sea Creatures Are Giant 😱",
+      "views": 37162648,
+      "channel": "FactoHolic",
+      "video_id": "av-5jRrz6sk",
+      "seed": "deep sea creature shorts"
+    },
+    {
+      "title": "Weird Cats Moments, But Funny 🙀 #funny #cat",
+      "views": 28649518,
+      "channel": "Fresh Topify",
+      "video_id": "YzOtX_BpoME",
+      "seed": "weirdest animal shorts"
+    },
+    {
+      "title": "Biggest Animal Ever Known",
+      "views": 24246739,
+      "channel": "Facts' Mine",
+      "video_id": "wagZhQgzotw",
+      "seed": "biggest animal ever shorts"
+    },
+    {
+      "title": "Diego’s Island Survival Adventure 🌴🌊 | Alone in Nature#shorts #shortvideo #shortsfeed #ytshorts",
+      "views": 20082336,
+      "channel": "Tapak Hewan —",
+      "video_id": "r-irptWaQE4",
+      "seed": "animal survival shorts"
+    },
+    {
+      "title": "🐶 Top 5 Funniest Dog Moments Ever 😂 #shorts #dogs #funnydogs",
+      "views": 19833517,
+      "channel": "CallMeKeveen",
+      "video_id": "dF1TfJrEBqo",
+      "seed": "biggest animal ever shorts"
+    },
+    {
+      "title": "If I Was an “ANOMALY” in ANIMAL HOSPITAL on ROBLOX! 🐱💉👩‍⚕️🧈",
+      "views": 19229098,
+      "channel": "Lana's Life",
+      "video_id": "__hXenhXa_w",
+      "seed": "weirdest animal shorts"
+    },
+    {
+      "title": "Sharks Terrified of Orcas Underwater 💀🌊 #shorts",
+      "views": 18506121,
+      "channel": "Ocean Pulse",
+      "video_id": "Or9OJON16jE",
+      "seed": "apex predator shorts"
+    },
+    {
+      "title": "Hospital Lore (Animal Hospital Anomaly animation) #animalhospital #animation #animalhospitalroblox",
+      "views": 16329820,
+      "channel": "guckguckguck",
+      "video_id": "C6v6O08eUII",
+      "seed": "weirdest animal shorts"
+    },
+    {
+      "title": "أخطر 3 مفترسات في آسيا.. آخر واحد مرعب! 😱🐅",
+      "views": 15179548,
+      "channel": "Omegaverse",
+      "video_id": "KJneRuRghiM",
+      "seed": "most dangerous animals shorts"
+    },
+    {
+      "title": "Ranking CRAZIEST Animal Hospital Roblox Moments #shorts #usa #roblox",
+      "views": 12796795,
+      "channel": "Lyla Ranks",
+      "video_id": "416obXna_TY",
+      "seed": "weirdest animal shorts"
+    },
+    {
+      "title": "Rare White Baby Gorilla Meets Her Sibling for the First Time! 🦍🤍#shorts",
+      "views": 12542882,
+      "channel": "SamCourtroomReacts",
+      "video_id": "3KG5szmhk4g",
+      "seed": "rarest animal shorts"
+    },
+    {
+      "title": "أخطر إقلاع بالطائرة 🚨",
+      "views": 12250587,
+      "channel": "Qaher",
+      "video_id": "00oaP4XrC3A",
+      "seed": "most dangerous animals shorts"
+    },
+    {
+      "title": "Most Dangerous Job in South Africa 🦁🇿🇦",
+      "views": 12023063,
+      "channel": "Simon Wilson",
+      "video_id": "lH1Ovb6u3jE",
+      "seed": "most dangerous animals shorts"
+    }
+  ]
+}

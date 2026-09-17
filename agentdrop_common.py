@@ -64,3 +64,16 @@ def setup_logging(level: int = logging.INFO) -> logging.Logger:
         stream=sys.stdout,
     )
     return logging.getLogger("agentdrop")
+
+
+# post_id namespaces, one per content format. Every learning read is scoped by
+# these: the DB can hold videos from formats this channel has retired, and a
+# ranker trained on the old Reddit story channel recommends r/ProRevenge to a
+# wildlife channel.
+_POST_ID_PREFIX = {"clipranking": "clip_", "ranking": "rank_", "story": "manual_"}
+
+
+def post_id_prefix(config: dict | None = None) -> str:
+    """The post_id prefix for the configured content_type ('' if unknown)."""
+    ctype = (config or {}).get("content_type", "clipranking")
+    return _POST_ID_PREFIX.get(ctype, "")

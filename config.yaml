@@ -10,7 +10,18 @@
 #   story       = Reddit-story narration Shorts
 #   ranking     = cinematic "Top 5 ___" space countdowns (the old format)
 #   clipranking = silent "Ranking ___ Moments" ranked stock-video clips
-#                 (the 2026-09-15 pivot — see the clipranking: block below)
+#                 (the 2026-09-15 pivot — see the # --- LEARNING LOOP ----------------------------------------------------
+# The daily `learn` pass (2h before production) refreshes stats, reads and
+# classifies comments, mines the ten reference channels for videos that beat
+# their OWN median, and writes tracking/insights.json. The generator reads that
+# snapshot as evidence when choosing tomorrow's topics.
+learning:
+  enabled: true
+  read_comments: true          # classify comments (jokes/sarcasm vs real feedback)
+  mine_rivals: true            # reference-channel breakout detection
+  rival_outlier_multiple: 2.5  # "beat its own channel" threshold
+
+clipranking: block below)
 content_type: clipranking
 
 # --- RANKING CHANNEL — RETIRED 2026-09-15 ---------------------------

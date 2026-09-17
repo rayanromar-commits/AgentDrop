@@ -7,6 +7,8 @@ Commands:
   python3 main.py upload      upload the next APPROVED video to YouTube
   python3 main.py tiktok      post the next video to TikTok
   python3 main.py stats       refresh + print performance stats
+  python3 main.py learn       refresh stats, read comments, mine rivals/trends
+  python3 main.py comments    read + classify the channel's comments now
   python3 main.py digest      send the daily Slack performance digest now
   python3 main.py schedule    run continuously on your configured schedule
 
@@ -20,7 +22,8 @@ intend AgentDrop to operate (and spend) on its own.
 
 import sys
 
-from agentdrop_common import bootstrap_cloud_secrets, load_config, setup_logging
+from agentdrop_common import (bootstrap_cloud_secrets, load_config,
+                               post_id_prefix, setup_logging)
 from database import db
 
 log = setup_logging()
@@ -54,7 +57,9 @@ def _apply_ranking_performance_weight(candidates: list[dict], config: dict) -> N
     """
     import random
 
-    perf = db.subreddit_performance()
+    # Scoped to the active format: the DB can still hold the retired story
+    # channel's videos, and learning from those recommends the wrong things.
+    perf = db.subreddit_performance(prefix=post_id_prefix(config))
     if not perf:
         return
 
@@ -239,7 +244,7 @@ def restock_ranking_datasets(config: dict) -> int:
         log.info("[restock] only %d fresh list(s) (< %d); generating %d "
                  "performance-weighted dataset(s)...", fresh, min_buffer, need)
         try:
-            perf = db.subreddit_performance()
+            perf = db.subreddit_performance(prefix=post_id_prefix(config))
         except Exception:
             perf = None
         paths = rgen.generate_batch(need, perf=perf)
@@ -363,6 +368,26 @@ def upload_next_tiktok(config: dict):
     return None
 
 
+def learn(config: dict) -> None:
+    """Refresh everything the channel knows, then rebuild the insight snapshot.
+
+    Runs before production so the day's topics are chosen on today's evidence:
+    our own stats and retention, the comments (jokes and sarcasm filtered out),
+    the ten reference channels' breakouts, and the wider trend search.
+    """
+    from tracking.insights import build
+    db.init_db()
+    if not config.get("learning", {}).get("enabled", True):
+        log.info("[learn] learning disabled in config; skipping.")
+        return
+    try:
+        refresh_performance(config)
+    except Exception as e:
+        log.warning("[learn] stats refresh failed (%s); learning on what we "
+                    "already have.", e)
+    build(config)
+
+
 def refresh_performance(config: dict) -> None:
     from tracking.stats import refresh_stats, print_report
     db.init_db()
@@ -464,6 +489,20 @@ def start_scheduler(config: dict) -> None:
     sched.add_job(production_job, CronTrigger(hour=prod_hour, minute=0, timezone=tz),
                   id="produce", name="daily production")
 
+    # Learn BEFORE producing, so the day's list is chosen on today's evidence.
+    # Two hours earlier: the pass makes external API calls (comments, rivals,
+    # trends) and must never delay the production window if one hangs.
+    learn_hour = (prod_hour - 2) % 24
+    def learn_job():
+        if not _active_today():
+            return
+        try:
+            learn(config)
+        except Exception as e:      # learning must never break the drop
+            log.error("[scheduler] learn pass failed: %s", e)
+    sched.add_job(learn_job, CronTrigger(hour=learn_hour, minute=0, timezone=tz),
+                  id="learn", name="daily learning pass")
+
     # Upload one approved video at each configured time (idle before start_date).
     def upload_job():
         if _active_today():
@@ -496,9 +535,10 @@ def start_scheduler(config: dict) -> None:
                       CronTrigger(hour=dh, minute=dm, timezone=tz),
                       id="digest", name="daily digest")
 
-    log.info("Scheduler started. Production at %02d:00; uploads at %s; "
-             "stats every 6h; digest at %s. Approval mode: %s. Ctrl+C to stop.",
-             prod_hour, ", ".join(times),
+    log.info("Scheduler started. Learning at %02d:00; production at %02d:00; "
+             "uploads at %s; stats every 6h; digest at %s. Approval mode: %s. "
+             "Ctrl+C to stop.",
+             learn_hour, prod_hour, ", ".join(times),
              digest_time if ncfg.get("enabled") else "off",
              config["approval_mode"])
     if config["approval_mode"] == "manual":
@@ -552,13 +592,20 @@ def main() -> None:
         upload_next_tiktok(config)
     elif cmd == "stats":
         refresh_performance(config)
+    elif cmd == "learn":
+        learn(config)
+    elif cmd == "comments":
+        from tracking.comments import read_and_summarize
+        db.init_db()
+        import json as _j
+        print(_j.dumps(read_and_summarize(), indent=2, ensure_ascii=False))
     elif cmd == "digest":
         send_digest(config)
     elif cmd == "schedule":
         start_scheduler(config)
     else:
         log.error("Unknown command '%s'. Use: show | produce | restock | upload | "
-                  "tiktok | stats | digest | schedule", cmd)
+                  "tiktok | stats | learn | comments | digest | schedule", cmd)
 
 
 if __name__ == "__main__":

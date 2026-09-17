@@ -19,12 +19,15 @@ Uses the YouTube Data API we already authenticate for. Quota: search.list costs
 """
 
 import json
+import os
 import re
 import sys
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+
+from dotenv import load_dotenv
 
 from agentdrop_common import setup_logging
 
@@ -122,6 +125,74 @@ def on_niche(text: str) -> bool:
     if any(w in t for w in _UNSERVABLE):
         return False                       # real, popular, and closed to us
     return any(w in t for w in _NICHE_WORDS)
+
+
+_SERVABLE_PROMPT = """Our channel makes ranked-clip Shorts using PROFESSIONAL \
+STOCK FOOTAGE only (Pexels/Pixabay). We can show real animals, places, objects \
+and nature. We CANNOT show: user-filmed comedy, pets doing something funny or \
+unusual, accidents, fails, pranks, reaction moments, sports or gameplay clips, \
+specific people, or any one-off event somebody caught on a phone. Those live on \
+social video, never in a stock library.
+
+Below are subjects that are performing well on competitor channels. For each, \
+say whether WE could build a five-entry ranking of it from stock footage alone.
+
+The test is not "is it about animals" — "cats stealing the spotlight" is about \
+cats and is still a NO, because what makes it work is a comic moment nobody \
+sells as stock. A YES means the five things ranked are subjects a stock library \
+holds ordinary footage of: species, places, natural phenomena, objects.
+
+Return ONLY JSON: {{"servable": [<indices that pass>]}}
+
+Subjects:
+{listing}"""
+
+
+def servable(subjects: list[str]) -> list[str]:
+    """Keep only mined subjects our stock-footage pipeline can actually build.
+
+    `on_niche` is a keyword filter and keyword filters lose this fight: a live
+    rival mine returned "cats stealing spotlight", "animals reacting fainting"
+    and "insane claw machine clips", all of which name creatures or objects and
+    none of which exist as stock footage. They are UGC comedy — the lane that is
+    structurally closed to us — and the difference is semantic, not lexical.
+
+    So the keyword pass runs first (free, catches the obvious) and a model call
+    settles the rest. If the model is unavailable the keyword result stands:
+    degrading to a noisier pool is acceptable, failing the daily run is not.
+    """
+    subjects = [s for s in subjects if on_niche(s)]
+    if not subjects:
+        return []
+    load_dotenv()
+    if not os.getenv("ANTHROPIC_API_KEY"):
+        return subjects
+    try:
+        import anthropic
+    except ImportError:
+        return subjects
+    listing = "\n".join(f"{i}. {s}" for i, s in enumerate(subjects))
+    try:
+        resp = anthropic.Anthropic().messages.create(
+            model="claude-opus-4-8", max_tokens=600,
+            output_config={"effort": "low"},
+            messages=[{"role": "user",
+                       "content": _SERVABLE_PROMPT.format(listing=listing)}])
+        txt = "".join(b.text for b in resp.content if b.type == "text")
+        m = re.search(r"\{.*\}", txt, re.S)
+        if not m:
+            return subjects
+        keep = json.loads(m.group(0)).get("servable") or []
+    except Exception as e:
+        log.info("[trends] servability check unavailable (%s); keeping the "
+                 "keyword-filtered list.", e)
+        return subjects
+    idx = {i for i in keep if isinstance(i, int) and not isinstance(i, bool)}
+    out = [s for i, s in enumerate(subjects) if i in idx]
+    if len(out) < len(subjects):
+        log.info("[trends] %d of %d mined subject(s) dropped as unservable by "
+                 "stock footage.", len(subjects) - len(out), len(subjects))
+    return out
 
 
 def _relevant(title: str) -> bool:
@@ -258,7 +329,7 @@ def trending_topics(limit: int = 30, refresh: bool = False) -> list[str]:
             log.info("[trends] fetch failed; using the cached read.")
             rows = cache["rows"]                 # stale beats nothing
 
-    seen, out = set(), []
+    seen, cands = set(), []
     for r in rows:
         s = _subject(r["title"])
         if len(s.split()) < 2:
@@ -266,13 +337,13 @@ def trending_topics(limit: int = 30, refresh: bool = False) -> list[str]:
         key = frozenset(s.split())
         if key in seen:
             continue
-        if not on_niche(s):
-            continue                       # popular, but not about a creature
         seen.add(key)
-        out.append(s)
-        if len(out) >= limit:
+        cands.append(s)
+        if len(cands) >= limit * 3:        # room for the servability filter
             break
-    return out
+    # on_niche (keyword) then the model check — a subject can name a creature
+    # and still be footage we cannot buy. See servable().
+    return servable(cands)[:limit]
 
 
 def winning_titles(limit: int = 25, refresh: bool = False) -> list[dict]:

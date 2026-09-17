@@ -1,0 +1,597 @@
+{
+  "fetched_at": "2026-09-17T02:10:53.120906+00:00",
+  "channels": [
+    {
+      "name": "AuraShorts",
+      "median": 2608654.5,
+      "n": 50
+    },
+    {
+      "name": "Mugi Ranks",
+      "median": 1175255.0,
+      "n": 33
+    },
+    {
+      "name": "Rankexa",
+      "median": 115389.5,
+      "n": 50
+    },
+    {
+      "name": "RankZilla",
+      "median": 7670854.0,
+      "n": 50
+    },
+    {
+      "name": "Ryth",
+      "median": 1107105.0,
+      "n": 50
+    },
+    {
+      "name": "CallMeRanks",
+      "median": 43408.0,
+      "n": 50
+    },
+    {
+      "name": "Ranked Flow",
+      "median": 27433.0,
+      "n": 50
+    },
+    {
+      "name": "Xiro Ranks",
+      "median": 4974155.0,
+      "n": 50
+    },
+    {
+      "name": "LaylaRanks",
+      "median": 1385448.0,
+      "n": 50
+    },
+    {
+      "name": "Polar Ranks",
+      "median": 3589200.5,
+      "n": 30
+    }
+  ],
+  "outliers": [
+    {
+      "title": "Ranking Best Cats Stealing The Spotlight",
+      "views": 159093818,
+      "multiple": 135.4,
+      "channel": "Mugi Ranks",
+      "subject": "cats stealing spotlight",
+      "superlative": "",
+      "published": "2026-04-21T00:37:00Z"
+    },
+    {
+      "title": "Ranking Best Tree Cutting Moments! 🌴😮 #usa",
+      "views": 4237809,
+      "multiple": 97.6,
+      "channel": "CallMeRanks",
+      "subject": "tree cutting moments",
+      "superlative": "",
+      "published": "2026-08-13T21:11:10Z"
+    },
+    {
+      "title": "Ranking Best Clingy Cat Moments",
+      "views": 94844433,
+      "multiple": 80.7,
+      "channel": "Mugi Ranks",
+      "subject": "clingy cat moments",
+      "superlative": "",
+      "published": "2026-06-11T00:39:15Z"
+    },
+    {
+      "title": "Ranking Best Shark Moments",
+      "views": 324953790,
+      "multiple": 65.3,
+      "channel": "Xiro Ranks",
+      "subject": "shark moments",
+      "superlative": "",
+      "published": "2026-07-08T23:50:22Z"
+    },
+    {
+      "title": "Weird habits we secretly do as a kid 🙈",
+      "views": 7147800,
+      "multiple": 61.9,
+      "channel": "Rankexa",
+      "subject": "weird habits secretly kid",
+      "superlative": "",
+      "published": "2026-09-08T14:00:08Z"
+    },
+    {
+      "title": "DON'T CHECK THE SOUND 😭😭",
+      "views": 408551509,
+      "multiple": 53.3,
+      "channel": "RankZilla",
+      "subject": "don check sound",
+      "superlative": "",
+      "published": "2026-05-28T16:05:22Z"
+    },
+    {
+      "title": "Ranking Best Snake Moments",
+      "views": 56589566,
+      "multiple": 48.2,
+      "channel": "Mugi Ranks",
+      "subject": "snake moments",
+      "superlative": "",
+      "published": "2026-04-14T01:31:57Z"
+    },
+    {
+      "title": "Ranking Best Objects Having Nightmare! 😀😭 #usa",
+      "views": 2078317,
+      "multiple": 47.9,
+      "channel": "CallMeRanks",
+      "subject": "objects having nightmare",
+      "superlative": "",
+      "published": "2026-09-04T03:49:55Z"
+    },
+    {
+      "title": "Ranking Best Cheetah Moments",
+      "views": 175121896,
+      "multiple": 35.2,
+      "channel": "Xiro Ranks",
+      "subject": "cheetah moments",
+      "superlative": "",
+      "published": "2026-05-19T20:52:17Z"
+    },
+    {
+      "title": "Ranking Funniest Chicken Scream 💀",
+      "views": 117166155,
+      "multiple": 32.6,
+      "channel": "Polar Ranks",
+      "subject": "funniest chicken scream",
+      "superlative": "",
+      "published": "2026-05-14T01:44:52Z"
+    },
+    {
+      "title": "Ranking Best Kissing Cats Moments",
+      "views": 37325246,
+      "multiple": 31.8,
+      "channel": "Mugi Ranks",
+      "subject": "kissing cats moments",
+      "superlative": "",
+      "published": "2026-05-23T04:08:48Z"
+    },
+    {
+      "title": "Ranking Crazy Demolition Clips! 🫤😭 #usa",
+      "views": 1370366,
+      "multiple": 31.6,
+      "channel": "CallMeRanks",
+      "subject": "crazy demolition clips",
+      "superlative": "",
+      "published": "2026-08-10T12:28:54Z"
+    },
+    {
+      "title": "Ranking Funniest Bungee Moments✌🏼😭",
+      "views": 43676414,
+      "multiple": 31.5,
+      "channel": "LaylaRanks",
+      "subject": "funniest bungee moments",
+      "superlative": "",
+      "published": "2026-07-11T17:00:36Z"
+    },
+    {
+      "title": "Brother And Sister Moments We Get 💀✨",
+      "views": 3523569,
+      "multiple": 30.5,
+      "channel": "Rankexa",
+      "subject": "brother sister moments get",
+      "superlative": "",
+      "published": "2026-09-07T16:00:14Z"
+    },
+    {
+      "title": "Ranking Funniest Waterpark Moments✌🏼😭",
+      "views": 38818874,
+      "multiple": 28.0,
+      "channel": "LaylaRanks",
+      "subject": "funniest waterpark moments",
+      "superlative": "",
+      "published": "2026-07-13T16:00:37Z"
+    },
+    {
+      "title": "Ranking Weirdest Sea Creatures",
+      "views": 132931087,
+      "multiple": 26.7,
+      "channel": "Xiro Ranks",
+      "subject": "weirdest sea creatures",
+      "superlative": "weirdest",
+      "published": "2026-06-20T21:11:21Z"
+    },
+    {
+      "title": "Ranking The Best Billiard Moments! 😭😬 #usa",
+      "views": 1141639,
+      "multiple": 26.3,
+      "channel": "CallMeRanks",
+      "subject": "billiard moments",
+      "superlative": "",
+      "published": "2026-08-28T02:22:57Z"
+    },
+    {
+      "title": "Ranking The Best Slide Moments! 😮😂 #usa",
+      "views": 1095794,
+      "multiple": 25.2,
+      "channel": "CallMeRanks",
+      "subject": "slide moments",
+      "superlative": "",
+      "published": "2026-09-05T03:54:55Z"
+    },
+    {
+      "title": "Ranking Best Amusement Park Moments! 😁😋 #usa",
+      "views": 1081991,
+      "multiple": 24.9,
+      "channel": "CallMeRanks",
+      "subject": "amusement park moments",
+      "superlative": "",
+      "published": "2026-08-31T01:48:07Z"
+    },
+    {
+      "title": "Ranking Pets Taking Medicine Moments",
+      "views": 60272727,
+      "multiple": 23.1,
+      "channel": "AuraShorts",
+      "subject": "pets taking medicine moments",
+      "superlative": "",
+      "published": "2026-09-02T21:08:07Z"
+    },
+    {
+      "title": "Ranking Satisfying Wasp Nest Removal 😭",
+      "views": 72103143,
+      "multiple": 20.1,
+      "channel": "Polar Ranks",
+      "subject": "satisfying wasp nest removal",
+      "superlative": "",
+      "published": "2026-07-29T17:59:59Z"
+    },
+    {
+      "title": "Ranking The Best Scooter Moments! 🛴😜😬 #usa",
+      "views": 841648,
+      "multiple": 19.4,
+      "channel": "CallMeRanks",
+      "subject": "scooter moments",
+      "superlative": "",
+      "published": "2026-09-01T01:09:10Z"
+    },
+    {
+      "title": "Ranking Best Frog Moments",
+      "views": 94367877,
+      "multiple": 19.0,
+      "channel": "Xiro Ranks",
+      "subject": "frog moments",
+      "superlative": "",
+      "published": "2026-07-01T02:19:13Z"
+    },
+    {
+      "title": "Ranking Best Bunny Moments",
+      "views": 20696873,
+      "multiple": 17.6,
+      "channel": "Mugi Ranks",
+      "subject": "bunny moments",
+      "superlative": "",
+      "published": "2026-07-29T03:57:12Z"
+    },
+    {
+      "title": "Unexplainable Pet Behaviors Ranked 🐶😹",
+      "views": 1900349,
+      "multiple": 16.5,
+      "channel": "Rankexa",
+      "subject": "unexplainable pet behaviors",
+      "superlative": "",
+      "published": "2026-09-07T20:00:28Z"
+    },
+    {
+      "title": "Ranking Funniest Influencer Moments✌🏼😭",
+      "views": 22800164,
+      "multiple": 16.5,
+      "channel": "LaylaRanks",
+      "subject": "funniest influencer moments",
+      "superlative": "",
+      "published": "2026-07-11T19:15:26Z"
+    },
+    {
+      "title": "Ranking Alpine Coaster Moments🍠",
+      "views": 20805992,
+      "multiple": 15.0,
+      "channel": "LaylaRanks",
+      "subject": "alpine coaster moments",
+      "superlative": "",
+      "published": "2026-04-23T16:30:10Z"
+    },
+    {
+      "title": "Unexpected Awkward Life Situations 🙈🔥",
+      "views": 1704836,
+      "multiple": 14.8,
+      "channel": "Rankexa",
+      "subject": "unexpected awkward life situations",
+      "superlative": "",
+      "published": "2026-09-07T18:00:16Z"
+    },
+    {
+      "title": "Ranking Best Turtle Moments",
+      "views": 16632147,
+      "multiple": 14.2,
+      "channel": "Mugi Ranks",
+      "subject": "turtle moments",
+      "superlative": "",
+      "published": "2026-04-15T23:37:02Z"
+    },
+    {
+      "title": "Ranking Funniest Parkour Moments✌🏼😭",
+      "views": 19347475,
+      "multiple": 14.0,
+      "channel": "LaylaRanks",
+      "subject": "funniest parkour moments",
+      "superlative": "",
+      "published": "2026-07-09T18:00:37Z"
+    },
+    {
+      "title": "Ranking Best Bug Moments",
+      "views": 68121249,
+      "multiple": 13.7,
+      "channel": "Xiro Ranks",
+      "subject": "bug moments",
+      "superlative": "",
+      "published": "2026-07-13T23:50:43Z"
+    },
+    {
+      "title": "Ranking Animals Reacting To Fainting",
+      "views": 15979056,
+      "multiple": 13.6,
+      "channel": "Mugi Ranks",
+      "subject": "animals reacting fainting",
+      "superlative": "",
+      "published": "2026-05-25T04:00:10Z"
+    },
+    {
+      "title": "Ranking Funniest Playground Moments✌🏼😭",
+      "views": 18378259,
+      "multiple": 13.3,
+      "channel": "LaylaRanks",
+      "subject": "funniest playground moments",
+      "superlative": "",
+      "published": "2026-07-20T19:30:03Z"
+    },
+    {
+      "title": "Ranking Funniest Ice Cream Moments",
+      "views": 34110426,
+      "multiple": 13.1,
+      "channel": "AuraShorts",
+      "subject": "funniest ice cream moments",
+      "superlative": "",
+      "published": "2026-09-04T01:33:36Z"
+    },
+    {
+      "title": "DON'T CHECK THE SOUND 😭😭",
+      "views": 100005241,
+      "multiple": 13.0,
+      "channel": "RankZilla",
+      "subject": "don check sound",
+      "superlative": "",
+      "published": "2026-06-27T16:41:21Z"
+    },
+    {
+      "title": "Ranking Back Crack Moments🍠",
+      "views": 16277206,
+      "multiple": 11.7,
+      "channel": "LaylaRanks",
+      "subject": "back crack moments",
+      "superlative": "",
+      "published": "2026-04-24T16:00:17Z"
+    },
+    {
+      "title": "Unspoken rules everyone silently follows 🤫",
+      "views": 1313873,
+      "multiple": 11.4,
+      "channel": "Rankexa",
+      "subject": "unspoken rules everyone silently follows",
+      "superlative": "",
+      "published": "2026-09-08T16:00:30Z"
+    },
+    {
+      "title": "Ranking Funniest Chicken Scream 💀",
+      "views": 40002238,
+      "multiple": 11.1,
+      "channel": "Polar Ranks",
+      "subject": "funniest chicken scream",
+      "superlative": "",
+      "published": "2026-05-19T23:00:21Z"
+    },
+    {
+      "title": "Ranking Best Otter Moments",
+      "views": 12786046,
+      "multiple": 10.9,
+      "channel": "Mugi Ranks",
+      "subject": "otter moments",
+      "superlative": "",
+      "published": "2026-04-12T02:08:24Z"
+    },
+    {
+      "title": "DON'T CHECK THE SOUND 😭😭",
+      "views": 83969132,
+      "multiple": 10.9,
+      "channel": "RankZilla",
+      "subject": "don check sound",
+      "superlative": "",
+      "published": "2026-06-23T16:46:38Z"
+    },
+    {
+      "title": "Ranking Worst Diving Fails 💀",
+      "views": 38448397,
+      "multiple": 10.7,
+      "channel": "Polar Ranks",
+      "subject": "diving fails",
+      "superlative": "",
+      "published": "2026-03-23T22:38:32Z"
+    },
+    {
+      "title": "Ranking Best Bread Fails! 😮😀 #usa",
+      "views": 456370,
+      "multiple": 10.5,
+      "channel": "CallMeRanks",
+      "subject": "bread fails",
+      "superlative": "",
+      "published": "2026-09-02T00:30:46Z"
+    },
+    {
+      "title": "Ranking Best Spider Moments",
+      "views": 52240249,
+      "multiple": 10.5,
+      "channel": "Xiro Ranks",
+      "subject": "spider moments",
+      "superlative": "",
+      "published": "2026-07-02T00:21:55Z"
+    },
+    {
+      "title": "Ranking Cats From Different Countries",
+      "views": 11938864,
+      "multiple": 10.2,
+      "channel": "Mugi Ranks",
+      "subject": "cats from different countries",
+      "superlative": "",
+      "published": "2026-06-21T06:05:24Z"
+    },
+    {
+      "title": "Ranking Most Annoying Moments 💀",
+      "views": 36699902,
+      "multiple": 10.2,
+      "channel": "Polar Ranks",
+      "subject": "most annoying moments",
+      "superlative": "",
+      "published": "2026-07-10T20:06:15Z"
+    },
+    {
+      "title": "Trying to step into your shoe without using your hands 👟🦶",
+      "views": 1057430,
+      "multiple": 9.2,
+      "channel": "Rankexa",
+      "subject": "trying step into shoe without",
+      "superlative": "",
+      "published": "2026-09-13T21:24:56Z"
+    },
+    {
+      "title": "RANKING THE FUNNIEST LEGO FAILS 🧱 #usa",
+      "views": 246866,
+      "multiple": 9.0,
+      "channel": "Ranked Flow",
+      "subject": "funniest lego fails",
+      "superlative": "",
+      "published": "2026-08-26T20:00:33Z"
+    },
+    {
+      "title": "Ranking Best IRL Mario Kart Moments 💀",
+      "views": 32382411,
+      "multiple": 9.0,
+      "channel": "Polar Ranks",
+      "subject": "irl mario kart moments",
+      "superlative": "",
+      "published": "2026-08-01T20:45:30Z"
+    },
+    {
+      "title": "DON'T CHECK THE SOUND 😭😭",
+      "views": 67311246,
+      "multiple": 8.8,
+      "channel": "RankZilla",
+      "subject": "don check sound",
+      "superlative": "",
+      "published": "2026-06-18T16:55:08Z"
+    },
+    {
+      "title": "Ranking Best Fast Reflex Moments! 😄🤣 #usa",
+      "views": 380703,
+      "multiple": 8.8,
+      "channel": "CallMeRanks",
+      "subject": "fast reflex moments",
+      "superlative": "",
+      "published": "2026-08-27T00:06:33Z"
+    },
+    {
+      "title": "Ranking Funniest Truck Horn Moments",
+      "views": 22712434,
+      "multiple": 8.7,
+      "channel": "AuraShorts",
+      "subject": "funniest truck horn moments",
+      "superlative": "",
+      "published": "2026-08-29T05:39:02Z"
+    },
+    {
+      "title": "DON'T CHECK THE SOUND 😭😭",
+      "views": 65346325,
+      "multiple": 8.5,
+      "channel": "RankZilla",
+      "subject": "don check sound",
+      "superlative": "",
+      "published": "2026-09-08T16:12:04Z"
+    },
+    {
+      "title": "The ultimate test of survival during a gym session 🏋️‍♂️💀",
+      "views": 942489,
+      "multiple": 8.2,
+      "channel": "Rankexa",
+      "subject": "ultimate test survival during gym",
+      "superlative": "",
+      "published": "2026-09-11T22:00:34Z"
+    },
+    {
+      "title": "Ranking Best Cat Football Moments",
+      "views": 39808692,
+      "multiple": 8.0,
+      "channel": "Xiro Ranks",
+      "subject": "cat football moments",
+      "superlative": "",
+      "published": "2026-05-26T02:02:52Z"
+    },
+    {
+      "title": "Unlocking core childhood memories we all secretly share 🎒✨",
+      "views": 895377,
+      "multiple": 7.8,
+      "channel": "Rankexa",
+      "subject": "unlocking core childhood memories all",
+      "superlative": "",
+      "published": "2026-09-11T14:00:39Z"
+    },
+    {
+      "title": "Ranking Funniest Design Fails🍠",
+      "views": 10517500,
+      "multiple": 7.6,
+      "channel": "LaylaRanks",
+      "subject": "funniest design fails",
+      "superlative": "",
+      "published": "2026-04-06T18:30:27Z"
+    },
+    {
+      "title": "Ranking Insane Claw Machine Clips! 😀 #usa",
+      "views": 320572,
+      "multiple": 7.4,
+      "channel": "CallMeRanks",
+      "subject": "insane claw machine clips",
+      "superlative": "",
+      "published": "2026-08-24T21:37:12Z"
+    },
+    {
+      "title": "Ranking Best Malinois Dog Moments",
+      "views": 36915377,
+      "multiple": 7.4,
+      "channel": "Xiro Ranks",
+      "subject": "malinois dog moments",
+      "superlative": "",
+      "published": "2026-06-11T00:44:48Z"
+    },
+    {
+      "title": "Ranking Funniest Theme Park Moments II🍠",
+      "views": 10151238,
+      "multiple": 7.3,
+      "channel": "LaylaRanks",
+      "subject": "funniest theme park moments",
+      "superlative": "",
+      "published": "2026-04-12T20:15:00Z"
+    },
+    {
+      "title": "Ranking Dogs Cooling Off Moments",
+      "views": 8281550,
+      "multiple": 7.0,
+      "channel": "Mugi Ranks",
+      "subject": "dogs cooling off moments",
+      "superlative": "",
+      "published": "2026-06-26T19:35:41Z"
+    }
+  ]
+}

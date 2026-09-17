@@ -16,6 +16,7 @@ import os
 import random
 import re
 import sys
+from itertools import zip_longest
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
@@ -305,6 +306,20 @@ def generate_clip_ranking(topic: str | None = None,
                  "hook is. Ignore any that are off-topic (gaming, vlogs, "
                  "personal channels, other languages); they came from a keyword "
                  "collision. Do NOT copy a title or remake a specific video.")
+    # Everything the channel has learned — our own results per category and per
+    # title framing, what viewers actually asked for in the comments, and which
+    # videos beat their OWN channel's median on directly comparable channels.
+    # Presented as evidence, not orders: told what to make, the model converges
+    # on one subject within a week.
+    try:
+        from tracking.insights import briefing
+        brief = briefing()
+    except Exception:
+        brief = ""
+    if brief:
+        user += ("\n\nWhat this channel has learned so far — weigh it, don't "
+                 "obey it, and do not repeat a subject already covered:\n" + brief)
+
     user += " Write the JSON now."
     try:
         client = anthropic.Anthropic()
@@ -364,6 +379,93 @@ empty list if every item is fine.
 
 The list is titled "{title}". The items are:
 {items}"""
+
+
+_SUBSTITUTE_PROMPT = """A ranked-clip video is being built from this list, but \
+one entry cannot be used: no stock footage exists that actually shows it, so \
+keeping it would mean captioning the wrong animal.
+
+List title: "{title}"
+Entries: {items}
+The entry to replace: "{failed}" (rank {rank})
+
+Name ONE replacement that:
+- genuinely belongs on this list — it must be TRUE that it fits the title's \
+superlative, not merely plausible,
+- is NOT already on the list and is not a near-twin of anything on it,
+- is EASY to find in a professional stock footage library, and is recognisable \
+on screen without a caption. Prefer a well-known, frequently filmed subject \
+over an obscure or deep-sea one; that is exactly why the last one failed,
+- is not extinct, mythical, microscopic or abstract.
+
+Also write its on-screen caption (AT MOST 5 words, a fragment, no period, true \
+of ORDINARY footage of it — not a rare peak moment) and 3 stock search terms, \
+best first, EVERY one containing the topic's own words, with the third being \
+the bare subject name alone.
+
+Return ONLY JSON:
+{{"name": "...", "label": "...", "queries": ["...", "...", "..."]}}"""
+
+
+def substitute_item(data: dict, failed_name: str) -> dict | None:
+    """A replacement entry for one that has no sourceable footage.
+
+    A list is worth saving. When a single entry cannot be shown — a tiger shark
+    whose stripes are in no stock clip, say — the honest options are to abandon
+    the whole ranking or to rank a different animal that genuinely belongs on
+    it. The second keeps the day's drop without ever putting a wrong clip under
+    a caption, because the CAPTION CHANGES TOO: the video ends up ranking what
+    it actually shows.
+
+    Returns {name, label, queries} keeping the failed entry's rank, or None.
+    """
+    load_dotenv()
+    if not os.getenv("ANTHROPIC_API_KEY"):
+        return None
+    try:
+        import anthropic
+    except ImportError:
+        return None
+
+    items = data.get("items", [])
+    failed = next((it for it in items
+                   if str(it.get("name", "")).lower() == failed_name.lower()), None)
+    if not failed:
+        return None
+    listing = ", ".join(str(it.get("name", "")) for it in items)
+    try:
+        resp = anthropic.Anthropic().messages.create(
+            model=MODEL, max_tokens=800,
+            output_config={"effort": "low"},
+            messages=[{"role": "user", "content": _SUBSTITUTE_PROMPT.format(
+                title=data.get("title", ""), items=listing,
+                failed=failed_name, rank=failed.get("rank", ""))}])
+        txt = "".join(b.text for b in resp.content if b.type == "text")
+        m = re.search(r"\{.*\}", txt, re.S)
+        if not m:
+            return None
+        sub = json.loads(m.group(0))
+    except Exception as e:
+        log.warning("[clip-gen] substitution failed for %r: %s", failed_name, e)
+        return None
+
+    name = str(sub.get("name") or "").strip()
+    if not name:
+        return None
+    existing = {str(it.get("name", "")).lower() for it in items}
+    if name.lower() in existing:
+        log.info("[clip-gen] substitute %r is already on the list; skipping.", name)
+        return None
+    if _UNFILMABLE_RE.search(name):
+        log.info("[clip-gen] substitute %r is unfilmable; skipping.", name)
+        return None
+    qs = [q.strip() for q in (sub.get("queries") or [])
+          if isinstance(q, str) and q.strip()]
+    if not qs:
+        qs = [name]
+    label = " ".join(str(sub.get("label") or "").strip().rstrip(".").split()[:5])
+    return {"rank": failed.get("rank"), "name": name, "label": label,
+            "queries": list(dict.fromkeys(qs)), "query": qs[0]}
 
 
 def _unfilmable_items(data: dict) -> list[str]:
@@ -592,6 +694,28 @@ def generate_batch(n: int, perf: dict | None = None,
         log.info("[clip-gen] trend data unavailable (%s); using the curated "
                  "topic list only.", e)
 
+    # Subjects that beat their OWN channel's median on the ten reference
+    # channels. A keyword search (above) finds what is big in the lane; this
+    # finds what OVERPERFORMED for a channel shaped like ours, which is the
+    # better signal about a subject and is not distorted by channel size.
+    try:
+        from sourcing.rival_miner import winning_subjects
+        rivals = winning_subjects(15)
+        if rivals:
+            # Interleaved rather than appended, so the two sources alternate
+            # instead of one monopolising the front of the pool.
+            merged = []
+            for a, b in zip_longest(mined, rivals):
+                if a:
+                    merged.append(a)
+                if b:
+                    merged.append(b)
+            mined = merged
+            log.info("[clip-gen] %d rival breakout subject(s) in the pool "
+                     "(top: %s).", len(rivals), rivals[0][:50])
+    except Exception as e:
+        log.info("[clip-gen] rival data unavailable (%s).", e)
+
     saved: list[Path] = []
     tried: set[str] = set()
     while len(saved) < n:
@@ -638,7 +762,7 @@ if __name__ == "__main__":
         try:
             from database import db
             db.init_db()
-            perf = db.subreddit_performance()
+            perf = db.subreddit_performance(prefix="clip_")
         except Exception as e:
             log.info("[clip-gen] no performance data (%s); generating uniformly.", e)
         paths = generate_batch(n, perf=perf)

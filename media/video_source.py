@@ -345,27 +345,36 @@ is NOT to pick the nicest clip. It is to decide which candidates, if any, \
 genuinely show **{name}** — and to throw out the rest.
 
 THE IDENTITY TEST comes first, and a candidate that fails it is out no matter \
-how good it looks:
-- The clip must show **{name}** ITSELF. A different species, a relative, or \
-something merely similar is WRONG. A whale shark is not a megalodon. A garden \
-spider is not a Sydney funnel-web. A generic reef is not a named fish.
-- Some entries CANNOT be filmed, because they are extinct, mythical, \
-microscopic, or an abstract idea. For those, the honest answer is that NO \
-candidate is correct. Never accept a living look-alike as a stand-in for an \
-extinct animal — that is the single worst failure in this format, because the \
-caption names one thing while the screen shows another.
-- If you cannot tell from the frame whether it is really {name} — because the \
-subject is small, distant, blurred, or the species is genuinely ambiguous — that \
-is NOT a pass. Leave it out.
-- Entry names are short and stock search returns the wrong sense of a word \
-happily: for a video about GLASS BLOWING, an entry "Breath Inflate" must show \
-molten glass at a furnace, NOT a fizzy drink in a glass.
+how good it looks. The test is CONTRADICTION, not proof: reject a clip that \
+shows something the name rules out — do not demand that a frame prove a species \
+beyond doubt.
+- REJECT when the clip is plainly a DIFFERENT thing: a whale shark for a \
+megalodon, a garden spider for a Sydney funnel-web, a sea turtle for a fish, a \
+fizzy drink for glass blowing (a real case: "Breath Inflate" in a glass-blowing \
+video pulled a drinking glass — entry names are short and stock search returns \
+the wrong sense of a word happily).
+- REJECT when the NAME PROMISES A VISIBLE FEATURE AND THE FRAME LACKS IT. If \
+the name says blue, the animal must be blue; a tiger shark needs its stripes, an \
+oceanic whitetip its white-tipped fins, a hammerhead its head. This is the check \
+that matters most, because that feature is exactly what a viewer looks for.
+- ACCEPT when the clip is a PLAUSIBLE, UNCONTRADICTED example of {name} — the \
+right kind of animal, in the right setting, with nothing visible that rules it \
+out — even if the frame alone could not prove the exact species. Many subjects \
+simply are not identifiable to species from one frame, and refusing them all \
+would mean publishing nothing. A shark that could be the named shark is fine; a \
+dolphin is not.
+- Some entries CANNOT be filmed at all, because they are extinct, mythical, \
+microscopic, or an abstract idea. For those, NO candidate is correct, however \
+good it looks. Never accept a living look-alike as a stand-in for an extinct \
+animal — that is the single worst failure in this format, because the caption \
+names one thing while the screen shows another.
 
-REJECTING IS SAFE AND OFTEN CORRECT. Returning an empty list costs nothing: the \
-entry is dropped and a different ranking is used instead. Nothing you reject \
-ever ends up on screen mislabelled. A viewer seeing the wrong animal under a \
-confident caption is far more damaging than a video we simply do not publish, so \
-when in doubt, leave it out.
+REJECTING IS SAFE. Returning an empty list costs nothing: the entry is dropped \
+and a different ranking is used instead, and nothing you reject ever ends up on \
+screen mislabelled. But rejecting EVERYTHING is its own failure — if several \
+candidates are plausible and none is contradicted, accept them. Save the \
+rejection for what is actually wrong: a different animal, a missing signature \
+feature, a watermark, or a subject nothing could have filmed.
 
 Among candidates that PASS the identity test, order them best-first by:
 - VISUALLY STRIKING: dramatic, close, well-lit, high contrast,
@@ -420,12 +429,19 @@ def _judge(name: str, cand: list[dict], context: str = "",
             "type": "base64", "media_type": "image/jpeg", "data": _b64(c["frame"])}})
     try:
         resp = anthropic.Anthropic().messages.create(
-            model=JUDGE_MODEL, max_tokens=800,
+            model=JUDGE_MODEL, max_tokens=2500,
+            # Thinking counts against max_tokens, and this model thinks by
+            # default: at 800 tokens the judge regularly spent the whole budget
+            # reasoning and returned an EMPTY response, which read as "no JSON"
+            # and silently dropped a perfectly good clip. Low effort plus real
+            # headroom keeps the verdict cheap and always present.
+            output_config={"effort": "low"},
             messages=[{"role": "user", "content": content}])
         txt = "".join(b.text for b in resp.content if b.type == "text")
         m = re.search(r"\{.*\}", txt, re.S)
         if not m:
-            log.warning("[clip-judge] no JSON for %r; accepting nothing.", name)
+            log.warning("[clip-judge] no JSON for %r (stop_reason=%s); "
+                        "accepting nothing.", name, resp.stop_reason)
             return [], "cover"
         data = json.loads(m.group(0))
     except Exception as e:
