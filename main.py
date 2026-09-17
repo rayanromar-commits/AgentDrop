@@ -262,7 +262,7 @@ def upload_next_approved(config: dict):
     from pathlib import Path
     from upload.youtube_upload import upload_video
     from notify.events import notify_posted, notify_failed, notify_low_stock
-    from sourcing.manual_source import archive_story, restock_status
+    from sourcing.ledger import archive_story, restock_status
     db.init_db()
     held_for_spacing = 0
     for row in db.videos_missing_platform("youtube"):
@@ -283,7 +283,7 @@ def upload_next_approved(config: dict):
             # Retire the source script so it's never reused (avoids the
             # repetitive-content penalties that throttle a channel). If a
             # story was actually retired, nudge Slack when stock runs low.
-            if archive_story(row["post_id"]):
+            if archive_story(row["post_id"], config, youtube_id=vid):
                 min_days = config.get("notifications", {}).get(
                     "restock_min_days", 4)
                 notify_low_stock(restock_status(config), min_days)
@@ -306,7 +306,7 @@ def upload_next_tiktok(config: dict):
     from pathlib import Path
     from upload.tiktok_upload import upload_video_tiktok
     from notify.events import notify_posted, notify_failed, notify_low_stock
-    from sourcing.manual_source import archive_story, restock_status
+    from sourcing.ledger import archive_story, restock_status
     db.init_db()
     if not config.get("tiktok", {}).get("enabled"):
         log.info("TikTok disabled in config; skipping.")
@@ -320,7 +320,7 @@ def upload_next_tiktok(config: dict):
             where = "TikTok drafts" if mode == "inbox" else "TikTok"
             notify_posted(where, row["title"])
             # Idempotent: no-op if YouTube already archived this story.
-            if archive_story(row["post_id"]):
+            if archive_story(row["post_id"], config):
                 min_days = config.get("notifications", {}).get(
                     "restock_min_days", 4)
                 notify_low_stock(restock_status(config), min_days)

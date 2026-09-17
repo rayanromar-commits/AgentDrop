@@ -23,7 +23,7 @@ def notify_low_stock(status: dict, min_days: float) -> None:
     """Ping Slack when the queue's RUNWAY drops to/below `min_days`.
 
     Measured in UPLOADS/days, not stories — a story fans out into ~3 videos, so
-    upload runway is the truer signal. `status` is sourcing.manual_source.
+    upload runway is the truer signal. `status` is sourcing.ledger.
     restock_status(): {stories, uploads, uploads_per_day, days_runway}. Fires at
     posting time (not just the daily digest) so a restock can happen before the
     queue runs dry; one nudge per post while at/below the threshold, so it

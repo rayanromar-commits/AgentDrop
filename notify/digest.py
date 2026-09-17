@@ -4,7 +4,7 @@ Compose and send the once-a-day performance digest to Slack.
 Contents:
   - channel totals (subscribers / views / videos) with 1d / 7d / 30d deltas
   - top 3 videos by views (title + link)
-  - how many unused manual stories remain, with a restock warning
+  - how many unused ranking lists remain, with a restock warning
 
 Test on demand:  python3 main.py digest
 """
@@ -18,7 +18,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 from agentdrop_common import setup_logging
 from database import db
 from notify.slack import send_slack
-from sourcing.manual_source import restock_status
+from sourcing.ledger import restock_status
 from tracking.stats import fetch_channel_stats, refresh_stats
 
 log = setup_logging()
