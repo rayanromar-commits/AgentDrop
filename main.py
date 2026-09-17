@@ -253,6 +253,13 @@ def produce_one_video(config: dict):
               "or 'ranking'.", ctype)
     return None
 
+# Minimum gap between two parts of the same story on YouTube. Inert for the
+# ranking formats — one dataset renders exactly one video, so nothing has
+# siblings — but the guard below is kept because it is what keeps a multi-part
+# format out of the 0-view jail if one is ever reintroduced.
+SERIES_SPACING_HOURS = 20
+
+
 def upload_next_approved(config: dict):
     """Upload the oldest eligible video not yet on YouTube.
 
