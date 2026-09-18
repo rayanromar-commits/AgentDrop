@@ -283,7 +283,7 @@ SERIES_SPACING_HOURS = 20
 # How many rankings a single production run will try before giving up. A list is
 # abandoned when its entries have no verifiable stock footage, so without a few
 # attempts one bad dataset would cost the whole drop.
-MAX_DATASET_ATTEMPTS = 4
+MAX_DATASET_ATTEMPTS = 8
 
 
 def upload_next_approved(config: dict):

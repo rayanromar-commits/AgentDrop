@@ -77,3 +77,18 @@ def post_id_prefix(config: dict | None = None) -> str:
     """The post_id prefix for the configured content_type ('' if unknown)."""
     ctype = (config or {}).get("content_type", "clipranking")
     return _POST_ID_PREFIX.get(ctype, "")
+
+
+def first_json(text: str):
+    """Parse the FIRST JSON value in `text`, ignoring anything after it.
+
+    Every model call here pulled its JSON out with a greedy `\\{.*\\}`, which
+    spans from the first brace to the LAST one — so a reply that added a second
+    object or a braced aside after its answer failed with "Extra data" and was
+    thrown away. That silently killed a list-saving substitution on 2026-09-17.
+    """
+    import json
+    start = text.find("{")
+    if start < 0:
+        raise ValueError("no JSON object in reply")
+    return json.JSONDecoder().raw_decode(text[start:])[0]

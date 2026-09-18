@@ -42,7 +42,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 from dotenv import load_dotenv
 
-from agentdrop_common import setup_logging
+from agentdrop_common import first_json, setup_logging
 from database import db
 
 log = setup_logging()
@@ -176,7 +176,7 @@ def classify(comments: list[dict]) -> list[dict]:
         if not m:
             log.warning("[comments] classifier returned no JSON.")
             return []
-        tagged = json.loads(m.group(0)).get("comments") or []
+        tagged = first_json(m.group(0)).get("comments") or []
     except Exception as e:
         log.warning("[comments] classification failed (%s).", e)
         return []

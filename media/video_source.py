@@ -39,7 +39,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 from dotenv import load_dotenv
 from PIL import Image
 
-from agentdrop_common import setup_logging
+from agentdrop_common import first_json, setup_logging
 
 log = setup_logging()
 
@@ -68,7 +68,7 @@ _LAST_HIT: dict[str, float] = {}
 MIN_HEIGHT = 720          # below this a 1080x1920 frame is a heavy upscale
 MIN_DURATION = 3.0        # shorter than one rank slot is useless
 MAX_DURATION = 120.0      # huge files cost download time for one 4s excerpt
-CANDIDATES = 6            # clips shown to the judge
+CANDIDATES = 8            # clips shown to the judge
 
 
 def _get(url: str, timeout: int = 40, retries: int = 3,
@@ -147,8 +147,15 @@ def _search_pexels(query: str, n: int) -> list[dict]:
     # Ask for noticeably more than we need: the duration and height filters
     # below reject roughly half of what comes back, and a judge choosing between
     # two clips is barely choosing at all.
+    #
+    # NO orientation filter. Most real wildlife footage is shot landscape, and
+    # restricting to portrait threw it away before anyone looked: "orca" in
+    # portrait returned boats, surfers and a dolphin, while the unfiltered search
+    # led with killer whales swimming underwater. Four straight lists died that
+    # way (2026-09-17). The renderer handles landscape — the judge picks
+    # 'fit' or 'cover' — and _best_file still prefers a portrait rendition.
     url = f"{PEXELS_SEARCH}?" + urlencode({
-        "query": query, "per_page": max(n * 3, 15), "orientation": "portrait"})
+        "query": query, "per_page": max(n * 3, 15)})
     try:
         raw = _get(url, headers={"Authorization": key})
         data = json.loads(raw)
@@ -171,7 +178,11 @@ def _search_pexels(query: str, n: int) -> list[dict]:
         poster = pics[len(pics) // 2] if pics else v.get("image")
         out.append({"src": "pexels", "url": f["link"], "dur": dur,
                     "w": f.get("width") or 0, "h": f.get("height") or 0,
-                    "poster": poster, "id": f"pexels_{v.get('id')}"})
+                    "poster": poster, "id": f"pexels_{v.get('id')}",
+                    # The page slug is the uploader's description of the clip
+                    # ("killer-whales-swimming-underwater-5607991") — the only
+                    # text Pexels gives us about what is actually in it.
+                    "desc": str(v.get("url") or "")})
     return out
 
 
@@ -205,7 +216,8 @@ def _search_pixabay(query: str, n: int) -> list[dict]:
         out.append({"src": "pixabay", "url": best["url"], "dur": dur,
                     "w": best.get("width") or 0, "h": best.get("height") or 0,
                     "poster": best.get("thumbnail") or v.get("userImageURL"),
-                    "id": f"pixabay_{v.get('id')}"})
+                    "id": f"pixabay_{v.get('id')}",
+                    "desc": str(v.get("tags") or "")})
     return out
 
 
@@ -357,6 +369,11 @@ the wrong sense of a word happily).
 the name says blue, the animal must be blue; a tiger shark needs its stripes, an \
 oceanic whitetip its white-tipped fins, a hammerhead its head. This is the check \
 that matters most, because that feature is exactly what a viewer looks for.
+- REJECT an aquarium or tank shot of a species no aquarium keeps. Great white \
+sharks, for one, do not survive in captivity, so a shark behind glass is not a \
+great white (a real case: an aquarium SAND TIGER, ragged teeth and all, was \
+captioned "Great White Shark"). Look for the named species' signature traits \
+before accepting a generic member of its group.
 - ACCEPT when the clip is a PLAUSIBLE, UNCONTRADICTED example of {name} — the \
 right kind of animal, in the right setting, with nothing visible that rules it \
 out — even if the frame alone could not prove the exact species. Many subjects \
@@ -443,7 +460,7 @@ def _judge(name: str, cand: list[dict], context: str = "",
             log.warning("[clip-judge] no JSON for %r (stop_reason=%s); "
                         "accepting nothing.", name, resp.stop_reason)
             return [], "cover"
-        data = json.loads(m.group(0))
+        data = first_json(m.group(0))
     except Exception as e:
         log.warning("[clip-judge] failed (%s); accepting nothing for %r.", e, name)
         return [], "cover"
@@ -469,6 +486,48 @@ def _queries(query) -> list[str]:
     if isinstance(query, str):
         return [query]
     return [q for q in (query or []) if isinstance(q, str) and q.strip()]
+
+
+# Words that describe the SHOT, not the subject. They are in every dataset query
+# ("... swimming underwater slow motion") and match half the library, so they
+# say nothing about whether a clip shows the right animal.
+_SHOT_WORDS = frozenset("""
+a an the of in on at with and or to from for by its into over under near
+close up closeup macro slow motion aerial view shot footage video clip
+underwater water ocean sea river lake forest jungle savanna wild wildlife
+swimming walking running crawling flying hunting charging sitting standing
+looking resting drifting floating diving jumping playing moving camera
+open deep blue green dark big large small tiny giant cute beautiful
+""".split())
+
+
+def _words(text: str) -> set[str]:
+    """Lowercase word stems: 'Killer-Whales' -> {'killer', 'whale'}."""
+    out = set()
+    for w in re.findall(r"[a-z]+", (text or "").lower()):
+        if len(w) > 3 and w.endswith("es") and not w.endswith("sses"):
+            w = w[:-1] if w[:-2].endswith(("l", "t", "k", "g", "r")) else w[:-2]
+        elif len(w) > 3 and w.endswith("s") and not w.endswith("ss"):
+            w = w[:-1]
+        out.add(w)
+    return out
+
+
+def _relevance(desc: str, name: str | None, terms: list[str]) -> float:
+    """How strongly a clip's own description names the subject.
+
+    A cheap pre-rank so the judge's limited slots go to clips that at least
+    CLAIM to show the subject — killer whales before penguins. It never accepts
+    anything: the vision judge still decides every clip on what it actually
+    shows. Words in the entry's name count double, because the queries can carry
+    words that aren't identity ("poison" also matches a darts match).
+    """
+    have = _words(desc)
+    if not have:
+        return 0.0
+    name_w = _words(name or "") - _SHOT_WORDS
+    term_w = set().union(*(_words(t) for t in terms)) - _SHOT_WORDS - name_w
+    return 2.0 * len(name_w & have) + len(term_w & have)
 
 
 def fetch_item_clip(query, prefer: str | None = None,
@@ -512,21 +571,28 @@ def fetch_item_clip(query, prefer: str | None = None,
         terms = terms + [fallback]
 
     def gather() -> list[dict]:
-        cands: list[dict] = []
+        # Pool EVERY term from BOTH libraries, then rank the pool. This used to
+        # take the first term's first six hits and stop, so the long descriptive
+        # query ("orca hunting underwater slow motion"), which stock search
+        # matches loosely, filled every slot with stingrays and turtles, and the
+        # bare name was never searched at all.
+        pool: list[dict] = []
         seen: set[str] = set()
         for term in terms:
-            if len(cands) >= CANDIDATES:
-                break
-            for c in (_search_pexels(term, CANDIDATES) or
+            for c in (_search_pexels(term, CANDIDATES) +
                       _search_pixabay(term, CANDIDATES)):
-                if len(cands) >= CANDIDATES:
-                    break
                 if c["id"] in seen or c["id"] in exclude:
                     continue
                 seen.add(c["id"])
-                poster = _download_poster(c)
-                if not poster:
-                    continue
+                pool.append(c)
+        # Stable sort, so search order breaks ties.
+        pool.sort(key=lambda c: -_relevance(c.get("desc", ""), prefer, terms))
+        cands: list[dict] = []
+        for c in pool:
+            if len(cands) >= CANDIDATES:
+                break
+            poster = _download_poster(c)
+            if poster:
                 cands.append({**c, "frame": poster})
         return cands
 

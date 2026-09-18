@@ -23,7 +23,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 from dotenv import load_dotenv
 
-from agentdrop_common import setup_logging
+from agentdrop_common import first_json, setup_logging
 
 log = setup_logging()
 
@@ -338,7 +338,7 @@ def generate_clip_ranking(topic: str | None = None,
         log.warning("[clip-gen] no JSON in response.")
         return None
     try:
-        data = json.loads(m.group(0))
+        data = first_json(m.group(0))
     except Exception as e:
         log.warning("[clip-gen] bad JSON: %s", e)
         return None
@@ -444,7 +444,7 @@ def _substitute_is_true(title: str, name: str, rank) -> bool:
         m = re.search(r"\{.*\}", txt, re.S)
         if not m:
             return False
-        data = json.loads(m.group(0))
+        data = first_json(m.group(0))
     except Exception as e:
         log.warning("[clip-gen] substitute verification failed (%s); rejecting.", e)
         return False
@@ -455,7 +455,8 @@ def _substitute_is_true(title: str, name: str, rank) -> bool:
     return ok
 
 
-def substitute_item(data: dict, failed_name: str) -> dict | None:
+def substitute_item(data: dict, failed_name: str,
+                    avoid: list[str] | None = None) -> dict | None:
     """A replacement entry for one that has no sourceable footage.
 
     A list is worth saving. When a single entry cannot be shown — a tiger shark
@@ -464,6 +465,9 @@ def substitute_item(data: dict, failed_name: str) -> dict | None:
     it. The second keeps the day's drop without ever putting a wrong clip under
     a caption, because the CAPTION CHANGES TOO: the video ends up ranking what
     it actually shows.
+
+    `avoid` = replacements already tried for this slot that had no footage,
+    so a second attempt asks for something different.
 
     Returns {name, label, queries} keeping the failed entry's rank, or None.
     """
@@ -495,12 +499,14 @@ def substitute_item(data: dict, failed_name: str) -> dict | None:
             output_config={"effort": "low"},
             messages=[{"role": "user", "content": _SUBSTITUTE_PROMPT.format(
                 title=data.get("title", ""), items=listing,
-                failed=failed_name, rank=failed.get("rank", ""))}])
+                failed=failed_name, rank=failed.get("rank", ""))
+                + (f"\n\nAlready tried, NO footage exists — do not suggest: "
+                   f"{', '.join(avoid)}." if avoid else "")}])
         txt = "".join(b.text for b in resp.content if b.type == "text")
         m = re.search(r"\{.*\}", txt, re.S)
         if not m:
             return None
-        sub = json.loads(m.group(0))
+        sub = first_json(m.group(0))
     except Exception as e:
         log.warning("[clip-gen] substitution failed for %r: %s", failed_name, e)
         return None
@@ -509,7 +515,7 @@ def substitute_item(data: dict, failed_name: str) -> dict | None:
     if not name:
         return None
     existing = {str(it.get("name", "")).lower() for it in items}
-    if name.lower() in existing:
+    if name.lower() in existing or name.lower() in {a.lower() for a in avoid or []}:
         log.info("[clip-gen] substitute %r is already on the list; skipping.", name)
         return None
     if _UNFILMABLE_RE.search(name):
@@ -561,7 +567,7 @@ def _unfilmable_items(data: dict) -> list[str]:
         m = re.search(r"\{.*\}", txt, re.S)
         if not m:
             return []
-        bad = json.loads(m.group(0)).get("unfilmable") or []
+        bad = first_json(m.group(0)).get("unfilmable") or []
     except Exception as e:
         log.warning("[clip-gen] filmability audit failed (%s); keeping list.", e)
         return []

@@ -62,6 +62,11 @@ YELLOW = (255, 213, 0)          # the rank list
 WHITE = (250, 251, 255)         # the title
 DIM = (180, 184, 200)           # unrevealed slots
 GOLD = (255, 236, 120)          # the #1 slot once revealed
+# Medal colours for the rank NUMERALS, as every top channel in the genre does
+# (Xiro's 133M/325M-view videos): the eye reads 1-2-3 as a podium before it
+# reads a single word.
+MEDAL = {1: (255, 200, 40), 2: (205, 212, 224), 3: (214, 136, 62)}
+TOPIC_BLUE = (90, 170, 255)     # the subject words of the title
 
 # Safe-zone layout (carried over from the ranking renderer — same phone frame).
 ML, MR = 60, 120
@@ -74,10 +79,15 @@ LABEL_CY = 1590                      # short label under it
 # Segment timing. No narration means durations are chosen, not measured, so the
 # video lands on target exactly and needs no atempo pass (which would also chew
 # up the music bed).
-INTRO_DUR = 1.8
+# NO intro. It used to be a 1.8s full-screen title card over a calm shot; the
+# reference channels (Xiro: 133M / 325M views) have no card at all — the small
+# title sits over the first REVEAL from frame 0, because the first second is
+# where a Short gets swiped. Set above 0 to bring back a beat of #1's footage.
+INTRO_DUR = 0.0
 OUTRO_DUR = 2.4        # the question is alone on screen here, so it needs a beat
 MIN_ITEM_DUR = 2.6
 MAX_SUBSTITUTIONS = 2   # a list needing more rewrites than this is just a bad list
+SUB_TRIES = 2           # replacement suggestions per failed slot
 OUTRO_TEXT = "Which one was your #1?"      # a question — this format lives on comments
 
 
@@ -138,30 +148,83 @@ def _base_overlay(title, by_rank, revealed_ranks, cur_rank):
     _scrim(img)
     d = ImageDraw.Draw(img)
 
-    ts = 68
-    tlines = _wrap(d, title.upper(), W - ML - MR, ts)
-    while len(tlines) > 2 and ts > 38:
-        ts -= 4
-        tlines = _wrap(d, title.upper(), W - ML - MR, ts)
-    y = TITLE_CY - (len(tlines) - 1) * (ts + 12) // 2
-    for ln in tlines:
-        _text(d, (W // 2, y), ln, ts, fill=WHITE, anchor="mm", stroke=9)
-        y += ts + 14
+    _draw_title(d, title)
 
     for rank in range(1, 6):
         yy = LIST_YS[rank - 1]
         cur = rank == cur_rank
         shown = rank in revealed_ranks
-        colour = (GOLD if rank == 1 else YELLOW) if shown else DIM
-        _text(d, (LIST_X, yy), str(rank), 66 if cur else 58, fill=colour, stroke=8)
+        num = MEDAL.get(rank, WHITE)
+        _text(d, (LIST_X, yy), str(SLOT_LABELS[rank - 1]), 66 if cur else 58,
+              fill=num, stroke=8)
         it = by_rank.get(rank)
         if shown and it:
             nm = it["name"].upper()
             _text(d, (LIST_X + 92, yy), nm,
-                  _fit(d, nm, 380, 50 if cur else 44), fill=colour, stroke=8)
-        else:
-            _text(d, (LIST_X + 92, yy), "—", 44, fill=DIM, stroke=8)
+                  _fit(d, nm, 380, 50 if cur else 44),
+                  fill=YELLOW if cur else WHITE, stroke=8)
     return img
+
+
+# Slot numbers as DISPLAYED. The genre's biggest channels number the list
+# 1, 2, 3, 4, 6 — five is skipped on purpose. It is the cheapest comment bait
+# in the format ("where is 5??"), and comments are exactly the signal this
+# channel lacks (14 shares / 36 comments in 68k views). It changes no claim:
+# the order of the entries is unchanged, only the label on the last slot.
+# Switch off with clipranking.skip_five: false.
+SLOT_LABELS = [1, 2, 3, 4, 6]
+
+
+def _title_words(title: str) -> list[tuple[str, tuple]]:
+    """Title split into (word, colour): 'Ranking' white, the superlative
+    yellow, the subject blue — the two-tone title every top channel uses, so the
+    subject reads at a glance."""
+    words = title.split()
+    out = []
+    sup = _SUPERLATIVE_RE.match(title or "")
+    n_sup = len(sup.group(1).split()) if sup else 0
+    for i, w in enumerate(words):
+        if i == 0 and w.lower() == "ranking":
+            out.append((w, WHITE))
+        elif 1 <= i <= n_sup:
+            out.append((w, YELLOW))
+        else:
+            out.append((w, TOPIC_BLUE))
+    return out
+
+
+_SUPERLATIVE_RE = re.compile(
+    r"^\s*ranking\s+((?:most|least)\s+\w+|\w+)\s", re.I)
+
+
+def _draw_title(d, title: str, cy: int = TITLE_CY):
+    words = _title_words(title)
+    ts = 70
+    def lines_at(size):
+        lines, cur = [], []
+        for w, c in words:
+            t = " ".join(x for x, _ in cur + [(w, c)])
+            if cur and d.textlength(t, font=_font(size)) > W - ML - MR:
+                lines.append(cur); cur = [(w, c)]
+            else:
+                cur.append((w, c))
+        if cur:
+            lines.append(cur)
+        return lines
+    lines = lines_at(ts)
+    while len(lines) > 2 and ts > 40:
+        ts -= 4
+        lines = lines_at(ts)
+    f = _font(ts)
+    space = d.textlength(" ", font=f)
+    y = cy - (len(lines) - 1) * (ts + 14) // 2
+    for ln in lines:
+        total = sum(d.textlength(w, font=f) for w, _ in ln) + space * (len(ln) - 1)
+        x = (W - total) / 2
+        for w, c in ln:
+            _text(d, (x, y), w, ts, fill=c, anchor="lm", stroke=9)
+            x += d.textlength(w, font=f) + space
+        y += ts + 14
 
 
 def _caption_layer(name: str, label: str, scale: float = 1.0) -> Image.Image:
@@ -194,22 +257,6 @@ def _topic(title: str) -> str:
     s = _TEMPLATE_WORDS.sub("", title or "")
     s = _TEMPLATE_WORDS.sub("", s)          # leading and trailing are separate matches
     return s.strip() or (title or "").strip()
-
-
-def _title_card(title: str) -> Image.Image:
-    """Intro layer — the title, big and centred, over the opening clip."""
-    img = Image.new("RGBA", (W, H), (0, 0, 0, 0))
-    d = ImageDraw.Draw(img)
-    size = 96
-    lines = _wrap(d, title.upper(), W - 2 * ML, size)
-    while len(lines) > 3 and size > 52:
-        size -= 6
-        lines = _wrap(d, title.upper(), W - 2 * ML, size)
-    y = H // 2 - (len(lines) - 1) * (size + 16) // 2
-    for ln in lines:
-        _text(d, (W // 2, y), ln, size, fill=WHITE, anchor="mm", stroke=12)
-        y += size + 18
-    return img
 
 
 def _outro_layer(text: str) -> Image.Image:
@@ -439,6 +486,8 @@ def _segment_audio(ff, clip_path, start, dur, out_wav):
 
 def render_clip_video(post_id, payload, config=None) -> Path:
     cfg = (config or {}).get("clipranking", {})
+    global SLOT_LABELS
+    SLOT_LABELS = [1, 2, 3, 4, 6] if cfg.get("skip_five", True) else [1, 2, 3, 4, 5]
     title = payload["title"]
     by_rank = {it["rank"]: it for it in payload["items"]}
     OUTPUT_DIR.mkdir(exist_ok=True)
@@ -488,15 +537,24 @@ def render_clip_video(post_id, payload, config=None) -> Path:
     # what it actually shows. Bounded, because a list needing three rewrites is
     # a bad list, not a sourcing problem.
     for failed in list(missing)[:MAX_SUBSTITUTIONS]:
-        sub = substitute_item(payload, failed)
-        if not sub:
-            continue
-        path, framing = fetch_item_clip(
-            sub["queries"], prefer=sub["name"], exclude=used, subject=subject,
-            context=f"{sub['name']} — {sub.get('label', '')}".strip(" —"))
-        if not path:
+        # Two tries per slot: the first suggestion is sometimes itself
+        # unfilmable (a live run offered a TARDIGRADE for Electric Eel), and a
+        # second ask that names what failed usually lands.
+        tried: list[str] = []
+        sub = path = None
+        for _ in range(SUB_TRIES):
+            sub = substitute_item(payload, failed, avoid=tried)
+            if not sub:
+                break
+            path, framing = fetch_item_clip(
+                sub["queries"], prefer=sub["name"], exclude=used, subject=subject,
+                context=f"{sub['name']} — {sub.get('label', '')}".strip(" —"))
+            if path:
+                break
             log.info("[clip] substitute %r for %r also had no footage.",
                      sub["name"], failed)
+            tried.append(sub["name"])
+        if not sub or not path:
             continue
         used.add(clip_hash(path))
         used.add(path.stem)
@@ -562,10 +620,10 @@ def render_clip_video(post_id, payload, config=None) -> Path:
 
     # plan entries: (clip, framing, dur, base_overlay, timed_overlays)
     plan = []
-    intro_base = Image.new("RGBA", (W, H), (0, 0, 0, 0))
-    _scrim(intro_base, top_h=500, bot_h=500)
-    plan.append((opener, "cover", INTRO_DUR, intro_base,
-                 [(*_crop(_title_card(title)), 0.0, INTRO_DUR)]))
+    if INTRO_DUR > 0:
+        intro_base = _base_overlay(title, by_rank, set(), None)
+        plan.append((opener, clips.get(1, (None, "cover"))[1], INTRO_DUR,
+                     intro_base, []))
 
     revealed: set[int] = set()
     for it in order:
@@ -597,7 +655,7 @@ def render_clip_video(post_id, payload, config=None) -> Path:
             # it takes the HEAD instead — otherwise the intro and the #1 reveal
             # play the identical few seconds and the payoff lands as a repeat.
             cdur = probe_duration(clip) if clip else 0.0
-            if i == 0:
+            if i == 0 and INTRO_DUR > 0:
                 start = 0.0
             else:
                 start = max(0.0, (cdur - dur) / 2.0) if cdur > dur else 0.0

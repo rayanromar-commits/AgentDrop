@@ -29,7 +29,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 from dotenv import load_dotenv
 
-from agentdrop_common import setup_logging
+from agentdrop_common import first_json, setup_logging
 
 log = setup_logging()
 
@@ -182,7 +182,7 @@ def servable(subjects: list[str]) -> list[str]:
         m = re.search(r"\{.*\}", txt, re.S)
         if not m:
             return subjects
-        keep = json.loads(m.group(0)).get("servable") or []
+        keep = first_json(m.group(0)).get("servable") or []
     except Exception as e:
         log.info("[trends] servability check unavailable (%s); keeping the "
                  "keyword-filtered list.", e)

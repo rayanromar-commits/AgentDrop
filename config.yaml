@@ -68,6 +68,8 @@ clipranking:
     enabled: true
     min_buffer: 4
     target: 12
+  skip_five: true                    # number the list 1,2,3,4,6 like the top
+                                     # channels do — "where's 5?" comment bait
   target_seconds: 20                 # finished length. Unlike `ranking` this is
                                      # hit EXACTLY by choosing segment durations
                                      # up front (no narration to measure), so
