@@ -225,20 +225,25 @@ def _produce_clipranking(config: dict):
         # on these; the only complaint is that the footage is ordinary. Post the
         # best of them and say so, so the quality bar shows up in the log
         # instead of silently costing a day.
-        best_cand, best_score = max(dull, key=lambda t: t[1])
-        log.warning("[clip] every list today was judged dull; posting the best "
-                    "of them (%r, best shot %s/5) rather than skipping the "
-                    "drop.", best_cand["title"], best_score)
+        # Walk ALL of them, best first: the fallback re-sources from scratch,
+        # and a second search can come back different — on 2026-09-26 the
+        # re-render lost its Munchkin clip and the day went dark while a fully
+        # verified "Smartest Big Cats" sat unused in this list.
         relaxed = {**config, "clipranking": {**config.get("clipranking", {}),
                                              "min_best_quality": 0,
                                              "min_mean_quality": 0}}
-        cand_payload = _json.loads(best_cand["body"])
-        try:
-            video_path = render_clip_video(best_cand["post_id"], cand_payload,
-                                           relaxed)
-            item, payload = best_cand, cand_payload
-        except UnusableDataset as e:
-            log.warning("[clip] fallback render failed too: %s", e)
+        for best_cand, best_score in sorted(dull, key=lambda t: -t[1]):
+            log.warning("[clip] every list today was judged dull; posting the "
+                        "best of them (%r, best shot %s/5) rather than skipping "
+                        "the drop.", best_cand["title"], best_score)
+            cand_payload = _json.loads(best_cand["body"])
+            try:
+                video_path = render_clip_video(best_cand["post_id"],
+                                               cand_payload, relaxed)
+                item, payload = best_cand, cand_payload
+                break
+            except UnusableDataset as e:
+                log.warning("[clip] fallback render failed too: %s", e)
 
     if video_path is None:
         log.error("No ranking could be sourced with verified footage in %d "
