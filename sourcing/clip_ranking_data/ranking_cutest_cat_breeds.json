@@ -1,0 +1,61 @@
+{
+  "title": "Ranking Cutest Cat Breeds",
+  "category": "cats",
+  "items": [
+    {
+      "rank": 5,
+      "name": "British Shorthair",
+      "label": "round face and plush coat",
+      "queries": [
+        "british shorthair cat sitting",
+        "british shorthair kitten close up",
+        "british shorthair"
+      ],
+      "query": "british shorthair cat sitting"
+    },
+    {
+      "rank": 4,
+      "name": "Persian Cat",
+      "label": "flat face and long fur",
+      "queries": [
+        "persian cat grooming close up",
+        "persian cat lying down fluffy",
+        "persian cat"
+      ],
+      "query": "persian cat grooming close up"
+    },
+    {
+      "rank": 3,
+      "name": "Maine Coon",
+      "label": "gentle giant of cats",
+      "queries": [
+        "maine coon cat walking slow motion",
+        "maine coon kitten playing",
+        "maine coon"
+      ],
+      "query": "maine coon cat walking slow motion"
+    },
+    {
+      "rank": 2,
+      "name": "Scottish Fold",
+      "label": "ears that fold forward",
+      "queries": [
+        "scottish fold cat close up",
+        "scottish fold kitten sitting",
+        "scottish fold cat"
+      ],
+      "query": "scottish fold cat close up"
+    },
+    {
+      "rank": 1,
+      "name": "Ragdoll Cat",
+      "label": "goes limp when held",
+      "queries": [
+        "ragdoll cat being held relaxed",
+        "ragdoll kitten blue eyes close up",
+        "ragdoll cat"
+      ],
+      "query": "ragdoll cat being held relaxed"
+    }
+  ]
+}

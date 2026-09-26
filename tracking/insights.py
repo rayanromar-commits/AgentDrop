@@ -43,7 +43,8 @@ PROJECT_ROOT = Path(__file__).resolve().parent.parent
 SNAPSHOT = PROJECT_ROOT / "tracking" / "insights.json"
 
 SUPERLATIVES = ["deadliest", "most dangerous", "most venomous", "strongest",
-                "biggest", "fastest", "weirdest", "rarest", "scariest"]
+                "biggest", "fastest", "weirdest", "rarest", "scariest",
+                "cutest", "smartest", "most beautiful", "friendliest"]
 
 MIN_SAMPLE = 3          # below this our own numbers are noise, not signal
 
@@ -105,6 +106,14 @@ def build(config: dict | None = None, refresh_rivals: bool = True) -> dict:
     except Exception as e:
         log.warning("[insights] own superlative stats unavailable: %s", e)
         snap["superlatives"] = {}
+
+    # Why the channel is stuck, and the one setting changed because of it.
+    try:
+        from tracking import jail
+        snap["jail"] = jail.apply(config)
+    except Exception as e:
+        log.warning("[insights] view-jail diagnosis unavailable: %s", e)
+        snap["jail"] = {}
 
     snap["comments"] = {}
     if lcfg.get("read_comments", True):
@@ -210,6 +219,27 @@ def briefing(snap: dict | None = None, max_chars: int = 2600) -> str:
     if not snap:
         return ""
     parts: list[str] = []
+
+    # What the numbers say is wrong right now. Phrased as a finding, not an
+    # instruction: the generator picks the subject, and a standing order here
+    # would flatten topic variety inside a week.
+    jd = ((snap.get("jail") or {}).get("diagnosis") or {})
+    d = jd.get("diagnosis")
+    if d == "HOOK":
+        parts.append(
+            f"Our videos are being SERVED and SKIPPED: {jd.get('evidence', '')}. "
+            "Completion is fine, so the subject has to earn the first second — "
+            "prefer subjects that are instantly legible in a single frame over "
+            "ones that need a caption to make sense.")
+    elif d == "RETENTION":
+        parts.append(f"Viewers start and then leave part-way: "
+                     f"{jd.get('evidence', '')}.")
+    elif d == "SPREAD":
+        parts.append(
+            f"Viewers watch to the end and then do nothing: "
+            f"{jd.get('evidence', '')}. What is missing is a list people would "
+            "ARGUE with or send to someone — a ranking whose #1 is obvious "
+            "gives nobody a reason to react.")
 
     sups = best_superlatives(snap)
     if sups:

@@ -179,6 +179,13 @@ def _produce_clipranking(config: dict):
     # entries have no verifiable footage (extinct or otherwise unfilmable
     # subjects) is skipped, not patched with look-alike clips — but skipping it
     # must not cost the day's drop, so the next list gets a turn.
+    # Lists rejected ONLY for dull footage, kept as a last resort: going dark
+    # is worse than posting the best of an ordinary day, and this channel has
+    # already lost four days to an empty buffer (2026-09-21).
+    dull: list[tuple[dict, float]] = []
+    from tracking import jail
+    config = {**config, "clipranking": jail.knobs_for_render(config)}
+
     item = payload = video_path = None
     for cand in candidates[:MAX_DATASET_ATTEMPTS]:
         cand_payload = _json.loads(cand["body"])
@@ -187,9 +194,52 @@ def _produce_clipranking(config: dict):
             video_path = render_clip_video(cand["post_id"], cand_payload, config)
         except UnusableDataset as e:
             log.warning("[clip] %s", e)
+            if getattr(e, "quality_only", False):
+                # Dull, not dishonest — keep it as a fallback and leave it in
+                # the buffer: tomorrow's search may well find better footage.
+                score = getattr(e, "quality", {}).get("best", 0)
+                dull.append((cand, score))
+                # Stop shopping once we have something decent. With the floor
+                # raised to 5 almost nothing passes outright, and judging all
+                # eight lists to find that out costs ~40 vision calls a day for
+                # a fallback we already hold.
+                if score >= GOOD_ENOUGH_QUALITY and len(dull) >= MIN_SHOPPING:
+                    log.info("[clip] stopping the search: %r already has a "
+                             "%s/5 shot, good enough to post.",
+                             cand["title"], score)
+                    break
+                continue
+            # Quarantine it: an unsourceable list is not buffer, and counting it
+            # as buffer is what kept autorefill from ever firing.
+            try:
+                from sourcing.clip_ranking_source import mark_unbuildable
+                mark_unbuildable(cand["title"], str(e))
+            except Exception as qe:
+                log.warning("[clip] could not quarantine %r: %s",
+                            cand["title"], qe)
             continue
         item, payload = cand, cand_payload
         break
+    if video_path is None and dull:
+        # NEVER GO DARK for taste alone. Every honesty check has already passed
+        # on these; the only complaint is that the footage is ordinary. Post the
+        # best of them and say so, so the quality bar shows up in the log
+        # instead of silently costing a day.
+        best_cand, best_score = max(dull, key=lambda t: t[1])
+        log.warning("[clip] every list today was judged dull; posting the best "
+                    "of them (%r, best shot %s/5) rather than skipping the "
+                    "drop.", best_cand["title"], best_score)
+        relaxed = {**config, "clipranking": {**config.get("clipranking", {}),
+                                             "min_best_quality": 0,
+                                             "min_mean_quality": 0}}
+        cand_payload = _json.loads(best_cand["body"])
+        try:
+            video_path = render_clip_video(best_cand["post_id"], cand_payload,
+                                           relaxed)
+            item, payload = best_cand, cand_payload
+        except UnusableDataset as e:
+            log.warning("[clip] fallback render failed too: %s", e)
+
     if video_path is None:
         log.error("No ranking could be sourced with verified footage in %d "
                   "attempt(s). Nothing produced — the datasets need subjects "
@@ -284,6 +334,38 @@ SERIES_SPACING_HOURS = 20
 # abandoned when its entries have no verifiable stock footage, so without a few
 # attempts one bad dataset would cost the whole drop.
 MAX_DATASET_ATTEMPTS = 8
+# When the quality floor is set high, production keeps looking for a better
+# list. These bound that search: once we have tried a few and one of them has a
+# genuinely strong shot, take it rather than judging every remaining list.
+GOOD_ENOUGH_QUALITY = 4
+MIN_SHOPPING = 3
+
+
+def _seed_comment(video_id: str, row, config: dict) -> None:
+    """Open the comment section ourselves, so viewers have a thread to join.
+
+    Comments are one of the engagement signals Shorts ranks on, and this
+    channel has been getting roughly one per video. The text names the #1 so
+    there is something specific to disagree with — "which was your favourite"
+    on an empty section gets nothing.
+    """
+    ccfg = config.get("clipranking", {}) or {}
+    if not ccfg.get("channel_comment", True):
+        return
+    try:
+        import json as _json
+        from upload.youtube_upload import post_channel_comment
+        payload = _json.loads(row["body"]) if row["body"] else {}
+        top = next((it for it in payload.get("items", [])
+                    if it.get("rank") == 1), None)
+        if top:
+            text = (f"{top['name']} at #1 — {top.get('label', '')}. "
+                    f"Swap it out if you think something else deserves it.")
+        else:
+            text = "Which one would you put at #1?"
+        post_channel_comment(video_id, text)
+    except Exception as e:
+        log.info("[youtube] seed comment skipped (%s).", e)
 
 
 def upload_next_approved(config: dict):
@@ -314,6 +396,7 @@ def upload_next_approved(config: dict):
             continue
         try:
             vid = upload_video(row, config)
+            _seed_comment(vid, row, config)
             notify_posted("YouTube", row["title"],
                           f"https://youtube.com/watch?v={vid}")
             # The dataset was already retired in the posted ledger at produce
@@ -336,6 +419,20 @@ def upload_next_approved(config: dict):
     else:
         log.info("No videos waiting for YouTube upload.")
     return None
+
+
+def diagnose_jail(config: dict):
+    """Print why the channel is stuck and what the agent would change."""
+    from tracking import jail
+    db.init_db()
+    out = jail.apply(config)
+    d = out.get("diagnosis", {})
+    log.info("[jail] %s — %s (n=%s, source=%s)", d.get("diagnosis"),
+             d.get("evidence"), d.get("n"), d.get("source"))
+    log.info("[jail] knobs now: %s", out.get("knobs"))
+    if out.get("change"):
+        log.info("[jail] change: %s", out["change"])
+    return out
 
 
 def upload_next_tiktok(config: dict):
@@ -386,6 +483,15 @@ def learn(config: dict) -> None:
         log.warning("[learn] stats refresh failed (%s); learning on what we "
                     "already have.", e)
     build(config)
+    # Answer a few viewers, as the channel. Bounded and idempotent (never the
+    # same thread twice) — see tracking/comments.auto_reply.
+    try:
+        from tracking.comments import auto_reply
+        n = auto_reply(config)
+        if n:
+            log.info("[learn] replied to %d comment(s).", n)
+    except Exception as e:
+        log.warning("[learn] auto-reply skipped (%s).", e)
 
 
 def refresh_performance(config: dict) -> None:
@@ -594,6 +700,8 @@ def main() -> None:
         refresh_performance(config)
     elif cmd == "learn":
         learn(config)
+    elif cmd == "jail":
+        diagnose_jail(config)
     elif cmd == "comments":
         from tracking.comments import read_and_summarize
         db.init_db()

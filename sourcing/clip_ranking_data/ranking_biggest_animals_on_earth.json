@@ -1,0 +1,61 @@
+{
+  "title": "Ranking Biggest Animals On Earth",
+  "category": "giant animals",
+  "items": [
+    {
+      "rank": 5,
+      "name": "Giraffe",
+      "label": "tallest animal alive",
+      "queries": [
+        "giraffe walking savanna slow motion",
+        "giraffe close up neck",
+        "giraffe"
+      ],
+      "query": "giraffe walking savanna slow motion"
+    },
+    {
+      "rank": 4,
+      "name": "Whale Shark",
+      "label": "largest fish in the ocean",
+      "queries": [
+        "whale shark swimming with divers",
+        "whale shark underwater close up",
+        "whale shark"
+      ],
+      "query": "whale shark swimming with divers"
+    },
+    {
+      "rank": 3,
+      "name": "African Elephant",
+      "label": "largest land animal",
+      "queries": [
+        "african elephant walking herd",
+        "elephant close up trunk",
+        "african elephant"
+      ],
+      "query": "african elephant walking herd"
+    },
+    {
+      "rank": 2,
+      "name": "Humpback Whale",
+      "label": "40 tons breaching the surface",
+      "queries": [
+        "humpback whale breaching slow motion",
+        "humpback whale underwater diving",
+        "humpback whale"
+      ],
+      "query": "humpback whale breaching slow motion"
+    },
+    {
+      "rank": 1,
+      "name": "Blue Whale",
+      "label": "biggest animal ever known",
+      "queries": [
+        "blue whale swimming aerial drone",
+        "blue whale surfacing ocean",
+        "blue whale"
+      ],
+      "query": "blue whale swimming aerial drone"
+    }
+  ]
+}

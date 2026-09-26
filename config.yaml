@@ -20,6 +20,13 @@ learning:
   read_comments: true          # classify comments (jokes/sarcasm vs real feedback)
   mine_rivals: true            # reference-channel breakout detection
   rival_outlier_multiple: 2.5  # "beat its own channel" threshold
+  # Let the agent turn ONE editing knob a day based on its own numbers — which
+  # of hook / retention / spread is actually holding the channel at ~1k views
+  # (see tracking/jail.py, and `python3 main.py jail` to see the reasoning).
+  # Set false to diagnose without ever changing anything.
+  auto_adjust: true
+  auto_reply: true             # answer a few viewer comments as the channel
+  max_replies_per_day: 3       # never more than this, never the same thread twice
 
 clipranking: block below)
 content_type: clipranking
@@ -70,6 +77,11 @@ clipranking:
     target: 12
   skip_five: true                    # number the list 1,2,3,4,6 like the top
                                      # channels do — "where's 5?" comment bait
+  loop_close: true                   # end on the footage running into the
+                                     # opening frame, so a replay is seamless
+  channel_comment: true              # post the first comment ourselves
+  min_best_quality: 4                # 1-5 watchability floor for a list's best
+                                     # shot; tracking/jail.py may raise this
   target_seconds: 20                 # finished length. Unlike `ranking` this is
                                      # hit EXACTLY by choosing segment durations
                                      # up front (no narration to measure), so

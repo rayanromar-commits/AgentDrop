@@ -40,6 +40,12 @@ _LIFETIME_START = "2020-01-01"
 # Shorts; impressions / CTR are intentionally omitted (not exposed for Shorts).
 _METRICS = [
     "views",
+    # Since 2026-03-31 `views` counts every start, however brief, and the OLD
+    # definition (a view that actually engaged) became `engagedViews`. The
+    # ratio between them is the closest thing the API has to Studio's
+    # "viewed vs swiped away" — which measures the exact failure this channel
+    # keeps hitting, videos that are served and then skipped.
+    "engagedViews",
     "averageViewPercentage",
     "averageViewDuration",
     "estimatedMinutesWatched",
@@ -101,6 +107,7 @@ def fetch_video_analytics(youtube_ids: list[str]) -> dict[str, dict]:
             if not vid:
                 continue
             out[vid] = {
+                "engaged_views": _int(rec.get("engagedViews")),
                 "avg_view_pct": _num(rec.get("averageViewPercentage")),
                 "avg_view_seconds": _num(rec.get("averageViewDuration")),
                 "shares": _int(rec.get("shares")),
@@ -110,6 +117,57 @@ def fetch_video_analytics(youtube_ids: list[str]) -> dict[str, dict]:
 
     log.info("[analytics] pulled retention/shares for %d video(s).", len(out))
     return out
+
+
+def fetch_retention(youtube_id: str) -> dict | None:
+    """Second-by-second retention for ONE video.
+
+    Returns {"curve": [(ratio, watch_ratio), ...], "hook_hold": float,
+    "loop_ratio": float} or None. `hook_hold` is the share of viewers still
+    watching at 5% in — the first-second hold that decides whether a Short
+    escapes its seed test, and the one thing average completion cannot tell us
+    (a video can average 60% because half leave instantly and half watch twice).
+
+    One query per video, so callers should ask only for the recent ones.
+    """
+    if not youtube_id:
+        return None
+    from datetime import date
+    try:
+        from upload.youtube_upload import get_analytics_service
+        analytics = get_analytics_service()
+    except Exception as e:
+        log.info("[analytics] retention client unavailable (%s).", e)
+        return None
+    try:
+        resp = analytics.reports().query(
+            ids="channel==MINE", startDate=_LIFETIME_START,
+            endDate=date.today().isoformat(),
+            metrics="audienceWatchRatio",
+            dimensions="elapsedVideoTimeRatio",
+            filters=f"video=={youtube_id}",
+            maxResults=500,
+        ).execute()
+    except Exception as e:
+        log.info("[analytics] retention query failed for %s (%s).", youtube_id, e)
+        return None
+    curve = []
+    for row in resp.get("rows", []) or []:
+        try:
+            curve.append((float(row[0]), float(row[1])))
+        except (TypeError, ValueError, IndexError):
+            continue
+    if not curve:
+        return None
+    curve.sort()
+    early = [w for r, w in curve if r <= 0.06]
+    return {
+        "curve": curve,
+        "hook_hold": (sum(early) / len(early)) if early else curve[0][1],
+        # Anything watched more than once pushes the tail above 1.0; that is the
+        # loop working, and loops feed the completion signal YouTube ranks on.
+        "loop_ratio": max(w for _r, w in curve),
+    }
 
 
 def _num(v):

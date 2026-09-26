@@ -101,6 +101,39 @@ def get_analytics_service():
     return build("youtubeAnalytics", "v2", credentials=get_credentials())
 
 
+def post_channel_comment(video_id: str, text: str) -> str | None:
+    """Leave a comment on our own video, as the channel. Returns its id.
+
+    Gives the argument somewhere to start: a ranked list invites disagreement,
+    but an empty comment section invites nothing. Needs the youtube.force-ssl
+    scope, which SCOPES already requests — a token granted before that scope
+    was added will fail here, and the fix is one re-auth (delete token.json).
+
+    PINNING is not possible: the API exposes no pin operation, that is a
+    YouTube Studio action only. So this is a plain first comment.
+
+    Never raises — a failed comment must not affect an upload that worked.
+    """
+    if not video_id or not text:
+        return None
+    try:
+        youtube = get_authenticated_service()
+        resp = youtube.commentThreads().insert(
+            part="snippet",
+            body={"snippet": {"videoId": video_id,
+                              "topLevelComment": {"snippet": {
+                                  "textOriginal": text[:900]}}}},
+        ).execute()
+        cid = resp.get("id")
+        log.info("[youtube] posted channel comment on %s: %r", video_id, text[:60])
+        return cid
+    except Exception as e:
+        log.warning("[youtube] could not post the channel comment on %s (%s). "
+                    "If this says insufficient scope, delete token.json and "
+                    "re-authorize.", video_id, e)
+        return None
+
+
 def upload_video(video_row, config: dict) -> str:
     """Upload one approved video. Returns the new YouTube video id."""
     from googleapiclient.http import MediaFileUpload

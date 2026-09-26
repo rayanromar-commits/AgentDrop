@@ -1,0 +1,61 @@
+{
+  "title": "Ranking Smartest Big Cats",
+  "category": "big cats",
+  "items": [
+    {
+      "rank": 5,
+      "name": "Cheetah",
+      "label": "fastest land hunter alive",
+      "queries": [
+        "cheetah running slow motion",
+        "cheetah stalking prey savanna",
+        "cheetah"
+      ],
+      "query": "cheetah running slow motion"
+    },
+    {
+      "rank": 4,
+      "name": "Leopard",
+      "label": "hauls kills up trees",
+      "queries": [
+        "leopard climbing tree with prey",
+        "leopard walking close up",
+        "leopard"
+      ],
+      "query": "leopard climbing tree with prey"
+    },
+    {
+      "rank": 3,
+      "name": "Jaguar",
+      "label": "ambushes prey from water",
+      "queries": [
+        "jaguar swimming river jungle",
+        "jaguar prowling close up",
+        "jaguar"
+      ],
+      "query": "jaguar swimming river jungle"
+    },
+    {
+      "rank": 2,
+      "name": "Lion",
+      "label": "hunts as coordinated pride",
+      "queries": [
+        "lion pride hunting savanna",
+        "lioness stalking prey slow motion",
+        "lion"
+      ],
+      "query": "lion pride hunting savanna"
+    },
+    {
+      "rank": 1,
+      "name": "Tiger",
+      "label": "largest cat on earth",
+      "queries": [
+        "tiger stalking through jungle slow motion",
+        "tiger swimming water close up",
+        "tiger"
+      ],
+      "query": "tiger stalking through jungle slow motion"
+    }
+  ]
+}

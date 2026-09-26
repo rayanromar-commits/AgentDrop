@@ -1,0 +1,61 @@
+{
+  "title": "Ranking Deadliest Predators Of The Arctic",
+  "category": "arctic predators",
+  "items": [
+    {
+      "rank": 5,
+      "name": "Arctic Fox",
+      "label": "silent hunter in the snow",
+      "queries": [
+        "arctic fox hunting snow",
+        "white fox walking tundra",
+        "arctic fox"
+      ],
+      "query": "arctic fox hunting snow"
+    },
+    {
+      "rank": 4,
+      "name": "Snowy Owl",
+      "label": "strikes on silent wings",
+      "queries": [
+        "snowy owl flying snow",
+        "snowy owl hunting close up",
+        "snowy owl"
+      ],
+      "query": "snowy owl flying snow"
+    },
+    {
+      "rank": 3,
+      "name": "Walrus",
+      "label": "tusks over a ton",
+      "queries": [
+        "walrus swimming underwater",
+        "walrus on ice close up",
+        "walrus"
+      ],
+      "query": "walrus swimming underwater"
+    },
+    {
+      "rank": 2,
+      "name": "Orca",
+      "label": "wolf of the frozen sea",
+      "queries": [
+        "orca swimming arctic ice",
+        "killer whale surfacing slow motion",
+        "orca"
+      ],
+      "query": "orca swimming arctic ice"
+    },
+    {
+      "rank": 1,
+      "name": "Polar Bear",
+      "label": "largest land predator alive",
+      "queries": [
+        "polar bear walking on ice",
+        "polar bear swimming underwater",
+        "polar bear"
+      ],
+      "query": "polar bear walking on ice"
+    }
+  ]
+}

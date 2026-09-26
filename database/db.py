@@ -204,6 +204,13 @@ def init_db() -> None:
         _add_column_if_missing(conn, "video_stats", "shares", "INTEGER")
         _add_column_if_missing(conn, "video_stats", "est_minutes_watched", "REAL")
         _add_column_if_missing(conn, "video_stats", "subscribers_gained", "INTEGER")
+        # engaged_views / views is the API-visible proxy for Studio's
+        # "viewed vs swiped away"; hook_hold is retention at ~5% in. Together
+        # they say whether a video was skipped or watched, which raw views
+        # cannot. Nullable: rows predating them stay valid.
+        _add_column_if_missing(conn, "video_stats", "engaged_views", "INTEGER")
+        _add_column_if_missing(conn, "video_stats", "hook_hold", "REAL")
+        _add_column_if_missing(conn, "video_stats", "loop_ratio", "REAL")
 
         # ONE-TIME: when TikTok cross-posting was first switched on, the whole
         # back catalog had a NULL tiktok_id and would have been posted to TikTok
@@ -291,7 +298,8 @@ def next_rotation_index(key: str) -> int:
 
 def record_stats(post_id, youtube_id, subreddit, views, likes, comments,
                  avg_view_pct=None, avg_view_seconds=None, shares=None,
-                 est_minutes_watched=None, subscribers_gained=None):
+                 est_minutes_watched=None, subscribers_gained=None,
+                 engaged_views=None, hook_hold=None, loop_ratio=None):
     """Save a performance snapshot for an uploaded video.
 
     The first six fields come from the YouTube Data API (always present).
@@ -305,12 +313,14 @@ def record_stats(post_id, youtube_id, subreddit, views, likes, comments,
             INSERT INTO video_stats
                 (post_id, youtube_id, subreddit, views, likes, comments,
                  avg_view_pct, avg_view_seconds, shares,
-                 est_minutes_watched, subscribers_gained)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                 est_minutes_watched, subscribers_gained,
+                 engaged_views, hook_hold, loop_ratio)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             """,
             (post_id, youtube_id, subreddit, views, likes, comments,
              avg_view_pct, avg_view_seconds, shares,
-             est_minutes_watched, subscribers_gained),
+             est_minutes_watched, subscribers_gained,
+             engaged_views, hook_hold, loop_ratio),
         )
     conn.close()
 

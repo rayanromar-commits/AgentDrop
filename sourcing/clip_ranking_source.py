@@ -61,6 +61,40 @@ def _load_posted() -> dict:
         return {"posted": []}
 
 
+def unbuildable_ids() -> set[str]:
+    """post_ids of lists that could not be rendered from real footage.
+
+    A list whose entries have no verifiable stock clip is not "fresh stock" —
+    it is a list that will fail again tomorrow, every attempt costing five
+    vision calls. Left counted as buffer they silently starve the channel: on
+    2026-09-21 the pool held exactly 4 such lists, autorefill only fires BELOW
+    min_buffer 4, and the channel went dark for four days.
+
+    Reversible on purpose: the entries stay in the ledger with their reason, so
+    a better footage source (or a fixed search) can clear them.
+    """
+    return {e["post_id"] for e in _load_posted().get("unbuildable", [])
+            if isinstance(e, dict) and e.get("post_id")}
+
+
+def mark_unbuildable(title: str, reason: str = "") -> None:
+    """Record that this list has no sourceable footage (idempotent)."""
+    pid = _post_id(title)
+    data = _load_posted()
+    entries = data.setdefault("unbuildable", [])
+    if any(isinstance(e, dict) and e.get("post_id") == pid for e in entries):
+        return
+    entries.append({"post_id": pid, "title": title, "reason": reason[:200],
+                    "date": __import__("datetime").date.today().isoformat()})
+    try:
+        POSTED_LEDGER.parent.mkdir(parents=True, exist_ok=True)
+        POSTED_LEDGER.write_text(json.dumps(data, indent=2, ensure_ascii=False),
+                                 encoding="utf-8")
+        log.info("[clip] quarantined unbuildable list: %s (%s)", title, pid)
+    except Exception as e:
+        log.warning("[clip] could not write posted-ledger: %s", e)
+
+
 def posted_ids() -> set[str]:
     """post_ids of every dataset the ledger records as already uploaded."""
     return {e["post_id"] for e in _load_posted().get("posted", [])
@@ -247,12 +281,17 @@ def fetch_stories(config: dict, skip_seen: bool = True) -> list[dict]:
     datasets = _datasets(config)
     random.shuffle(datasets)                    # vary which topic goes next
     already_posted = posted_ids() if skip_seen else set()
+    unbuildable = unbuildable_ids() if skip_seen else set()
     posted_data = [d for _p, d in datasets if _post_id(d["title"]) in already_posted]
     seen_titles: set[str] = set()
     stories: list[dict] = []
     for path, data in datasets:
         post_id = _post_id(data["title"])
         if skip_seen and (post_id in already_posted or db.post_already_seen(post_id)):
+            continue
+        if post_id in unbuildable:
+            log.info("[clip] skipping quarantined list (no sourceable "
+                     "footage): %s", path.name)
             continue
         if skip_seen:
             why = is_near_duplicate(data, posted_data)

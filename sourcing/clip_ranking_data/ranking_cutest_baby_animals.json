@@ -1,0 +1,61 @@
+{
+  "title": "Ranking Cutest Baby Animals",
+  "category": "baby animals",
+  "items": [
+    {
+      "rank": 5,
+      "name": "Fawn",
+      "label": "wobbly first steps in grass",
+      "queries": [
+        "baby deer fawn walking grass",
+        "newborn fawn spotted close up",
+        "fawn"
+      ],
+      "query": "baby deer fawn walking grass"
+    },
+    {
+      "rank": 4,
+      "name": "Duckling",
+      "label": "tiny feet on the water",
+      "queries": [
+        "ducklings swimming pond close up",
+        "baby duckling waddling grass",
+        "duckling"
+      ],
+      "query": "ducklings swimming pond close up"
+    },
+    {
+      "rank": 3,
+      "name": "Baby Elephant",
+      "label": "flopping in the mud",
+      "queries": [
+        "baby elephant playing mud",
+        "elephant calf running herd",
+        "baby elephant"
+      ],
+      "query": "baby elephant playing mud"
+    },
+    {
+      "rank": 2,
+      "name": "Red Panda Cub",
+      "label": "clumsy fluff in the trees",
+      "queries": [
+        "red panda cub climbing tree",
+        "baby red panda playing",
+        "red panda cub"
+      ],
+      "query": "red panda cub climbing tree"
+    },
+    {
+      "rank": 1,
+      "name": "Kitten",
+      "label": "tiny paws and big eyes",
+      "queries": [
+        "newborn kitten playing close up",
+        "fluffy kitten meowing slow motion",
+        "kitten"
+      ],
+      "query": "newborn kitten playing close up"
+    }
+  ]
+}

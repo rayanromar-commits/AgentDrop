@@ -98,6 +98,30 @@ TOPIC_GROUPS: dict[str, list[str]] = {
         "animals with the most extreme migrations", "loudest animals",
         "animals that can regenerate", "coldest and hottest surviving animals",
     ],
+    # The danger lane has a hard ceiling that is not about audience: stock
+    # libraries do not have great whites, box jellyfish or poison dart frogs,
+    # so its best lists keep dying at the footage gate. Cute and clever animals
+    # are the BEST-served subjects in every free library (dogs, cats, kittens,
+    # puppies, otters), which means better footage AND a wider audience — and
+    # cute travels between friends, which is the share signal this channel is
+    # missing. Kept alongside danger, not instead of it: the performance
+    # weighting decides which one earns tomorrow.
+    "cute_pets": [
+        "cutest puppies", "cutest kittens", "funniest cat behaviours",
+        "dogs with the sweetest temperaments", "cutest baby animals",
+        "smartest dog breeds", "fluffiest animals on earth",
+        "cutest animals that fit in your hand", "friendliest animals",
+        "cutest animal families", "dogs that never stop smiling",
+        "cats caught being cats",
+    ],
+    "cool_animals": [
+        "coolest looking animals", "most beautiful birds",
+        "animals with the best camouflage", "most colourful animals",
+        "animals that glow", "smartest animals alive",
+        "most graceful animals in motion", "animals with incredible eyes",
+        "best swimmers in the animal kingdom", "most majestic big cats",
+        "animals with the wildest patterns", "birds of prey ranked",
+    ],
     "weird_rare": [
         "weirdest animals alive", "rarest animals on earth",
         "animals that shouldn't exist", "animals with bizarre defenses",
@@ -129,6 +153,14 @@ CATEGORY_TO_GROUP: dict[str, str] = {
     "extremes": "extremes", "speed": "extremes", "strength": "extremes",
     "size": "extremes", "senses": "extremes", "longevity": "extremes",
     "migration": "extremes", "records": "extremes",
+    "cute": "cute_pets", "cute pets": "cute_pets", "pets": "cute_pets",
+    "puppies": "cute_pets", "kittens": "cute_pets", "dogs": "cute_pets",
+    "cats": "cute_pets", "baby animals": "cute_pets", "adorable": "cute_pets",
+    "cool animals": "cool_animals", "cool": "cool_animals",
+    "birds": "cool_animals", "beautiful": "cool_animals",
+    "camouflage": "cool_animals", "colourful": "cool_animals",
+    "colorful": "cool_animals", "intelligence": "cool_animals",
+    "smartest": "cool_animals",
     "weird": "weird_rare", "rare": "weird_rare", "strange": "weird_rare",
     "bizarre": "weird_rare", "prehistoric": "weird_rare",
     "endangered": "weird_rare", "discoveries": "weird_rare",
@@ -168,17 +200,28 @@ Return ONE JSON object (and nothing else) with this exact shape:
 Rules:
 - title: MUST follow the genre template exactly — \
 "Ranking {Deadliest|Most Dangerous|Most Venomous|Strongest|Biggest|Fastest|\
-Weirdest|Rarest|Scariest} <TOPIC>". No colons, no numbers, no emoji, no extra \
-clauses. This is a house format, not a place to be creative: "Ranking Deadliest \
-Ocean Predators", "Ranking Most Venomous Snakes", "Ranking Weirdest Deep Sea \
-Creatures".
-  The superlative is doing real work, so do NOT soften it. Titles built on \
-"Best ... Moments" or on beauty measure 1,000-36,000 views in this lane; titles \
-built on danger, size and strangeness measure 200,000-54,000,000. People share \
-what unsettles them, not what is pretty. Pick the superlative that is TRUE of \
-your list and lean on it.
+Weirdest|Rarest|Scariest|Cutest|Smartest|Most Beautiful|Friendliest} <TOPIC>". \
+No colons, no numbers, no emoji, no extra clauses. This is a house format, not \
+a place to be creative: "Ranking Deadliest Ocean Predators", "Ranking Most \
+Venomous Snakes", "Ranking Cutest Puppies".
+  The superlative is doing real work, so do NOT soften it — pick the one that \
+is TRUE of your list and lean on it. Two lanes work here for different reasons. \
+DANGER/STRANGENESS (deadliest, most venomous, weirdest) travels because people \
+share what unsettles them: 200,000-54,000,000 views in this niche, against \
+1,000-36,000 for "beautiful nature moments", which is the framing to avoid. \
+CUTE (cutest, friendliest, smartest — puppies, kittens, baby animals) travels \
+because people send it to someone they know, and it has a second advantage that \
+decides many of these lists: stock libraries are FULL of it, while they have \
+almost no great whites or poison dart frogs. Never mix the two in one list.
 - category: ONE short lowercase tag for the subject ("sharks", "volcanoes", \
 "big cats"). The channel measures engagement per category.
+- PREFER SUBJECTS A STOCK LIBRARY ACTUALLY HAS, and this outranks how exotic \
+the subject is. A list of five animals nobody has filmed cannot be built at \
+all, and lists have been thrown away for exactly this: golden poison frog, \
+munchkin cat, box jellyfish, electric eel, great white shark. Common, \
+frequently-filmed animals (dogs, cats, big cats, bears, elephants, octopuses, \
+crocodiles, eagles) are not a compromise here — they are what makes the video \
+exist.
 - name: the thing being ranked, 1-3 words, TITLE CASE. It goes on screen in the \
 rank slot, so it must be instantly readable ("Great White", "Lava Fountain", \
 "Snow Leopard").
@@ -259,7 +302,8 @@ Output ONLY the JSON object — no prose, no code fences."""
 # recognisability.
 _TITLE_RE = re.compile(
     r"^Ranking (Deadliest|Most Dangerous|Most Venomous|Strongest|Biggest|"
-    r"Fastest|Weirdest|Rarest|Scariest) \S.*$")
+    r"Fastest|Weirdest|Rarest|Scariest|Cutest|Smartest|Most Beautiful|"
+    r"Friendliest) \S.*$")
 
 
 def _slug(title: str) -> str:
@@ -579,6 +623,26 @@ def _unfilmable_items(data: dict) -> list[str]:
     return out
 
 
+# Words a caption must never END on. Chopping a long label at exactly five
+# words produced "tusks over a ton of" on screen (2026-09-25) — the cap cut the
+# sentence mid-phrase and the caption read as a mistake, which is worse than a
+# shorter caption.
+_DANGLING = frozenset("""
+of in on at to for with and or but the a an that than as from into over under
+its his her their up by is are was were can could will would has have had
+""".split())
+
+
+def _trim_label(label: str, max_words: int = 5) -> str:
+    """Cut a caption to length WITHOUT leaving it dangling mid-phrase."""
+    words = label.split()
+    if len(words) > max_words:
+        words = words[:max_words]
+    while words and words[-1].lower().strip(",;:") in _DANGLING:
+        words.pop()
+    return " ".join(words)
+
+
 def _validate(data: dict) -> dict | None:
     """Enforce the dataset contract. Returns the normalized dict, or None."""
     title = (data.get("title") or "").strip()
@@ -610,10 +674,7 @@ def _validate(data: dict) -> dict | None:
         # No narrator: the label is read silently in about a second, so a long
         # one is worse than none. Trim rather than reject.
         label = str(it.get("label") or it.get("stat") or "").strip().rstrip(".")
-        words = label.split()
-        if len(words) > 5:
-            label = " ".join(words[:5])
-        it["label"] = label
+        it["label"] = _trim_label(label)
         it.pop("stat", None)
 
         # Normalize search terms: keep `queries` (the pool the fetcher searches)
@@ -722,6 +783,96 @@ def pick_topics(n: int, perf: dict | None = None,
     return picked
 
 
+def unsourceable_items(data: dict) -> list[str]:
+    """Entry names the stock libraries appear to have NO footage of.
+
+    A metadata-only probe: search, then check whether any result's own
+    description names the subject in full — every word of the entry name, or
+    every distinctive word of the search phrase. Partial matches don't count,
+    which is the whole point: a generic "frog-in-pond" clip is not a golden
+    poison frog, and counting it as one is how a caption ends up lying.
+
+    No downloads, no vision calls. Queries are tried in order and it stops at
+    the first hit, so a well-served subject costs one search.
+
+    This exists because finding out at RENDER time costs a whole day's upload:
+    on 2026-09-21 the buffer held four lists whose subjects (golden poison
+    frog, munchkin cat, box jellyfish, great white) are simply not in any free
+    library, production burned every attempt on them, and the channel went dark
+    for four days.
+
+    Verified against the live datasets: flags Great White, Golden/Strawberry/
+    Corroboree Frog, Box Jellyfish, Irukandji, Man O' War, Electric Eel and
+    Munchkin — every subject that has actually failed a render — while Orca,
+    Grizzly and Bengal Tiger clear it.
+
+    Never raises: if the probe itself fails (no key, network, rate limit) it
+    reports nothing and the render-time checks still apply.
+    """
+    try:
+        from media.video_source import (_SHOT_WORDS, _search_pexels,
+                                        _search_pixabay, _words)
+    except Exception:
+        return []
+    bad: list[str] = []
+    for it in data.get("items", []):
+        name = str(it.get("name") or "")
+        queries = it.get("queries") or ([it["query"]] if it.get("query") else [])
+        if not name or not queries:
+            continue
+        name_key = _words(name) - _SHOT_WORDS
+        found = False
+        saw_candidates = False
+        for term in queries:
+            try:
+                pool = _search_pexels(term, 8) + _search_pixabay(term, 8)
+            except Exception as e:
+                log.info("[clip-gen] stock probe failed for %r (%s); allowing.",
+                         name, e)
+                return []
+            saw_candidates = saw_candidates or bool(pool)
+            term_key = _words(term) - _SHOT_WORDS
+            for c in pool:
+                have = _words(c.get("desc", ""))
+                if (name_key and name_key <= have) or (term_key and term_key <= have):
+                    found = True
+                    break
+            if found:
+                break
+        if not found and not saw_candidates:
+            # Every search came back completely empty — that is a rate limit or
+            # an outage, not evidence about this animal. Saying "unsourceable"
+            # here would throw away good lists whenever Pexels is throttling.
+            log.info("[clip-gen] stock probe inconclusive for %r (no search "
+                     "results at all); allowing.", name)
+            continue
+        if not found:
+            log.info("[clip-gen] stock probe: nothing in the libraries is "
+                     "described as %r.", name)
+            bad.append(name)
+    return bad
+
+
+def _footage_verdict(data: dict) -> str | None:
+    """Why this list cannot be built, or None if it can.
+
+    Mirrors what the RENDERER can actually recover from, so the probe neither
+    over- nor under-rejects: a missing rank 1 is fatal because the payoff slot
+    is never substituted, and more than one miss exceeds the substitution
+    budget. A single miss further down is fine — the renderer swaps in another
+    animal and rewrites its caption.
+    """
+    missing = set(unsourceable_items(data))
+    if not missing:
+        return None
+    top = next((it for it in data.get("items", []) if it.get("rank") == 1), None)
+    if top and str(top.get("name", "")) in missing:
+        return f"no footage for the #1 payoff ({top['name']})"
+    if len(missing) > 1:
+        return f"no footage for {len(missing)} entries ({', '.join(sorted(missing))})"
+    return None
+
+
 def generate_batch(n: int, perf: dict | None = None,
                    seed: str | None = None) -> list[Path]:
     """Generate up to ``n`` NEW datasets, performance-weighted, skipping dups.
@@ -805,6 +956,12 @@ def generate_batch(n: int, perf: dict | None = None,
             why = is_near_duplicate(d, existing)
             if why:
                 log.info("[clip-gen] near-duplicate skipped (%s): %s", why, d["title"])
+                continue
+            # Does stock footage of these subjects exist AT ALL? Cheaper to ask
+            # now than to lose a day's drop to it later.
+            verdict = _footage_verdict(d)
+            if verdict:
+                log.info("[clip-gen] %r skipped — %s.", d["title"], verdict)
                 continue
             p = save(d)
             if p:

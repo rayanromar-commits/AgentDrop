@@ -69,6 +69,10 @@ MIN_HEIGHT = 720          # below this a 1080x1920 frame is a heavy upscale
 MIN_DURATION = 3.0        # shorter than one rank slot is useless
 MAX_DURATION = 120.0      # huge files cost download time for one 4s excerpt
 CANDIDATES = 8            # clips shown to the judge
+# Below this mean frame-to-frame change (0-1), a clip is effectively a still.
+# Measured on real footage: a resting animal lands ~0.01-0.02, a swimming shark
+# ~0.06, a breaching whale ~0.15.
+MIN_MOTION = 0.03
 
 
 def _get(url: str, timeout: int = 40, retries: int = 3,
@@ -176,9 +180,19 @@ def _search_pexels(query: str, n: int) -> list[dict]:
         pics = [pp.get("picture") for pp in (v.get("video_pictures") or [])
                 if pp.get("picture")]
         poster = pics[len(pics) // 2] if pics else v.get("image")
+        # THREE frames (early / middle / late), not one. A single frozen frame
+        # cannot tell a dramatic clip from a locked-off shot of a sleeping
+        # animal — they look identical — and "pretty but boring" is the whole
+        # reason this channel's footage underperforms. The strip is free.
+        if len(pics) >= 3:
+            posters = [pics[len(pics) // 6], pics[len(pics) // 2],
+                       pics[-1 - len(pics) // 6]]
+        else:
+            posters = pics or ([v.get("image")] if v.get("image") else [])
         out.append({"src": "pexels", "url": f["link"], "dur": dur,
                     "w": f.get("width") or 0, "h": f.get("height") or 0,
-                    "poster": poster, "id": f"pexels_{v.get('id')}",
+                    "poster": poster, "posters": posters,
+                    "id": f"pexels_{v.get('id')}",
                     # The page slug is the uploader's description of the clip
                     # ("killer-whales-swimming-underwater-5607991") — the only
                     # text Pexels gives us about what is actually in it.
@@ -216,6 +230,7 @@ def _search_pixabay(query: str, n: int) -> list[dict]:
         out.append({"src": "pixabay", "url": best["url"], "dur": dur,
                     "w": best.get("width") or 0, "h": best.get("height") or 0,
                     "poster": best.get("thumbnail") or v.get("userImageURL"),
+                    "posters": [best.get("thumbnail")] if best.get("thumbnail") else [],
                     "id": f"pixabay_{v.get('id')}",
                     "desc": str(v.get("tags") or "")})
     return out
@@ -310,6 +325,59 @@ def _download_poster(cand: dict) -> Path | None:
     return out
 
 
+def _download_posters(cand: dict, limit: int = 3) -> list[Path]:
+    """Fetch up to `limit` preview frames for one candidate, in time order.
+
+    Falls back to the single midpoint poster when a source only ships one
+    (Pixabay). Frames are a few KB each — the whole point of judging on them
+    rather than on downloaded video.
+    """
+    urls = [u for u in (cand.get("posters") or []) if u][:limit]
+    if not urls:
+        one = _download_poster(cand)
+        return [one] if one else []
+    CACHE_DIR.mkdir(parents=True, exist_ok=True)
+    out: list[Path] = []
+    for i, u in enumerate(urls):
+        p = CACHE_DIR / f"{cand['id']}.p{i}.jpg"
+        if p.exists() and p.stat().st_size > 0:
+            out.append(p)
+            continue
+        try:
+            data = _get(u, timeout=20)
+        except Exception as e:
+            log.info("[clips] preview frame %d fetch failed (%s): %s",
+                     i, cand["id"], e)
+            continue
+        if len(data) < 500:
+            continue
+        p.write_bytes(data)
+        out.append(p)
+    return out
+
+
+def motion_score(frames: list[Path]) -> float:
+    """How much the picture CHANGES across a clip, 0.0 (frozen) to ~1.0.
+
+    Mean absolute difference between the first and last preview frame, on a
+    tiny greyscale thumbnail. Deterministic, costs no API call, and it is the
+    cheapest way to tell a clip where something HAPPENS from a beautiful still
+    life — which is exactly the difference between footage people watch and
+    footage people swipe past. Returns 0.0 when it cannot be measured, so an
+    unmeasurable candidate is never dropped for it.
+    """
+    if len(frames) < 2:
+        return 0.0
+    try:
+        a = Image.open(frames[0]).convert("L").resize((64, 64), Image.BILINEAR)
+        b = Image.open(frames[-1]).convert("L").resize((64, 64), Image.BILINEAR)
+    except Exception:
+        return 0.0
+    pa, pb = a.load(), b.load()
+    total = sum(abs(pa[x, y] - pb[x, y]) for y in range(64) for x in range(64))
+    return total / (64 * 64 * 255.0)
+
+
 def prune_cache(max_bytes: int = 1_500_000_000) -> int:
     """Keep the clip cache under a size cap, oldest first.
 
@@ -393,13 +461,34 @@ candidates are plausible and none is contradicted, accept them. Save the \
 rejection for what is actually wrong: a different animal, a missing signature \
 feature, a watermark, or a subject nothing could have filmed.
 
-Among candidates that PASS the identity test, order them best-first by:
-- VISUALLY STRIKING: dramatic, close, well-lit, high contrast,
+SECOND, and ONLY among candidates that passed, comes WATCHABILITY. Each \
+candidate is shown to you as up to three frames in time order, so you can see \
+whether anything actually happens. This channel's problem is not wrong footage, \
+it is BORING footage: correct, pretty, and swiped past in half a second. Order \
+the survivors best-first by:
+- THE SUBJECT FILLS THE FRAME. A distant speck in a wide landscape is the \
+single most common failure. Close beats far, every time.
+- SOMETHING HAPPENS across the three frames: it moves, hunts, jumps, eats, \
+reacts, changes. A locked-off shot of a resting animal reads as a still photo.
+- THE FACE AND EYES ARE VISIBLE, ideally looking toward camera.
+- WILD OR NATURAL SETTING. Penalise cage bars, fences, enclosure walls, \
+painted zoo backdrops, aquarium glass, visible handlers or hands, tags and \
+harnesses. A real case: a "most dangerous bears" video opened on a polar bear \
+in a zoo pen with painted fake ice, and it looked cheap.
 - CLEAN: absolutely NO watermark, logo, stock-agency mark, channel name, URL, \
 social handle, or overlaid text of any kind (a watermark is also an automatic \
 fail, like a wrong subject),
-- full-frame and sharp, not a soft or tiny source,
-- suggestive of MOTION. A static locked-off shot reads as a still photo.
+- full-frame and sharp, not a soft or tiny source.
+
+Then rate YOUR TOP PICK for watchability, `quality` 1-5:
+5 = a shot people would stop scrolling for: close, alive, something happening.
+4 = strong: clear, close, some movement.
+3 = ordinary stock b-roll: correct and unremarkable.
+2 = weak: distant, static, cluttered, or obviously captive.
+1 = unusable as entertainment.
+Be honest and use the WHOLE scale — a 3 here is not an insult, it is the most \
+common stock clip. Do not inflate: a rating of 4-5 for ordinary b-roll makes \
+this number useless.
 
 Also decide framing for your top pick in a tall 9:16 phone frame:
 - "cover" = the shot already fills a vertical frame, or the subject is central \
@@ -408,13 +497,15 @@ enough that cropping the sides loses nothing. This is usually right.
 to full-bleed would cut it in half — fit it to the width instead.
 
 Return ONLY JSON. `acceptable` lists the indices that PASS the identity test, \
-best first, and is `[]` when none do. `reason` at most 15 words:
-{{"acceptable": [<indices>], "framing": "cover"|"fit", "reason": "..."}}"""
+ordered by watchability, best first, and is `[]` when none do. `quality` rates \
+your top pick 1-5. `reason` at most 15 words:
+{{"acceptable": [<indices>], "quality": <1-5>, "framing": "cover"|"fit", \
+"reason": "..."}}"""
 
 
 def _judge(name: str, cand: list[dict], context: str = "",
-           subject: str = "") -> tuple[list[int], str]:
-    """Claude-vision verification: (acceptable indices best-first, framing).
+           subject: str = "") -> tuple[list[int], str, int]:
+    """Claude-vision verification: (acceptable best-first, framing, quality).
 
     Returns EVERY candidate that genuinely shows `name`, not just a winner, so
     the caller can step past one that duplicates footage already used without
@@ -428,22 +519,24 @@ def _judge(name: str, cand: list[dict], context: str = "",
     if not os.getenv("ANTHROPIC_API_KEY"):
         log.error("[clip-judge] ANTHROPIC_API_KEY not set — cannot verify that "
                   "footage matches %r, so nothing is accepted.", name)
-        return [], "cover"
+        return [], "cover", 0
     try:
         import anthropic
     except ImportError:
         log.error("[clip-judge] anthropic package missing — cannot verify %r.", name)
-        return [], "cover"
+        return [], "cover", 0
     ctx = f"\nThe on-screen caption for this clip reads: \"{context}\"" if context else ""
     subj = f" The whole video is ranking **{subject}**." if subject else ""
     content = [{"type": "text",
                 "text": _JUDGE_PROMPT.format(name=name, context=ctx, subject=subj)}]
     for i, c in enumerate(cand):
+        frames = c.get("frames") or [c["frame"]]
         content.append({"type": "text", "text":
                         f"Candidate {i} (source: {c['src']}, {c['w']}x{c['h']}px, "
-                        f"{c['dur']:.0f}s):"})
-        content.append({"type": "image", "source": {
-            "type": "base64", "media_type": "image/jpeg", "data": _b64(c["frame"])}})
+                        f"{c['dur']:.0f}s) — {len(frames)} frame(s) in time order:"})
+        for f in frames:
+            content.append({"type": "image", "source": {
+                "type": "base64", "media_type": "image/jpeg", "data": _b64(f)}})
     try:
         resp = anthropic.Anthropic().messages.create(
             model=JUDGE_MODEL, max_tokens=2500,
@@ -459,11 +552,11 @@ def _judge(name: str, cand: list[dict], context: str = "",
         if not m:
             log.warning("[clip-judge] no JSON for %r (stop_reason=%s); "
                         "accepting nothing.", name, resp.stop_reason)
-            return [], "cover"
+            return [], "cover", 0
         data = first_json(m.group(0))
     except Exception as e:
         log.warning("[clip-judge] failed (%s); accepting nothing for %r.", e, name)
-        return [], "cover"
+        return [], "cover", 0
     framing = "fit" if data.get("framing") == "fit" else "cover"
     raw = data.get("acceptable")
     if not isinstance(raw, list):
@@ -475,9 +568,14 @@ def _judge(name: str, cand: list[dict], context: str = "",
         if 0 <= i < len(cand) and i not in seen:
             seen.add(i)
             ok.append(i)
-    log.info("[clip-judge] %s -> accepted=%s framing=%s (%s)", name, ok, framing,
-             str(data.get("reason", ""))[:80])
-    return ok, framing
+    try:
+        quality = int(data.get("quality") or 0)
+    except (TypeError, ValueError):
+        quality = 0
+    quality = max(0, min(5, quality))
+    log.info("[clip-judge] %s -> accepted=%s q=%s framing=%s (%s)", name, ok,
+             quality, framing, str(data.get("reason", ""))[:80])
+    return ok, framing, quality
 
 
 # --- public API ---------------------------------------------------------------
@@ -553,12 +651,14 @@ def fetch_item_clip(query, prefer: str | None = None,
     downloaded. Judging on downloaded files instead meant ~30 clips (500MB) per
     video; this pulls five.
 
-    Returns (path, framing), or (None, 'cover') when nothing usable was found.
+    Returns (path, framing, quality 0-5), or (None, 'cover', 0) when nothing
+    usable was found. `quality` is the judge's watchability rating of the shot
+    it picked — the renderer refuses a list whose best footage is boring.
     """
     exclude = set(exclude or ())
     terms = _queries(query)
     if not terms:
-        return None, "cover"
+        return None, "cover", 0
 
     # A dataset's terms describe the IDEAL shot ("great white breaching clean out
     # of the water") and stock libraries often simply do not have it. Falling back
@@ -587,26 +687,37 @@ def fetch_item_clip(query, prefer: str | None = None,
                 pool.append(c)
         # Stable sort, so search order breaks ties.
         pool.sort(key=lambda c: -_relevance(c.get("desc", ""), prefer, terms))
-        cands: list[dict] = []
+        cands, frozen = [], []
         for c in pool:
             if len(cands) >= CANDIDATES:
                 break
-            poster = _download_poster(c)
-            if poster:
-                cands.append({**c, "frame": poster})
+            frames = _download_posters(c)
+            if not frames:
+                continue
+            entry = {**c, "frame": frames[0], "frames": frames,
+                     "motion": motion_score(frames)}
+            # A clip where nothing moves is a still photo with a file size. Hold
+            # them back rather than dropping them outright: for some subjects
+            # every candidate is a portrait, and a static clip of the right
+            # animal still beats abandoning the list.
+            (frozen if entry["motion"] < MIN_MOTION else cands).append(entry)
+        if len(cands) < CANDIDATES and frozen:
+            frozen.sort(key=lambda c: -c["motion"])
+            cands.extend(frozen[:CANDIDATES - len(cands)])
         return cands
 
     cands = gather()
     if not cands:
         log.warning("[clips] no usable candidate for %r (terms: %s)",
                     prefer or terms[0], "; ".join(terms))
-        return None, "cover"
+        return None, "cover", 0
 
-    ok, framing = _judge(prefer or terms[0], cands, context=context, subject=subject)
+    ok, framing, quality = _judge(prefer or terms[0], cands, context=context,
+                                  subject=subject)
     if not ok:
         log.warning("[clips] no candidate verified as %r — entry has no clip.",
                     prefer or terms[0])
-        return None, framing
+        return None, framing, 0
 
     # Download the best VERIFIED candidate; if its content collides with footage
     # another rank is already using (the same stock clip republished under two
@@ -623,17 +734,22 @@ def fetch_item_clip(query, prefer: str | None = None,
                      "next verified candidate.", c["id"])
             continue
         prune_cache()
-        return path, framing
+        # The rating describes the judge's FIRST choice; stepping down to a
+        # later verified candidate means a weaker shot, so say so rather than
+        # carrying the top pick's score onto footage it wasn't given for.
+        q = quality if i == ok[0] else max(1, quality - 1)
+        return path, framing, q
 
     log.warning("[clips] every verified candidate for %r was a duplicate or "
                 "failed to download.", prefer or terms[0])
-    return None, framing
+    return None, framing, 0
 
 
 if __name__ == "__main__":
     terms = sys.argv[1:] or ["great white shark breaching"]
-    path, framing = fetch_item_clip(terms, prefer=terms[0])
+    path, framing, quality = fetch_item_clip(terms, prefer=terms[0])
     if path:
-        print(f"OK  {path}  ({probe_duration(path):.1f}s, framing={framing})")
+        print(f"OK  {path}  ({probe_duration(path):.1f}s, framing={framing}, "
+              f"quality={quality}/5)")
     else:
         print("no usable clip found")

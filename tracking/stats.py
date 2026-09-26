@@ -20,6 +20,10 @@ from database import db
 log = setup_logging()
 
 
+# How many of the most recent videos get a per-video retention-curve query.
+RETENTION_VIDEOS = 12
+
+
 def refresh_stats() -> int:
     """Fetch fresh stats for all uploaded videos. Returns count updated."""
     from upload.youtube_upload import get_authenticated_service
@@ -36,8 +40,17 @@ def refresh_stats() -> int:
 
     # Deeper retention/shares metrics from the Analytics API (empty dict if the
     # scope isn't granted yet — the snapshot still records Data-API stats).
-    from tracking.analytics import fetch_video_analytics
+    from tracking.analytics import fetch_retention, fetch_video_analytics
     analytics = fetch_video_analytics(ids)
+
+    # The retention CURVE costs one query per video, so only the recent ones —
+    # they are the only videos any decision is made about, and old curves never
+    # change. Newest first: `uploaded` is oldest-first.
+    retention: dict[str, dict] = {}
+    for vid in ids[-RETENTION_VIDEOS:]:
+        r = fetch_retention(vid)
+        if r:
+            retention[vid] = r
 
     updated = 0
     for i in range(0, len(ids), 50):
@@ -61,6 +74,9 @@ def refresh_stats() -> int:
                 shares=a.get("shares"),
                 est_minutes_watched=a.get("est_minutes_watched"),
                 subscribers_gained=a.get("subscribers_gained"),
+                engaged_views=a.get("engaged_views"),
+                hook_hold=(retention.get(item["id"]) or {}).get("hook_hold"),
+                loop_ratio=(retention.get(item["id"]) or {}).get("loop_ratio"),
             )
             updated += 1
     log.info("Refreshed stats for %d video(s)%s.", updated,

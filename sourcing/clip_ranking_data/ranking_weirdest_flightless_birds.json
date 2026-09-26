@@ -1,0 +1,61 @@
+{
+  "title": "Ranking Weirdest Flightless Birds",
+  "category": "birds",
+  "items": [
+    {
+      "rank": 5,
+      "name": "Emu",
+      "label": "sprints on huge two-toed feet",
+      "queries": [
+        "emu running fast outback",
+        "emu walking close up",
+        "emu"
+      ],
+      "query": "emu running fast outback"
+    },
+    {
+      "rank": 4,
+      "name": "Cassowary",
+      "label": "helmeted bird with dagger claws",
+      "queries": [
+        "cassowary walking rainforest",
+        "cassowary close up head casque",
+        "cassowary"
+      ],
+      "query": "cassowary walking rainforest"
+    },
+    {
+      "rank": 3,
+      "name": "Kiwi",
+      "label": "nostrils at tip of beak",
+      "queries": [
+        "kiwi bird foraging night",
+        "kiwi bird walking close up",
+        "kiwi bird"
+      ],
+      "query": "kiwi bird foraging night"
+    },
+    {
+      "rank": 2,
+      "name": "Ostrich",
+      "label": "largest bird on earth",
+      "queries": [
+        "ostrich running savanna slow motion",
+        "ostrich close up eyes",
+        "ostrich"
+      ],
+      "query": "ostrich running savanna slow motion"
+    },
+    {
+      "rank": 1,
+      "name": "Penguin",
+      "label": "flightless bird that flies underwater",
+      "queries": [
+        "penguin swimming underwater slow motion",
+        "penguin colony diving",
+        "penguin"
+      ],
+      "query": "penguin swimming underwater slow motion"
+    }
+  ]
+}

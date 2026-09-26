@@ -138,6 +138,11 @@ def fetch_comments(max_videos: int = MAX_VIDEOS,
                 "author": sn.get("authorDisplayName", ""),
                 "text": text[:400],
                 "likes": int(sn.get("likeCount", 0) or 0),
+                # Thread id: what a reply attaches to, and what we remember so
+                # the same person is never answered twice.
+                "thread_id": item.get("id", ""),
+                "is_ours": bool(sn.get("authorChannelId", {}).get("value")
+                                == row.get("channel_id")),
             })
     log.info("[comments] read %d comment(s) across %d video(s).",
              len(out), len(rows))
@@ -225,6 +230,112 @@ def summarize(tagged: list[dict]) -> dict:
         "requests": requests[:12],
         "as_of": date.today().isoformat(),
     }
+
+
+_REPLY_PROMPT = """You run a YouTube Shorts channel that posts silent ranked \
+countdowns of animals. Someone left this comment on "{title}":
+
+  {author}: "{text}"
+
+Write a reply from the channel. Rules:
+- ONE short line, at most 12 words. This is a Shorts comment, not a letter.
+- Sound like a person who makes these videos, not a brand or a bot. No emoji \
+spam (one is fine), no "thanks for watching!", no hashtags, no links.
+- If they named a pick, engage with THAT pick specifically.
+- If they are joking, be funny back. If they are complaining, take it plainly \
+and do not argue.
+- Never promise future videos on a specific subject.
+
+Return ONLY the reply text, nothing else."""
+
+
+def _replied_ids() -> set[str]:
+    try:
+        return set(json.loads(db.get_meta("replied_comments") or "[]"))
+    except Exception:
+        return set()
+
+
+def _remember_reply(thread_id: str) -> None:
+    ids = _replied_ids()
+    ids.add(thread_id)
+    try:
+        # Keep the list bounded; old threads scroll out of reach anyway.
+        db.set_meta("replied_comments", json.dumps(sorted(ids)[-400:]))
+    except Exception as e:
+        log.info("[comments] could not remember the reply (%s).", e)
+
+
+def auto_reply(config: dict | None = None, tagged: list[dict] | None = None) -> int:
+    """Reply to a few real viewer comments, as the channel. Returns how many.
+
+    Comments are an engagement signal Shorts ranks on, and a channel that never
+    answers teaches people not to bother. Deliberately bounded: a few per day,
+    never the same thread twice, never spam, and never our own comments — an
+    account that replies to everything instantly reads as a bot, which is worse
+    than silence.
+
+    Off with `learning.auto_reply: false`.
+    """
+    config = config or {}
+    lcfg = config.get("learning", {}) or {}
+    if not lcfg.get("auto_reply", True):
+        return 0
+    cap = int(lcfg.get("max_replies_per_day", 3))
+    if cap <= 0:
+        return 0
+
+    if tagged is None:
+        tagged = classify(fetch_comments())
+    done = _replied_ids()
+    # Most-liked first: the comment other viewers already engaged with is the
+    # thread worth being seen in.
+    pool = [c for c in tagged
+            if c.get("thread_id") and c["thread_id"] not in done
+            and not c.get("is_ours")
+            and c.get("kind") in ("answer", "joke", "praise", "feedback",
+                                  "request", "question")]
+    pool.sort(key=lambda c: c.get("likes", 0), reverse=True)
+    if not pool:
+        log.info("[comments] nothing new to reply to.")
+        return 0
+
+    try:
+        import anthropic
+        client = anthropic.Anthropic()
+    except Exception as e:
+        log.info("[comments] no Claude client for replies (%s).", e)
+        return 0
+    from upload.youtube_upload import get_authenticated_service
+    try:
+        youtube = get_authenticated_service()
+    except Exception as e:
+        log.warning("[comments] no YouTube service for replies (%s).", e)
+        return 0
+
+    sent = 0
+    for c in pool[:cap]:
+        try:
+            resp = client.messages.create(
+                model=MODEL, max_tokens=300,
+                output_config={"effort": "low"},
+                messages=[{"role": "user", "content": _REPLY_PROMPT.format(
+                    title=c.get("title", ""), author=c.get("author", ""),
+                    text=c.get("text", ""))}])
+            text = "".join(b.text for b in resp.content if b.type == "text").strip()
+            text = text.strip('"').split("\n")[0][:200]
+            if not text:
+                continue
+            youtube.comments().insert(
+                part="snippet",
+                body={"snippet": {"parentId": c["thread_id"],
+                                  "textOriginal": text}}).execute()
+            _remember_reply(c["thread_id"])
+            sent += 1
+            log.info("[comments] replied to %s: %r", c.get("author", ""), text[:60])
+        except Exception as e:
+            log.warning("[comments] reply failed (%s).", e)
+    return sent
 
 
 def read_and_summarize() -> dict:

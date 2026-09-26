@@ -44,6 +44,11 @@ log = setup_logging()
 
 
 class UnusableDataset(RuntimeError):
+    #: True when the ONLY thing wrong was that the footage was dull, not that it
+    #: was missing or mislabelled. Production may relax the bar for one of these
+    #: rather than post nothing at all; it must never relax the honesty checks.
+    quality_only = False
+
     """This ranking cannot be rendered honestly — try a different list.
 
     Raised when an entry has no stock footage that verifiably shows it (the
@@ -88,7 +93,27 @@ OUTRO_DUR = 2.4        # the question is alone on screen here, so it needs a bea
 MIN_ITEM_DUR = 2.6
 MAX_SUBSTITUTIONS = 2   # a list needing more rewrites than this is just a bad list
 SUB_TRIES = 2           # replacement suggestions per failed slot
+# Watchability floors (the judge's 1-5 rating). A list must have at least one
+# genuinely arresting shot and not be wall-to-wall ordinary b-roll. Deliberately
+# modest: 3 is "ordinary stock", so this rejects only the properly dull lists.
+MIN_BEST_QUALITY = 4
+MIN_MEAN_QUALITY = 2.6
 OUTRO_TEXT = "Which one was your #1?"      # a question — this format lives on comments
+SHARE_TEXT = "Send this to someone who'd disagree"
+
+
+def _excerpt_start(clip, dur: float, want: float | None) -> float:
+    """Where to start the excerpt inside a source clip.
+
+    Default is the MIDDLE: stock footage routinely opens on a fade or an
+    establishing beat, so the front of a clip is the least interesting part of
+    it. `want` pins an explicit start (the loop close needs the seconds that run
+    directly into the video's opening frame), clamped to the clip's length.
+    """
+    cdur = probe_duration(clip) if clip else 0.0
+    if want is not None:
+        return max(0.0, min(want, max(cdur - dur, 0.0)))
+    return max(0.0, (cdur - dur) / 2.0) if cdur > dur else 0.0
 
 
 def _font(sz):
@@ -297,6 +322,8 @@ MUSIC_FOLDER = {
     "deep_sea": "ocean", "sharks": "ocean", "ocean_predators": "ocean",
     "venomous": "wildlife", "apex_predators": "wildlife", "weird_rare": "wildlife",
     "extremes": "extreme",
+    # Cute lists want the light bed, not the menace one.
+    "cute_pets": "pets", "cool_animals": "nature",
 }
 
 
@@ -488,6 +515,12 @@ def render_clip_video(post_id, payload, config=None) -> Path:
     cfg = (config or {}).get("clipranking", {})
     global SLOT_LABELS
     SLOT_LABELS = [1, 2, 3, 4, 6] if cfg.get("skip_five", True) else [1, 2, 3, 4, 5]
+    loop_close = bool(cfg.get("loop_close", True))
+    # The watchability floor is a KNOB: tracking/jail.py raises it when the
+    # numbers say videos are being swiped past, and production may lower it for
+    # one render rather than let the channel go dark.
+    min_best = float(cfg.get("min_best_quality", MIN_BEST_QUALITY))
+    min_mean = float(cfg.get("min_mean_quality", MIN_MEAN_QUALITY))
     title = payload["title"]
     by_rank = {it["rank"]: it for it in payload["items"]}
     OUTPUT_DIR.mkdir(exist_ok=True)
@@ -519,8 +552,9 @@ def render_clip_video(post_id, payload, config=None) -> Path:
     used: set[str] = set()
     missing: list[str] = []
     clips: dict[int, tuple[Path | None, str]] = {}
+    quality: dict[int, int] = {}
     for it in sorted(payload["items"], key=lambda x: x["rank"]):
-        path, framing = fetch_item_clip(
+        path, framing, q = fetch_item_clip(
             it.get("queries") or it.get("query"), prefer=it["name"],
             exclude=used, subject=subject,
             context=f"{it['name']} — {it.get('label', '')}".strip(" —"))
@@ -530,6 +564,7 @@ def render_clip_video(post_id, payload, config=None) -> Path:
         else:
             missing.append(it["name"])
         clips[it["rank"]] = (path, framing)
+        quality[it["rank"]] = q
 
     # One unsourceable entry should not cost the whole ranking. Before giving
     # up, ask for a replacement that genuinely belongs on this list and is
@@ -546,7 +581,7 @@ def render_clip_video(post_id, payload, config=None) -> Path:
             sub = substitute_item(payload, failed, avoid=tried)
             if not sub:
                 break
-            path, framing = fetch_item_clip(
+            path, framing, q = fetch_item_clip(
                 sub["queries"], prefer=sub["name"], exclude=used, subject=subject,
                 context=f"{sub['name']} — {sub.get('label', '')}".strip(" —"))
             if path:
@@ -564,6 +599,7 @@ def render_clip_video(post_id, payload, config=None) -> Path:
                 payload["items"][i] = sub
                 break
         clips[rank] = (path, framing)
+        quality[rank] = q
         missing.remove(failed)
         log.info("[clip] %r had no footage — ranking %r at #%s instead.",
                  failed, sub["name"], rank)
@@ -574,6 +610,13 @@ def render_clip_video(post_id, payload, config=None) -> Path:
     by_rank = {it["rank"]: it for it in payload["items"]}
     rest = [it for it in payload["items"] if it["rank"] != 1]
     random.Random(post_id).shuffle(rest)
+    # Whatever is revealed FIRST is the hook — the frame that decides whether
+    # anyone stays past the first second, which is YouTube's own #1 ranking
+    # input for Shorts ("% of viewers who chose to view"). So the best-rated
+    # shot leads, instead of whichever one the shuffle happened to pick. #1
+    # still lands last: it is the payoff the countdown exists for.
+    if rest:
+        rest.sort(key=lambda it: -quality.get(it["rank"], 0))
     order = rest + [it for it in payload["items"] if it["rank"] == 1]
 
     # ALL OR NOTHING for whatever is still missing. An entry with no verified
@@ -587,6 +630,23 @@ def render_clip_video(post_id, payload, config=None) -> Path:
             f"{title!r}: no verified footage for {len(missing)} of 5 entries "
             f"({', '.join(missing)}) — abandoning this list rather than showing "
             f"the wrong subject under a caption")
+    # QUALITY FLOOR. Correct footage is not enough: this channel's videos are
+    # verified, pretty and swiped past. If the best shot we could find for this
+    # list is ordinary b-roll, the list is not worth a day's drop — another one
+    # gets the slot, exactly as if the footage had been unverifiable.
+    scores = [quality.get(it["rank"], 0) for it in payload["items"]]
+    best, mean_q = max(scores), sum(scores) / max(len(scores), 1)
+    if best < min_best or mean_q < min_mean:
+        e = UnusableDataset(
+            f"{title!r}: footage is verified but dull (best {best}/5, mean "
+            f"{mean_q:.1f}/5, floor {min_best}/{min_mean:.1f}) — "
+            f"abandoning rather than posting boring clips")
+        e.quality_only = True
+        e.quality = {"best": best, "mean": mean_q}
+        raise e
+    log.info("[clip] footage quality: best %d/5, mean %.1f/5 (per rank: %s)",
+             best, mean_q, {r: quality.get(r, 0) for r in sorted(quality)})
+
     found = [clips[r][0] for r in sorted(clips) if clips[r][0]]
 
     # The outro gets its OWN shot. It used to replay rank 5's clip, so the video
@@ -598,32 +658,36 @@ def render_clip_video(post_id, payload, config=None) -> Path:
     # "Deadliest Predators That Hunt Sharks" the judge correctly rejected every
     # candidate because no stock clip depicts a whole sentence. The category
     # ("predators", "sharks") is the searchable noun behind it.
-    outro_subject = payload.get("category") or subject
-    if len(subject.split()) <= 3:
-        outro_subject = subject
-    outro_clip, outro_framing = fetch_item_clip(
-        [outro_subject, f"{outro_subject} close up",
-         f"{outro_subject} slow motion"],
-        prefer=outro_subject, exclude=used, subject=outro_subject)
-    if outro_clip:
-        used.add(clip_hash(outro_clip))
-    else:
-        # Fall back to the FIRST-revealed entry's clip — the one furthest back in
-        # the viewer's memory — instead of the last, which just played.
-        outro_clip = clips[order[0]["rank"]][0]
-        outro_framing = clips[order[0]["rank"]][1]
-        log.info("[clip] no separate outro shot for %r; reusing the "
-                 "first-revealed entry's clip.", outro_subject)
+    # LOOP CLOSE. The outro plays the first-revealed clip's footage from just
+    # BEFORE the moment the video opens on, so the last frame runs straight into
+    # the first and a replay is seamless. Since March 2025 replays count as
+    # views, and average % viewed (which a loop pushes over 100%) is one of
+    # YouTube's named Shorts ranking inputs — so the loop is worth more than a
+    # separate pretty backdrop nobody reads.
+    outro_clip, outro_framing = clips[order[0]["rank"]]
+    outro_start = None          # resolved below, once the opener's start is known
+    if not loop_close:
+        outro_subject = payload.get("category") or subject
+        if len(subject.split()) <= 3:
+            outro_subject = subject
+        alt, alt_framing, _oq = fetch_item_clip(
+            [outro_subject, f"{outro_subject} close up",
+             f"{outro_subject} slow motion"],
+            prefer=outro_subject, exclude=used, subject=outro_subject)
+        if alt:
+            used.add(clip_hash(alt))
+            outro_clip, outro_framing = alt, alt_framing
     # #1's clip leads the intro: it's the best shot we sourced, and the opening
     # second is what decides whether anyone stays.
     opener = clips.get(1, (None, ""))[0] or found[0]
 
-    # plan entries: (clip, framing, dur, base_overlay, timed_overlays)
+    # plan entries: (clip, framing, dur, base_overlay, timed_overlays, start)
+    # `start` is None for "take the middle of the clip".
     plan = []
     if INTRO_DUR > 0:
         intro_base = _base_overlay(title, by_rank, set(), None)
         plan.append((opener, clips.get(1, (None, "cover"))[1], INTRO_DUR,
-                     intro_base, []))
+                     intro_base, [], 0.0))
 
     revealed: set[int] = set()
     for it in order:
@@ -633,19 +697,32 @@ def render_clip_video(post_id, payload, config=None) -> Path:
         cap_big = _crop(_caption_layer(it["name"], it.get("label", ""), scale=1.14))
         cap = _crop(_caption_layer(it["name"], it.get("label", "")))
         timed = [(*cap_big, 0.0, 0.16), (*cap, 0.16, item_dur)]
-        plan.append((path, framing, item_dur, base, timed))
+        plan.append((path, framing, item_dur, base, timed, None))
 
     # The outro clears completely: no title, no rank list, no caption — just the
     # question. `_outro_layer` carries its own dim, so the base is empty.
     outro_base = Image.new("RGBA", (W, H), (0, 0, 0, 0))
+    # Two beats: the argument, then the ask. The share prompt deliberately does
+    # NOT say "comment below" — the channel's own read is that it feels icky —
+    # and shares are the signal this channel is missing, not comments.
+    half = OUTRO_DUR / 2.0
+    if cfg.get("share_cta", True):
+        outro_timed = [(*_crop(_outro_layer(OUTRO_TEXT)), 0.0, half),
+                       (*_crop(_outro_layer(SHARE_TEXT)), half, OUTRO_DUR)]
+    else:
+        outro_timed = [(*_crop(_outro_layer(OUTRO_TEXT)), 0.0, OUTRO_DUR)]
+    if loop_close:
+        # Run the footage straight into the opening frame of the video.
+        first_start = _excerpt_start(plan[0][0], plan[0][2], plan[0][5])
+        outro_start = max(0.0, first_start - OUTRO_DUR)
     plan.append((outro_clip, outro_framing, OUTRO_DUR, outro_base,
-                 [(*_crop(_outro_layer(OUTRO_TEXT)), 0.0, OUTRO_DUR)]))
+                 outro_timed, outro_start))
 
     with tempfile.TemporaryDirectory() as tmp:
         tmpd = Path(tmp)
         seg_files, durs, starts, seg_clips = [], [], [], []
         t = 0.0
-        for i, (clip, framing, dur, base, timed) in enumerate(plan):
+        for i, (clip, framing, dur, base, timed, want_start) in enumerate(plan):
             # Excerpt from the clip's middle: stock footage routinely opens on a
             # fade or an establishing beat, so the front of a clip is the least
             # interesting part of it.
@@ -654,11 +731,7 @@ def render_clip_video(post_id, payload, config=None) -> Path:
             # sourced, and the opening second decides whether anyone stays), so
             # it takes the HEAD instead — otherwise the intro and the #1 reveal
             # play the identical few seconds and the payoff lands as a repeat.
-            cdur = probe_duration(clip) if clip else 0.0
-            if i == 0 and INTRO_DUR > 0:
-                start = 0.0
-            else:
-                start = max(0.0, (cdur - dur) / 2.0) if cdur > dur else 0.0
+            start = _excerpt_start(clip, dur, want_start)
             seg = tmpd / f"seg{i}.mp4"
             try:
                 pattern = _overlay_track(tmpd, i, base, timed, dur)
