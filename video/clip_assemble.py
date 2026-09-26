@@ -37,6 +37,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 from PIL import Image, ImageDraw, ImageFont
 
 from agentdrop_common import setup_logging
+from media import clip_ledger
 from media.video_source import (clip_hash, fetch_item_clip, probe_duration)
 from sourcing.clip_ranking_generate import substitute_item
 
@@ -549,7 +550,9 @@ def render_clip_video(post_id, payload, config=None) -> Path:
     # order. Every entry sourced adds to `used`, so whatever goes last picks from
     # the most-depleted pool — and #1 is the payoff the whole countdown builds to,
     # the one shot that must not fall back.
-    used: set[str] = set()
+    # Seeded with every clip already shown in a POSTED video, so no upload
+    # recycles another's footage (media/clip_ledger.py).
+    used: set[str] = clip_ledger.used_keys()
     missing: list[str] = []
     clips: dict[int, tuple[Path | None, str]] = {}
     quality: dict[int, int] = {}
@@ -811,6 +814,8 @@ def render_clip_video(post_id, payload, config=None) -> Path:
                         "-map", "0:v", "-map", "1:a", "-c:v", "copy",
                         "-c:a", "aac", "-b:a", "160k", "-shortest", str(out_path)],
                        check=True, capture_output=True)
+    shown = {p for p, _f in clips.values() if p} | {outro_clip}
+    clip_ledger.record([(p.stem, clip_hash(p)) for p in shown if p], post_id)
     return out_path
 
 
